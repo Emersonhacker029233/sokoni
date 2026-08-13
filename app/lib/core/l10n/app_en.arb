@@ -98,5 +98,53 @@
   "@commonSkip": {"description": "Generic skip action label"},
 
   "commonClose": "Close",
-  "@commonClose": {}
+  "@commonClose": {},
+
+  "offlineShowingSavedResults": "You're offline — showing saved results",
+  "@offlineShowingSavedResults": {"description": "Banner shown when the device has no connectivity and a cached feed is displayed instead"},
+
+  "navHome": "Home",
+  "@navHome": {},
+  "navSearch": "Search",
+  "@navSearch": {},
+  "navSell": "Sell",
+  "@navSell": {},
+  "navOrders": "Orders",
+  "@navOrders": {},
+  "navProfile": "Profile",
+  "@navProfile": {},
+
+  "homeComingSoonTitle": "Your feed is coming together",
+  "@homeComingSoonTitle": {"description": "Placeholder home headline shown before the Phase 4 discovery feed lands"},
+  "homeComingSoonBody": "Browse by category, distance and search once discovery ships.",
+  "@homeComingSoonBody": {},
+
+  "searchComingSoonTitle": "Search",
+  "@searchComingSoonTitle": {},
+  "searchComingSoonBody": "Product and shop search lands with the discovery feed.",
+  "@searchComingSoonBody": {},
+
+  "ordersComingSoonTitle": "No orders yet",
+  "@ordersComingSoonTitle": {},
+  "ordersComingSoonBody": "Orders you place will show up here.",
+  "@ordersComingSoonBody": {},
+
+  "profileSignInTitle": "You're browsing as a guest",
+  "@profileSignInTitle": {"description": "Shown on the profile tab when not signed in — CLAUDE.md: browsing works without an account"},
+  "profileSignInBody": "Sign in to order, chat with sellers, and save favourites.",
+  "@profileSignInBody": {},
+  "profileSignInAction": "Sign in",
+  "@profileSignInAction": {},
+  "profileSignedInAs": "Signed in as {name}",
+  "@profileSignedInAs": {"placeholders": {"name": {"type": "String"}}},
+  "profileSignOut": "Sign out",
+  "@profileSignOut": {},
+  "profileStartSelling": "Start selling",
+  "@profileStartSelling": {},
+
+  "sellSignInPrompt": "Sign in to start selling on Sokoni.",
+  "@sellSignInPrompt": {},
+
+  "sellerWizardComingSoon": "Seller registration launches soon — check back shortly.",
+  "@sellerWizardComingSoon": {}
 }

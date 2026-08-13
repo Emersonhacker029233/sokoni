@@ -51,5 +51,33 @@
 
   "commonRetry": "Jaribu tena",
   "commonSkip": "Ruka",
-  "commonClose": "Funga"
+  "commonClose": "Funga",
+
+  "offlineShowingSavedResults": "Huna mtandao — inaonyesha matokeo yaliyohifadhiwa",
+
+  "navHome": "Nyumbani",
+  "navSearch": "Tafuta",
+  "navSell": "Uza",
+  "navOrders": "Oda",
+  "navProfile": "Wasifu",
+
+  "homeComingSoonTitle": "Mipasho yako inakaribia kukamilika",
+  "homeComingSoonBody": "Vinjari kwa kategoria, umbali na utafutaji mara mipasho itakapoanza.",
+
+  "searchComingSoonTitle": "Tafuta",
+  "searchComingSoonBody": "Utafutaji wa bidhaa na maduka utaanza pamoja na mipasho.",
+
+  "ordersComingSoonTitle": "Hakuna oda bado",
+  "ordersComingSoonBody": "Oda utakazoweka zitaonekana hapa.",
+
+  "profileSignInTitle": "Unavinjari kama mgeni",
+  "profileSignInBody": "Ingia ili kuagiza, kuzungumza na wauzaji, na kuhifadhi vipendwa.",
+  "profileSignInAction": "Ingia",
+  "profileSignedInAs": "Umeingia kama {name}",
+  "profileSignOut": "Toka",
+  "profileStartSelling": "Anza kuuza",
+
+  "sellSignInPrompt": "Ingia ili kuanza kuuza kwenye Sokoni.",
+
+  "sellerWizardComingSoon": "Usajili wa wauzaji unaanza hivi karibuni — rudi baadaye."
 }

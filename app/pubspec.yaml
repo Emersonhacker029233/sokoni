@@ -69,6 +69,7 @@ dependencies:
   sign_in_with_apple: ^8.1.0
   path_provider: ^2.1.6
   connectivity_plus: ^7.3.1
+  path: ^1.9.1
 
 # win32 is a transitive Windows-desktop-only dependency pulled in by file_picker,
 # share_plus and wakelock_plus. This app only targets Android/iOS, so the actual
@@ -105,7 +106,7 @@ flutter_launcher_icons:
   image_path: "assets/brand/sokoni_logo.png"
   min_sdk_android: 21
   adaptive_icon_background: "#0A0A0A"
-  adaptive_icon_foreground: "../assets/brand/sokoni_logo.png"
+  adaptive_icon_foreground: "assets/brand/sokoni_logo.png"
   remove_alpha_ios: true
 
 flutter_native_splash:
