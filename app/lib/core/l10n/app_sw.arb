@@ -79,5 +79,26 @@
 
   "sellSignInPrompt": "Ingia ili kuanza kuuza kwenye Sokoni.",
 
-  "sellerWizardComingSoon": "Usajili wa wauzaji unaanza hivi karibuni — rudi baadaye."
+  "sellerWizardComingSoon": "Usajili wa wauzaji unaanza hivi karibuni — rudi baadaye.",
+
+  "categoryAll": "Zote",
+
+  "sortNearby": "Karibu Nawe",
+  "sortTrending": "Maarufu",
+  "sortNewest": "Wauzaji Wapya",
+
+  "radiusLabel": "Umbali",
+  "radiusAll": "Zote",
+  "radiusKm": "km {km}",
+
+  "feedEmptyTitle": "Hakuna bidhaa karibu bado",
+  "feedEmptyBody": "Jaribu umbali mkubwa zaidi au kategoria tofauti.",
+  "feedErrorBody": "Hatukuweza kupakia mipasho.",
+
+  "locationPermissionTitle": "Pata maduka karibu nawe",
+  "locationPermissionBody": "Sokoni hutumia eneo lako kuonyesha wauzaji walio karibu kwanza. Unaweza pia kuchagua eneo lako mwenyewe.",
+  "locationChooseArea": "Chagua eneo lako",
+  "locationEnable": "Washa eneo",
+
+  "searchHint": "Tafuta bidhaa na maduka"
 }

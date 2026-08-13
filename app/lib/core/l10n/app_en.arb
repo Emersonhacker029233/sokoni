@@ -146,5 +146,41 @@
   "@sellSignInPrompt": {},
 
   "sellerWizardComingSoon": "Seller registration launches soon — check back shortly.",
-  "@sellerWizardComingSoon": {}
+  "@sellerWizardComingSoon": {},
+
+  "categoryAll": "All",
+  "@categoryAll": {"description": "The 'All' category chip, always first"},
+
+  "sortNearby": "Near You",
+  "@sortNearby": {},
+  "sortTrending": "Trending",
+  "@sortTrending": {},
+  "sortNewest": "New Sellers",
+  "@sortNewest": {},
+
+  "radiusLabel": "Radius",
+  "@radiusLabel": {},
+  "radiusAll": "All",
+  "@radiusAll": {},
+  "radiusKm": "{km} km",
+  "@radiusKm": {"placeholders": {"km": {"type": "String"}}},
+
+  "feedEmptyTitle": "No products nearby yet",
+  "@feedEmptyTitle": {},
+  "feedEmptyBody": "Try a wider radius or a different category.",
+  "@feedEmptyBody": {},
+  "feedErrorBody": "We couldn't load the feed.",
+  "@feedErrorBody": {},
+
+  "locationPermissionTitle": "Find shops near you",
+  "@locationPermissionTitle": {},
+  "locationPermissionBody": "Sokoni uses your location to show nearby sellers first. You can also pick your area manually.",
+  "@locationPermissionBody": {},
+  "locationChooseArea": "Choose your area",
+  "@locationChooseArea": {},
+  "locationEnable": "Enable location",
+  "@locationEnable": {},
+
+  "searchHint": "Search products and shops",
+  "@searchHint": {}
 }

@@ -1,0 +1,123 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+
+import '../../../core/providers.dart';
+import '../../../data/api/catalog_api.dart';
+import '../../../data/models/category.dart';
+import '../../../data/models/product.dart';
+import '../../../data/repositories/product_repository.dart';
+import 'discovery_location.dart';
+
+final catalogApiProvider = Provider<CatalogApi>((ref) {
+  return CatalogApi(ref.watch(dioProvider));
+});
+
+final productRepositoryProvider = Provider<ProductRepository>((ref) {
+  return ProductRepository(
+    api: ref.watch(catalogApiProvider),
+    cache: ref.watch(appDatabaseProvider),
+  );
+});
+
+final categoriesProvider = FutureProvider<List<SokoniCategory>>((ref) async {
+  return ref.watch(productRepositoryProvider).categories();
+});
+
+/// Radius presets from CLAUDE.md feature 1 — null means "All" (unbounded).
+enum RadiusPreset {
+  km1(1),
+  km5(5),
+  km10(10),
+  km25(25),
+  all(null);
+
+  const RadiusPreset(this.km);
+  final double? km;
+}
+
+final radiusPresetProvider = StateProvider<RadiusPreset>((ref) => RadiusPreset.km5);
+
+/// null = "All" category chip selected.
+final selectedCategoryIdProvider = StateProvider<int?>((ref) => null);
+
+final searchQueryProvider = StateProvider<String>((ref) => '');
+
+enum FeedSort { nearby, trending, newest }
+
+final feedSortProvider = StateProvider<FeedSort>((ref) => FeedSort.nearby);
+
+/// List ⇄ map toggle (CLAUDE.md feature 1).
+final feedIsMapViewProvider = StateProvider<bool>((ref) => false);
+
+class DiscoveryFeedState {
+  const DiscoveryFeedState({required this.items, required this.hasMore, required this.page});
+
+  final List<Product> items;
+  final bool hasMore;
+  final int page;
+}
+
+/// Drives the home feed: re-fetches automatically whenever location,
+/// radius, category, search or sort change (each read via `ref.watch`),
+/// and supports pull-to-refresh / infinite scroll on top of that.
+class DiscoveryFeedController extends AsyncNotifier<DiscoveryFeedState> {
+  @override
+  Future<DiscoveryFeedState> build() async {
+    final location = await ref.watch(discoveryLocationProvider.future);
+    final result = await ref
+        .watch(productRepositoryProvider)
+        .products(
+          lat: location.coords?.lat,
+          lng: location.coords?.lng,
+          radiusKm: ref.watch(radiusPresetProvider).km,
+          categoryId: ref.watch(selectedCategoryIdProvider),
+          query: ref.watch(searchQueryProvider),
+          sort: switch (ref.watch(feedSortProvider)) {
+            FeedSort.nearby => 'nearby',
+            FeedSort.trending => 'trending',
+            FeedSort.newest => 'newest',
+          },
+          page: 1,
+        );
+    return DiscoveryFeedState(items: result.items, hasMore: result.hasMore, page: result.currentPage);
+  }
+
+  Future<void> refresh() async {
+    ref.invalidateSelf();
+    await future;
+  }
+
+  Future<void> loadMore() async {
+    final current = state.value;
+    if (current == null || !current.hasMore) return;
+
+    final location = await ref.read(discoveryLocationProvider.future);
+    final result = await ref
+        .read(productRepositoryProvider)
+        .products(
+          lat: location.coords?.lat,
+          lng: location.coords?.lng,
+          radiusKm: ref.read(radiusPresetProvider).km,
+          categoryId: ref.read(selectedCategoryIdProvider),
+          query: ref.read(searchQueryProvider),
+          sort: switch (ref.read(feedSortProvider)) {
+            FeedSort.nearby => 'nearby',
+            FeedSort.trending => 'trending',
+            FeedSort.newest => 'newest',
+          },
+          page: current.page + 1,
+        );
+
+    state = AsyncData(
+      DiscoveryFeedState(
+        items: [...current.items, ...result.items],
+        hasMore: result.hasMore,
+        page: result.currentPage,
+      ),
+    );
+  }
+}
+
+final discoveryFeedProvider = AsyncNotifierProvider<DiscoveryFeedController, DiscoveryFeedState>(
+  DiscoveryFeedController.new,
+);

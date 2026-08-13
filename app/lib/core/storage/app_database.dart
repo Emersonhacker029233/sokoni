@@ -87,6 +87,25 @@ class AppDatabase extends _$AppDatabase {
     return query.map((row) => row.json).get();
   }
 
+  Future<void> cacheCategories(List<(int id, String json)> rows) async {
+    final now = DateTime.now();
+    await batch((batch) {
+      batch.insertAllOnConflictUpdate(
+        cachedCategories,
+        [
+          for (final (id, json) in rows)
+            CachedCategoriesCompanion.insert(id: Value(id), json: json, cachedAt: now),
+        ],
+      );
+    });
+  }
+
+  Future<List<String>> readCachedCategoriesJson() {
+    return (select(
+      cachedCategories,
+    )..orderBy([(t) => OrderingTerm.asc(t.id)])).map((row) => row.json).get();
+  }
+
   Future<void> setKeyValue(String key, String value) {
     return into(cachedKeyValues).insertOnConflictUpdate(
       CachedKeyValuesCompanion.insert(key: key, value: value),
