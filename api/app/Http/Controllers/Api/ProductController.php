@@ -27,7 +27,8 @@ class ProductController extends Controller
         $query = Product::visible()
             ->with(['category', 'seller', 'media'])
             ->search($request->string('q')->toString() ?: null)
-            ->inCategory($request->integer('category_id') ?: null);
+            ->inCategory($request->integer('category_id') ?: null)
+            ->forSeller($request->integer('seller_id') ?: null);
 
         if ($hasLocation) {
             $paginated = $this->paginateByDistance($query, $lat, $lng, $request->float('radius_km') ?: null, $sort, $page);

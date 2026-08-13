@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -94,7 +96,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       itemCount: items.length,
                       itemBuilder: (context, index) => ProductCard(
                         product: items[index],
-                        onTap: () {}, // Product detail route lands in Phase 5.
+                        onTap: () => context.push(SokoniRoutes.product(items[index].id)),
                       ),
                     ),
             ),

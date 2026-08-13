@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/motion/motion.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/router/routes.dart';
+import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/product.dart';
@@ -147,12 +150,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _showSellerQuickView(BuildContext context, SellerSummary seller) {
-    // A fuller seller quick-view (bio, products, WhatsApp deep link) lands
-    // in Phase 5 alongside the shop profile screen — this is enough for
-    // tapping a map pin to be meaningfully useful today.
     return showSokoniBottomSheet<void>(
       context: context,
-      initialChildSize: 0.3,
+      initialChildSize: 0.32,
       builder: (context) => Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +162,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               if (seller.isVerified)
                 const Padding(
                   padding: EdgeInsets.only(right: 4),
-                  child: Icon(Icons.verified_rounded, color: Colors.amber, size: 18),
+                  child: Icon(Icons.verified_rounded, color: SokoniColors.sokoniYellow, size: 18),
                 ),
               Expanded(
                 child: Text(seller.shopName, style: Theme.of(context).textTheme.titleMedium),
@@ -174,10 +174,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+              const Icon(Icons.star_rounded, size: 16, color: SokoniColors.sokoniYellow),
               const SizedBox(width: 4),
               Text('${seller.ratingAvg.toStringAsFixed(1)} (${seller.ratingCount})'),
             ],
+          ),
+          const SizedBox(height: SokoniDimens.space16),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push(SokoniRoutes.shop(seller.handle));
+            },
+            child: Text(AppLocalizations.of(context).shopViewAction),
           ),
         ],
       ),
@@ -293,7 +301,7 @@ class _ProductGrid extends StatelessWidget {
             final product = items[index];
             final card = ProductCard(
               product: product,
-              onTap: () {}, // Product detail route lands in Phase 5.
+              onTap: () => context.push(SokoniRoutes.product(product.id)),
             );
             if (index >= staggeredCount) return card;
             return _StaggeredGridItem(index: index, child: card);

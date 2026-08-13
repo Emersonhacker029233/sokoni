@@ -81,4 +81,10 @@ class Product extends Model
     {
         return $categoryId ? $query->where('category_id', $categoryId) : $query;
     }
+
+    /** Restricts to one seller's products — powers the shop profile's product tab. */
+    public function scopeForSeller(Builder $query, ?int $sellerId): Builder
+    {
+        return $sellerId ? $query->where('seller_id', $sellerId) : $query;
+    }
 }

@@ -16,6 +16,7 @@ _SellerSummary _$SellerSummaryFromJson(Map<String, dynamic> json) =>
       ratingCount: (json['rating_count'] as num?)?.toInt() ?? 0,
       lat: (json['lat'] as num?)?.toDouble(),
       lng: (json['lng'] as num?)?.toDouble(),
+      whatsapp: json['whatsapp'] as String?,
     );
 
 Map<String, dynamic> _$SellerSummaryToJson(_SellerSummary instance) =>
@@ -28,4 +29,5 @@ Map<String, dynamic> _$SellerSummaryToJson(_SellerSummary instance) =>
       'rating_count': instance.ratingCount,
       'lat': instance.lat,
       'lng': instance.lng,
+      'whatsapp': instance.whatsapp,
     };

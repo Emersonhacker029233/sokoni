@@ -100,5 +100,35 @@
   "locationChooseArea": "Chagua eneo lako",
   "locationEnable": "Washa eneo",
 
-  "searchHint": "Tafuta bidhaa na maduka"
+  "searchHint": "Tafuta bidhaa na maduka",
+
+  "productWhatsapp": "WhatsApp",
+  "productMessageSeller": "Tuma ujumbe kwa muuzaji",
+  "productReport": "Ripoti",
+  "productShare": "Shiriki",
+  "productStock": "{count, plural, =0{Hazipo stoo} =1{1 ipo stoo} other{{count} zipo stoo}}",
+  "productConditionNew": "Mpya",
+  "productConditionUsed": "Iliyotumika",
+
+  "reportTitle": "Ripoti hii",
+  "reportReasonNotBusiness": "Si maudhui ya biashara",
+  "reportReasonProhibited": "Bidhaa iliyokatazwa",
+  "reportReasonMisleading": "Tangazo la kupotosha",
+  "reportReasonSpam": "Taka",
+  "reportSubmitted": "Asante — tutaangalia.",
+
+  "shopReviewsTitle": "Maoni",
+  "shopMediaTitle": "Picha na Video",
+  "shopProductsTitle": "Bidhaa",
+  "shopNoReviews": "Hakuna maoni bado",
+  "shopVerifiedBadge": "Muuzaji aliyethibitishwa",
+  "shopPendingBadge": "Uthibitishaji unasubiri",
+
+  "favoritesTitle": "Vipendwa",
+  "favoritesEmptyTitle": "Hakuna vipendwa bado",
+  "favoritesEmptyBody": "Gusa moyo kwenye bidhaa ili kuihifadhi hapa.",
+
+  "chatComingSoon": "Mazungumzo kamili — kuangalia mara kwa mara, uthibitisho wa kusoma, viambatisho vya picha — vitaanza hivi karibuni. Mazungumzo yako yameundwa na yako tayari.",
+
+  "shopViewAction": "Angalia duka"
 }

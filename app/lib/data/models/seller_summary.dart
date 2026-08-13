@@ -17,6 +17,7 @@ abstract class SellerSummary with _$SellerSummary {
     @JsonKey(name: 'rating_count') @Default(0) int ratingCount,
     double? lat,
     double? lng,
+    String? whatsapp,
   }) = _SellerSummary;
 
   factory SellerSummary.fromJson(Map<String, dynamic> json) => _$SellerSummaryFromJson(json);

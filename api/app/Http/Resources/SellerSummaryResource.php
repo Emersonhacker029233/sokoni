@@ -26,6 +26,9 @@ class SellerSummaryResource extends JsonResource
             'rating_count' => $this->rating_count,
             'lat' => $this->when($this->hasLocation(), fn () => (float) $this->lat),
             'lng' => $this->when($this->hasLocation(), fn () => (float) $this->lng),
+            // WhatsApp deep link on product pages (CLAUDE.md feature 5),
+            // toggleable by the seller.
+            'whatsapp' => $this->when($this->show_whatsapp, $this->whatsapp),
         ];
     }
 }

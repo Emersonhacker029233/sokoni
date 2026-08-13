@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SellerSummary {
 
- int get id;@JsonKey(name: 'shop_name') String get shopName; String get handle;@JsonKey(name: 'is_verified') bool get isVerified;@JsonKey(name: 'rating_avg') double get ratingAvg;@JsonKey(name: 'rating_count') int get ratingCount; double? get lat; double? get lng;
+ int get id;@JsonKey(name: 'shop_name') String get shopName; String get handle;@JsonKey(name: 'is_verified') bool get isVerified;@JsonKey(name: 'rating_avg') double get ratingAvg;@JsonKey(name: 'rating_count') int get ratingCount; double? get lat; double? get lng; String? get whatsapp;
 /// Create a copy of SellerSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $SellerSummaryCopyWith<SellerSummary> get copyWith => _$SellerSummaryCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SellerSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.shopName, shopName) || other.shopName == shopName)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.ratingAvg, ratingAvg) || other.ratingAvg == ratingAvg)&&(identical(other.ratingCount, ratingCount) || other.ratingCount == ratingCount)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SellerSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.shopName, shopName) || other.shopName == shopName)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.ratingAvg, ratingAvg) || other.ratingAvg == ratingAvg)&&(identical(other.ratingCount, ratingCount) || other.ratingCount == ratingCount)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.whatsapp, whatsapp) || other.whatsapp == whatsapp));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,shopName,handle,isVerified,ratingAvg,ratingCount,lat,lng);
+int get hashCode => Object.hash(runtimeType,id,shopName,handle,isVerified,ratingAvg,ratingCount,lat,lng,whatsapp);
 
 @override
 String toString() {
-  return 'SellerSummary(id: $id, shopName: $shopName, handle: $handle, isVerified: $isVerified, ratingAvg: $ratingAvg, ratingCount: $ratingCount, lat: $lat, lng: $lng)';
+  return 'SellerSummary(id: $id, shopName: $shopName, handle: $handle, isVerified: $isVerified, ratingAvg: $ratingAvg, ratingCount: $ratingCount, lat: $lat, lng: $lng, whatsapp: $whatsapp)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $SellerSummaryCopyWith<$Res>  {
   factory $SellerSummaryCopyWith(SellerSummary value, $Res Function(SellerSummary) _then) = _$SellerSummaryCopyWithImpl;
 @useResult
 $Res call({
- int id,@JsonKey(name: 'shop_name') String shopName, String handle,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'rating_avg') double ratingAvg,@JsonKey(name: 'rating_count') int ratingCount, double? lat, double? lng
+ int id,@JsonKey(name: 'shop_name') String shopName, String handle,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'rating_avg') double ratingAvg,@JsonKey(name: 'rating_count') int ratingCount, double? lat, double? lng, String? whatsapp
 });
 
 
@@ -65,7 +65,7 @@ class _$SellerSummaryCopyWithImpl<$Res>
 
 /// Create a copy of SellerSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? shopName = null,Object? handle = null,Object? isVerified = null,Object? ratingAvg = null,Object? ratingCount = null,Object? lat = freezed,Object? lng = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? shopName = null,Object? handle = null,Object? isVerified = null,Object? ratingAvg = null,Object? ratingCount = null,Object? lat = freezed,Object? lng = freezed,Object? whatsapp = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,shopName: null == shopName ? _self.shopName : shopName // ignore: cast_nullable_to_non_nullable
@@ -75,7 +75,8 @@ as bool,ratingAvg: null == ratingAvg ? _self.ratingAvg : ratingAvg // ignore: ca
 as double,ratingCount: null == ratingCount ? _self.ratingCount : ratingCount // ignore: cast_nullable_to_non_nullable
 as int,lat: freezed == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
 as double?,lng: freezed == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
-as double?,
+as double?,whatsapp: freezed == whatsapp ? _self.whatsapp : whatsapp // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -160,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SellerSummary() when $default != null:
-return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng,_that.whatsapp);case _:
   return orElse();
 
 }
@@ -181,10 +182,10 @@ return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.rati
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp)  $default,) {final _that = this;
 switch (_that) {
 case _SellerSummary():
-return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng,_that.whatsapp);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +202,10 @@ return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.rati
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp)?  $default,) {final _that = this;
 switch (_that) {
 case _SellerSummary() when $default != null:
-return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng,_that.whatsapp);case _:
   return null;
 
 }
@@ -216,7 +217,7 @@ return $default(_that.id,_that.shopName,_that.handle,_that.isVerified,_that.rati
 @JsonSerializable()
 
 class _SellerSummary implements SellerSummary {
-  const _SellerSummary({required this.id, @JsonKey(name: 'shop_name') required this.shopName, required this.handle, @JsonKey(name: 'is_verified') this.isVerified = false, @JsonKey(name: 'rating_avg') this.ratingAvg = 0, @JsonKey(name: 'rating_count') this.ratingCount = 0, this.lat, this.lng});
+  const _SellerSummary({required this.id, @JsonKey(name: 'shop_name') required this.shopName, required this.handle, @JsonKey(name: 'is_verified') this.isVerified = false, @JsonKey(name: 'rating_avg') this.ratingAvg = 0, @JsonKey(name: 'rating_count') this.ratingCount = 0, this.lat, this.lng, this.whatsapp});
   factory _SellerSummary.fromJson(Map<String, dynamic> json) => _$SellerSummaryFromJson(json);
 
 @override final  int id;
@@ -227,6 +228,7 @@ class _SellerSummary implements SellerSummary {
 @override@JsonKey(name: 'rating_count') final  int ratingCount;
 @override final  double? lat;
 @override final  double? lng;
+@override final  String? whatsapp;
 
 /// Create a copy of SellerSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -241,16 +243,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SellerSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.shopName, shopName) || other.shopName == shopName)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.ratingAvg, ratingAvg) || other.ratingAvg == ratingAvg)&&(identical(other.ratingCount, ratingCount) || other.ratingCount == ratingCount)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SellerSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.shopName, shopName) || other.shopName == shopName)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.ratingAvg, ratingAvg) || other.ratingAvg == ratingAvg)&&(identical(other.ratingCount, ratingCount) || other.ratingCount == ratingCount)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.whatsapp, whatsapp) || other.whatsapp == whatsapp));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,shopName,handle,isVerified,ratingAvg,ratingCount,lat,lng);
+int get hashCode => Object.hash(runtimeType,id,shopName,handle,isVerified,ratingAvg,ratingCount,lat,lng,whatsapp);
 
 @override
 String toString() {
-  return 'SellerSummary(id: $id, shopName: $shopName, handle: $handle, isVerified: $isVerified, ratingAvg: $ratingAvg, ratingCount: $ratingCount, lat: $lat, lng: $lng)';
+  return 'SellerSummary(id: $id, shopName: $shopName, handle: $handle, isVerified: $isVerified, ratingAvg: $ratingAvg, ratingCount: $ratingCount, lat: $lat, lng: $lng, whatsapp: $whatsapp)';
 }
 
 
@@ -261,7 +263,7 @@ abstract mixin class _$SellerSummaryCopyWith<$Res> implements $SellerSummaryCopy
   factory _$SellerSummaryCopyWith(_SellerSummary value, $Res Function(_SellerSummary) _then) = __$SellerSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- int id,@JsonKey(name: 'shop_name') String shopName, String handle,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'rating_avg') double ratingAvg,@JsonKey(name: 'rating_count') int ratingCount, double? lat, double? lng
+ int id,@JsonKey(name: 'shop_name') String shopName, String handle,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'rating_avg') double ratingAvg,@JsonKey(name: 'rating_count') int ratingCount, double? lat, double? lng, String? whatsapp
 });
 
 
@@ -278,7 +280,7 @@ class __$SellerSummaryCopyWithImpl<$Res>
 
 /// Create a copy of SellerSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? shopName = null,Object? handle = null,Object? isVerified = null,Object? ratingAvg = null,Object? ratingCount = null,Object? lat = freezed,Object? lng = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? shopName = null,Object? handle = null,Object? isVerified = null,Object? ratingAvg = null,Object? ratingCount = null,Object? lat = freezed,Object? lng = freezed,Object? whatsapp = freezed,}) {
   return _then(_SellerSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,shopName: null == shopName ? _self.shopName : shopName // ignore: cast_nullable_to_non_nullable
@@ -288,7 +290,8 @@ as bool,ratingAvg: null == ratingAvg ? _self.ratingAvg : ratingAvg // ignore: ca
 as double,ratingCount: null == ratingCount ? _self.ratingCount : ratingCount // ignore: cast_nullable_to_non_nullable
 as int,lat: freezed == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
 as double?,lng: freezed == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
-as double?,
+as double?,whatsapp: freezed == whatsapp ? _self.whatsapp : whatsapp // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

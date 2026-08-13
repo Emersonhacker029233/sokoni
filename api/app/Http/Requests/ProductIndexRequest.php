@@ -21,6 +21,7 @@ class ProductIndexRequest extends FormRequest
             // omitted entirely for "All".
             'radius_km' => ['nullable', 'numeric', Rule::in([1, 5, 10, 25])],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'seller_id' => ['nullable', 'integer', 'exists:seller_profiles,id'],
             'q' => ['nullable', 'string', 'max:255'],
             'sort' => ['nullable', 'string', Rule::in(['nearby', 'trending', 'newest'])],
             'page' => ['nullable', 'integer', 'min:1'],

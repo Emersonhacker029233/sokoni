@@ -11,4 +11,16 @@ abstract final class SokoniRoutes {
   static const sell = '/sell';
   static const orders = '/orders';
   static const profile = '/profile';
+
+  // Detail routes, pushed on top of the tab shell.
+  static String product(int id) => '/products/$id';
+  static const productPattern = '/products/:id';
+
+  static String shop(String handle) => '/shop/$handle';
+  static const shopPattern = '/shop/:handle';
+
+  static String conversation(int id) => '/conversations/$id';
+  static const conversationPattern = '/conversations/:id';
+
+  static const favorites = '/favorites';
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/providers.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../data/models/user.dart';
 import '../../../features/auth/providers/auth_providers.dart';
@@ -51,6 +53,14 @@ class _SignedInProfile extends ConsumerWidget {
             children: [
               Text(l10n.profileSignedInAs(user.name), style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: SokoniDimens.space24),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.favorite_border_rounded),
+                title: Text(l10n.favoritesTitle),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(SokoniRoutes.favorites),
+              ),
+              const SizedBox(height: SokoniDimens.space12),
               OutlinedButton(
                 onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(l10n.sellerWizardComingSoon)),
