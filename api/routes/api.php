@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations', [ConversationController::class, 'index']);
     Route::post('/conversations', [ConversationController::class, 'store']);
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
+    Route::patch('/conversations/{conversation}/typing', [ConversationController::class, 'typing']);
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index']);
     Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store']);
 

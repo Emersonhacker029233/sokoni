@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SokoniUser {
 
- int get id; String get name; String? get email; String? get phone; String? get avatar; String? get locale;@JsonKey(name: 'is_seller') bool get isSeller;@JsonKey(name: 'seller_status') String? get sellerStatus;@JsonKey(name: 'terms_accepted') bool get termsAccepted;@JsonKey(name: 'created_at') DateTime? get createdAt;
+ int get id; String get name; String? get email; String? get phone; String? get avatar; String? get locale;@JsonKey(name: 'is_seller') bool get isSeller;@JsonKey(name: 'seller_status') String? get sellerStatus;@JsonKey(name: 'seller_handle') String? get sellerHandle;@JsonKey(name: 'terms_accepted') bool get termsAccepted;@JsonKey(name: 'created_at') DateTime? get createdAt;
 /// Create a copy of SokoniUser
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $SokoniUserCopyWith<SokoniUser> get copyWith => _$SokoniUserCopyWithImpl<SokoniU
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SokoniUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.locale, locale) || other.locale == locale)&&(identical(other.isSeller, isSeller) || other.isSeller == isSeller)&&(identical(other.sellerStatus, sellerStatus) || other.sellerStatus == sellerStatus)&&(identical(other.termsAccepted, termsAccepted) || other.termsAccepted == termsAccepted)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SokoniUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.locale, locale) || other.locale == locale)&&(identical(other.isSeller, isSeller) || other.isSeller == isSeller)&&(identical(other.sellerStatus, sellerStatus) || other.sellerStatus == sellerStatus)&&(identical(other.sellerHandle, sellerHandle) || other.sellerHandle == sellerHandle)&&(identical(other.termsAccepted, termsAccepted) || other.termsAccepted == termsAccepted)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,email,phone,avatar,locale,isSeller,sellerStatus,termsAccepted,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,email,phone,avatar,locale,isSeller,sellerStatus,sellerHandle,termsAccepted,createdAt);
 
 @override
 String toString() {
-  return 'SokoniUser(id: $id, name: $name, email: $email, phone: $phone, avatar: $avatar, locale: $locale, isSeller: $isSeller, sellerStatus: $sellerStatus, termsAccepted: $termsAccepted, createdAt: $createdAt)';
+  return 'SokoniUser(id: $id, name: $name, email: $email, phone: $phone, avatar: $avatar, locale: $locale, isSeller: $isSeller, sellerStatus: $sellerStatus, sellerHandle: $sellerHandle, termsAccepted: $termsAccepted, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $SokoniUserCopyWith<$Res>  {
   factory $SokoniUserCopyWith(SokoniUser value, $Res Function(SokoniUser) _then) = _$SokoniUserCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, String? email, String? phone, String? avatar, String? locale,@JsonKey(name: 'is_seller') bool isSeller,@JsonKey(name: 'seller_status') String? sellerStatus,@JsonKey(name: 'terms_accepted') bool termsAccepted,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id, String name, String? email, String? phone, String? avatar, String? locale,@JsonKey(name: 'is_seller') bool isSeller,@JsonKey(name: 'seller_status') String? sellerStatus,@JsonKey(name: 'seller_handle') String? sellerHandle,@JsonKey(name: 'terms_accepted') bool termsAccepted,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -65,7 +65,7 @@ class _$SokoniUserCopyWithImpl<$Res>
 
 /// Create a copy of SokoniUser
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = freezed,Object? phone = freezed,Object? avatar = freezed,Object? locale = freezed,Object? isSeller = null,Object? sellerStatus = freezed,Object? termsAccepted = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = freezed,Object? phone = freezed,Object? avatar = freezed,Object? locale = freezed,Object? isSeller = null,Object? sellerStatus = freezed,Object? sellerHandle = freezed,Object? termsAccepted = null,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -75,6 +75,7 @@ as String?,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nul
 as String?,locale: freezed == locale ? _self.locale : locale // ignore: cast_nullable_to_non_nullable
 as String?,isSeller: null == isSeller ? _self.isSeller : isSeller // ignore: cast_nullable_to_non_nullable
 as bool,sellerStatus: freezed == sellerStatus ? _self.sellerStatus : sellerStatus // ignore: cast_nullable_to_non_nullable
+as String?,sellerHandle: freezed == sellerHandle ? _self.sellerHandle : sellerHandle // ignore: cast_nullable_to_non_nullable
 as String?,termsAccepted: null == termsAccepted ? _self.termsAccepted : termsAccepted // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
@@ -162,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String? email,  String? phone,  String? avatar,  String? locale, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'seller_status')  String? sellerStatus, @JsonKey(name: 'terms_accepted')  bool termsAccepted, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String? email,  String? phone,  String? avatar,  String? locale, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'seller_status')  String? sellerStatus, @JsonKey(name: 'seller_handle')  String? sellerHandle, @JsonKey(name: 'terms_accepted')  bool termsAccepted, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SokoniUser() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.locale,_that.isSeller,_that.sellerStatus,_that.termsAccepted,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.locale,_that.isSeller,_that.sellerStatus,_that.sellerHandle,_that.termsAccepted,_that.createdAt);case _:
   return orElse();
 
 }
@@ -183,10 +184,10 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.l
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String? email,  String? phone,  String? avatar,  String? locale, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'seller_status')  String? sellerStatus, @JsonKey(name: 'terms_accepted')  bool termsAccepted, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String? email,  String? phone,  String? avatar,  String? locale, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'seller_status')  String? sellerStatus, @JsonKey(name: 'seller_handle')  String? sellerHandle, @JsonKey(name: 'terms_accepted')  bool termsAccepted, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _SokoniUser():
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.locale,_that.isSeller,_that.sellerStatus,_that.termsAccepted,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.locale,_that.isSeller,_that.sellerStatus,_that.sellerHandle,_that.termsAccepted,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +204,10 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.l
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String? email,  String? phone,  String? avatar,  String? locale, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'seller_status')  String? sellerStatus, @JsonKey(name: 'terms_accepted')  bool termsAccepted, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String? email,  String? phone,  String? avatar,  String? locale, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'seller_status')  String? sellerStatus, @JsonKey(name: 'seller_handle')  String? sellerHandle, @JsonKey(name: 'terms_accepted')  bool termsAccepted, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _SokoniUser() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.locale,_that.isSeller,_that.sellerStatus,_that.termsAccepted,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.locale,_that.isSeller,_that.sellerStatus,_that.sellerHandle,_that.termsAccepted,_that.createdAt);case _:
   return null;
 
 }
@@ -218,7 +219,7 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.avatar,_that.l
 @JsonSerializable()
 
 class _SokoniUser implements SokoniUser {
-  const _SokoniUser({required this.id, required this.name, this.email, this.phone, this.avatar, this.locale, @JsonKey(name: 'is_seller') required this.isSeller, @JsonKey(name: 'seller_status') this.sellerStatus, @JsonKey(name: 'terms_accepted') required this.termsAccepted, @JsonKey(name: 'created_at') this.createdAt});
+  const _SokoniUser({required this.id, required this.name, this.email, this.phone, this.avatar, this.locale, @JsonKey(name: 'is_seller') required this.isSeller, @JsonKey(name: 'seller_status') this.sellerStatus, @JsonKey(name: 'seller_handle') this.sellerHandle, @JsonKey(name: 'terms_accepted') required this.termsAccepted, @JsonKey(name: 'created_at') this.createdAt});
   factory _SokoniUser.fromJson(Map<String, dynamic> json) => _$SokoniUserFromJson(json);
 
 @override final  int id;
@@ -229,6 +230,7 @@ class _SokoniUser implements SokoniUser {
 @override final  String? locale;
 @override@JsonKey(name: 'is_seller') final  bool isSeller;
 @override@JsonKey(name: 'seller_status') final  String? sellerStatus;
+@override@JsonKey(name: 'seller_handle') final  String? sellerHandle;
 @override@JsonKey(name: 'terms_accepted') final  bool termsAccepted;
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
 
@@ -245,16 +247,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SokoniUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.locale, locale) || other.locale == locale)&&(identical(other.isSeller, isSeller) || other.isSeller == isSeller)&&(identical(other.sellerStatus, sellerStatus) || other.sellerStatus == sellerStatus)&&(identical(other.termsAccepted, termsAccepted) || other.termsAccepted == termsAccepted)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SokoniUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.locale, locale) || other.locale == locale)&&(identical(other.isSeller, isSeller) || other.isSeller == isSeller)&&(identical(other.sellerStatus, sellerStatus) || other.sellerStatus == sellerStatus)&&(identical(other.sellerHandle, sellerHandle) || other.sellerHandle == sellerHandle)&&(identical(other.termsAccepted, termsAccepted) || other.termsAccepted == termsAccepted)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,email,phone,avatar,locale,isSeller,sellerStatus,termsAccepted,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,email,phone,avatar,locale,isSeller,sellerStatus,sellerHandle,termsAccepted,createdAt);
 
 @override
 String toString() {
-  return 'SokoniUser(id: $id, name: $name, email: $email, phone: $phone, avatar: $avatar, locale: $locale, isSeller: $isSeller, sellerStatus: $sellerStatus, termsAccepted: $termsAccepted, createdAt: $createdAt)';
+  return 'SokoniUser(id: $id, name: $name, email: $email, phone: $phone, avatar: $avatar, locale: $locale, isSeller: $isSeller, sellerStatus: $sellerStatus, sellerHandle: $sellerHandle, termsAccepted: $termsAccepted, createdAt: $createdAt)';
 }
 
 
@@ -265,7 +267,7 @@ abstract mixin class _$SokoniUserCopyWith<$Res> implements $SokoniUserCopyWith<$
   factory _$SokoniUserCopyWith(_SokoniUser value, $Res Function(_SokoniUser) _then) = __$SokoniUserCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, String? email, String? phone, String? avatar, String? locale,@JsonKey(name: 'is_seller') bool isSeller,@JsonKey(name: 'seller_status') String? sellerStatus,@JsonKey(name: 'terms_accepted') bool termsAccepted,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id, String name, String? email, String? phone, String? avatar, String? locale,@JsonKey(name: 'is_seller') bool isSeller,@JsonKey(name: 'seller_status') String? sellerStatus,@JsonKey(name: 'seller_handle') String? sellerHandle,@JsonKey(name: 'terms_accepted') bool termsAccepted,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -282,7 +284,7 @@ class __$SokoniUserCopyWithImpl<$Res>
 
 /// Create a copy of SokoniUser
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = freezed,Object? phone = freezed,Object? avatar = freezed,Object? locale = freezed,Object? isSeller = null,Object? sellerStatus = freezed,Object? termsAccepted = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = freezed,Object? phone = freezed,Object? avatar = freezed,Object? locale = freezed,Object? isSeller = null,Object? sellerStatus = freezed,Object? sellerHandle = freezed,Object? termsAccepted = null,Object? createdAt = freezed,}) {
   return _then(_SokoniUser(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -292,6 +294,7 @@ as String?,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nul
 as String?,locale: freezed == locale ? _self.locale : locale // ignore: cast_nullable_to_non_nullable
 as String?,isSeller: null == isSeller ? _self.isSeller : isSeller // ignore: cast_nullable_to_non_nullable
 as bool,sellerStatus: freezed == sellerStatus ? _self.sellerStatus : sellerStatus // ignore: cast_nullable_to_non_nullable
+as String?,sellerHandle: freezed == sellerHandle ? _self.sellerHandle : sellerHandle // ignore: cast_nullable_to_non_nullable
 as String?,termsAccepted: null == termsAccepted ? _self.termsAccepted : termsAccepted // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,

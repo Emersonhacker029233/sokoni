@@ -13,10 +13,15 @@ class Conversation extends Model
 {
     use HasFactory;
 
+    /** How long a "typing" signal stays valid after the client sends it. */
+    public const TYPING_TTL_SECONDS = 6;
+
     protected function casts(): array
     {
         return [
             'last_message_at' => 'datetime',
+            'buyer_typing_until' => 'datetime',
+            'seller_typing_until' => 'datetime',
         ];
     }
 
@@ -49,5 +54,20 @@ class Conversation extends Model
     public function involves(User $user): bool
     {
         return $this->buyer_id === $user->id || $this->seller->user_id === $user->id;
+    }
+
+    /** Whether the party opposite $user is currently (within the TTL) typing. */
+    public function otherPartyTyping(User $user): bool
+    {
+        $until = $this->buyer_id === $user->id ? $this->seller_typing_until : $this->buyer_typing_until;
+
+        return $until !== null && $until->isFuture();
+    }
+
+    /** Marks $user as currently typing, from the caller's own role. */
+    public function markTyping(User $user): void
+    {
+        $column = $this->buyer_id === $user->id ? 'buyer_typing_until' : 'seller_typing_until';
+        $this->forceFill([$column => now()->addSeconds(self::TYPING_TTL_SECONDS)])->save();
     }
 }

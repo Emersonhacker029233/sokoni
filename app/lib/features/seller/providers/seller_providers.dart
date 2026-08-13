@@ -1,13 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../../data/api/review_api.dart';
 import '../../../data/api/seller_api.dart';
 import '../../../data/models/paginated_result.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/seller_profile.dart';
+import '../../../data/repositories/review_repository.dart';
 import '../../../data/repositories/seller_repository.dart';
 
 final sellerApiProvider = Provider<SellerApi>((ref) => SellerApi(ref.watch(dioProvider)));
+
+final reviewApiProvider = Provider<ReviewApi>((ref) => ReviewApi(ref.watch(dioProvider)));
+
+final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
+  return ReviewRepository(api: ref.watch(reviewApiProvider));
+});
 
 final sellerRepositoryProvider = Provider<SellerRepository>((ref) {
   return SellerRepository(api: ref.watch(sellerApiProvider), dio: ref.watch(dioProvider));

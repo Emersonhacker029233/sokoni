@@ -19,6 +19,7 @@ abstract final class SokoniRoutes {
   static String shop(String handle) => '/shop/$handle';
   static const shopPattern = '/shop/:handle';
 
+  static const conversations = '/conversations';
   static String conversation(int id) => '/conversations/$id';
   static const conversationPattern = '/conversations/:id';
 

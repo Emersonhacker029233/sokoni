@@ -19,6 +19,7 @@ class UserResource extends JsonResource
             'locale' => $this->locale,
             'is_seller' => $this->isSeller(),
             'seller_status' => $this->sellerProfile?->status,
+            'seller_handle' => $this->sellerProfile?->handle,
             'terms_accepted' => $this->terms_accepted_at !== null,
             'created_at' => $this->created_at,
         ];

@@ -9,6 +9,7 @@ use App\Models\Conversation;
 use App\Services\Push\PushNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
 {
@@ -36,14 +37,18 @@ class MessageController extends Controller
 
     public function store(StoreMessageRequest $request, Conversation $conversation): MessageResource
     {
-        $path = $request->hasFile('attachment')
-            ? $request->file('attachment')->store('chat', 'public')
+        // Stored as a full URL, not a disk-relative path — matches the
+        // convention every other media field in the API already uses
+        // (see ProductMediaController), so the client never needs to know
+        // about the storage disk to render an attachment.
+        $attachmentUrl = $request->hasFile('attachment')
+            ? Storage::disk('public')->url($request->file('attachment')->store('chat', 'public'))
             : null;
 
         $message = $conversation->messages()->create([
             'sender_id' => $request->user()->id,
             'body' => $request->string('body') ?: null,
-            'attachment' => $path,
+            'attachment' => $attachmentUrl,
         ]);
 
         $conversation->update(['last_message_at' => now()]);

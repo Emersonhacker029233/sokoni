@@ -8,11 +8,13 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
+import '../../../data/models/review.dart';
 import '../../../data/models/seller_profile.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/product_card.dart';
 import '../../../shared/widgets/report_sheet.dart';
+import '../../auth/providers/auth_providers.dart';
 import '../../discovery/providers/discovery_providers.dart';
 import '../providers/seller_providers.dart';
 import 'widgets/review_distribution_bar.dart';
@@ -204,7 +206,7 @@ class _ShopReviewsTab extends ConsumerWidget {
           children: [
             ReviewDistributionBar(distribution: distribution, total: page.total),
             const SizedBox(height: SokoniDimens.space16),
-            for (final review in page.items) _ReviewTile(review: review),
+            for (final review in page.items) _ReviewTile(review: review, shopHandle: handle),
           ],
         );
       },
@@ -212,13 +214,21 @@ class _ShopReviewsTab extends ConsumerWidget {
   }
 }
 
-class _ReviewTile extends StatelessWidget {
-  const _ReviewTile({required this.review});
+class _ReviewTile extends ConsumerWidget {
+  const _ReviewTile({required this.review, required this.shopHandle});
 
-  final dynamic review;
+  final Review review;
+  final String shopHandle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final currentUserAsync = ref.watch(currentUserProvider);
+    final isOwner = currentUserAsync.maybeWhen(
+      data: (user) => user.sellerHandle == shopHandle,
+      orElse: () => false,
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: SokoniDimens.space16),
       child: Column(
@@ -242,7 +252,7 @@ class _ReviewTile extends StatelessWidget {
           ),
           if (review.comment != null) ...[
             const SizedBox(height: 4),
-            Text(review.comment),
+            Text(review.comment!),
           ],
           if (review.reply != null) ...[
             const SizedBox(height: 8),
@@ -252,11 +262,59 @@ class _ReviewTile extends StatelessWidget {
                 color: SokoniColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(SokoniDimens.radiusField),
               ),
-              child: Text(review.reply, style: Theme.of(context).textTheme.bodySmall),
+              child: Text(review.reply!, style: Theme.of(context).textTheme.bodySmall),
+            ),
+          ] else if (isOwner) ...[
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => _showReplySheet(context, ref),
+              child: Text(l10n.reviewReply),
             ),
           ],
         ],
       ),
     );
+  }
+
+  Future<void> _showReplySheet(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final controller = TextEditingController();
+    final reply = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          left: SokoniDimens.space20,
+          right: SokoniDimens.space20,
+          top: SokoniDimens.space20,
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + SokoniDimens.space24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.reviewReply, style: Theme.of(sheetContext).textTheme.titleLarge),
+            const SizedBox(height: SokoniDimens.space16),
+            TextField(controller: controller, maxLines: 3, autofocus: true),
+            const SizedBox(height: SokoniDimens.space20),
+            FilledButton(
+              onPressed: () => Navigator.of(sheetContext).pop(controller.text.trim()),
+              child: Text(l10n.reviewSubmit),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (reply == null || reply.isEmpty) return;
+
+    try {
+      await ref.read(reviewRepositoryProvider).reply(reviewId: review.id, reply: reply);
+      ref.invalidate(sellerReviewsProvider(shopHandle));
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
   }
 }

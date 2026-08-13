@@ -133,6 +133,11 @@
   "favoritesEmptyBody": "Gusa moyo kwenye bidhaa ili kuihifadhi hapa.",
 
   "chatComingSoon": "Mazungumzo kamili — kuangalia mara kwa mara, uthibitisho wa kusoma, viambatisho vya picha — vitaanza hivi karibuni. Mazungumzo yako yameundwa na yako tayari.",
+  "chatTitle": "Ujumbe",
+  "chatEmptyTitle": "Hakuna ujumbe bado",
+  "chatEmptyBody": "Tuma ujumbe kwa muuzaji kutoka ukurasa wa bidhaa au duka ili kuanza mazungumzo.",
+  "chatTyping": "Anaandika…",
+  "chatMessageHint": "Ujumbe",
 
   "shopViewAction": "Angalia duka",
 
@@ -248,5 +253,10 @@
   "orderCancel": "Ghairi oda",
   "orderCancelReason": "Sababu (hiari)",
 
-  "commonCancel": "Ghairi"
+  "commonCancel": "Ghairi",
+
+  "reviewLeaveReview": "Toa maoni",
+  "reviewCommentHint": "Maoni (hiari)",
+  "reviewSubmit": "Wasilisha",
+  "reviewReply": "Jibu"
 }

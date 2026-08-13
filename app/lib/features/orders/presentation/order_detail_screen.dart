@@ -10,6 +10,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../data/models/order.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../seller/providers/seller_providers.dart';
 import '../providers/order_providers.dart';
 
 /// Next forward status for each current status — drives the seller's
@@ -167,6 +168,105 @@ class _OrderDetailBodyState extends ConsumerState<_OrderDetailBody> {
               child: Text(l10n.orderCancel),
             ),
           ],
+          if (!isSeller && order.status == 'completed' && order.hasReview != true) ...[
+            const SizedBox(height: SokoniDimens.space8),
+            FilledButton.icon(
+              onPressed: _updating ? null : _leaveReview,
+              icon: const Icon(Icons.star_outline_rounded),
+              label: Text(l10n.reviewLeaveReview),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _leaveReview() async {
+    final l10n = AppLocalizations.of(context);
+    final result = await showModalBottomSheet<({int rating, String comment})>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => _ReviewSheet(l10n: l10n),
+    );
+    if (result == null) return;
+
+    setState(() => _updating = true);
+    try {
+      await ref
+          .read(reviewRepositoryProvider)
+          .submit(orderId: widget.order.id, rating: result.rating, comment: result.comment.isEmpty ? null : result.comment);
+      ref.invalidate(orderDetailProvider(widget.order.id));
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+}
+
+class _ReviewSheet extends StatefulWidget {
+  const _ReviewSheet({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  State<_ReviewSheet> createState() => _ReviewSheetState();
+}
+
+class _ReviewSheetState extends State<_ReviewSheet> {
+  int _rating = 5;
+  final _commentController = TextEditingController();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: SokoniDimens.space20,
+        right: SokoniDimens.space20,
+        top: SokoniDimens.space20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + SokoniDimens.space24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.l10n.reviewLeaveReview, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: SokoniDimens.space16),
+          Row(
+            children: [
+              for (var i = 1; i <= 5; i++)
+                IconButton(
+                  icon: Icon(
+                    i <= _rating ? Icons.star_rounded : Icons.star_border_rounded,
+                    color: SokoniColors.sokoniYellow,
+                    size: 32,
+                  ),
+                  onPressed: () => setState(() => _rating = i),
+                ),
+            ],
+          ),
+          const SizedBox(height: SokoniDimens.space12),
+          TextField(
+            controller: _commentController,
+            maxLines: 3,
+            decoration: InputDecoration(labelText: widget.l10n.reviewCommentHint),
+          ),
+          const SizedBox(height: SokoniDimens.space20),
+          FilledButton(
+            onPressed: () => Navigator.of(
+              context,
+            ).pop((rating: _rating, comment: _commentController.text.trim())),
+            child: Text(widget.l10n.reviewSubmit),
+          ),
         ],
       ),
     );

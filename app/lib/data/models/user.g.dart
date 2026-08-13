@@ -15,6 +15,7 @@ _SokoniUser _$SokoniUserFromJson(Map<String, dynamic> json) => _SokoniUser(
   locale: json['locale'] as String?,
   isSeller: json['is_seller'] as bool,
   sellerStatus: json['seller_status'] as String?,
+  sellerHandle: json['seller_handle'] as String?,
   termsAccepted: json['terms_accepted'] as bool,
   createdAt: json['created_at'] == null
       ? null
@@ -31,6 +32,7 @@ Map<String, dynamic> _$SokoniUserToJson(_SokoniUser instance) =>
       'locale': instance.locale,
       'is_seller': instance.isSeller,
       'seller_status': instance.sellerStatus,
+      'seller_handle': instance.sellerHandle,
       'terms_accepted': instance.termsAccepted,
       'created_at': instance.createdAt?.toIso8601String(),
     };

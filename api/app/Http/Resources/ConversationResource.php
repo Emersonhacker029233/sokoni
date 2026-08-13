@@ -24,6 +24,10 @@ class ConversationResource extends JsonResource
                 $request->user() !== null,
                 fn () => $this->messages->where('sender_id', '!=', $request->user()->id)->whereNull('read_at')->count()
             ),
+            'other_party_typing' => $this->when(
+                $request->user() !== null,
+                fn () => $this->otherPartyTyping($request->user())
+            ),
         ];
     }
 }

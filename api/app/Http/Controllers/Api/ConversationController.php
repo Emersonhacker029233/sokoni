@@ -52,4 +52,13 @@ class ConversationController extends Controller
 
         return new ConversationResource($conversation->load(['buyer', 'seller', 'product', 'messages']));
     }
+
+    /** Refreshes the caller's typing signal (CLAUDE.md feature 5) — see Conversation::markTyping. */
+    public function typing(Request $request, Conversation $conversation): ConversationResource
+    {
+        $this->authorize('view', $conversation);
+        $conversation->markTyping($request->user());
+
+        return new ConversationResource($conversation->load(['buyer', 'seller', 'product', 'messages']));
+    }
 }

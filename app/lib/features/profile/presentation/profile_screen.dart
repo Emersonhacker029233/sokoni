@@ -55,6 +55,13 @@ class _SignedInProfile extends ConsumerWidget {
               const SizedBox(height: SokoniDimens.space24),
               ListTile(
                 contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.chat_bubble_outline_rounded),
+                title: Text(l10n.chatTitle),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(SokoniRoutes.conversations),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.favorite_border_rounded),
                 title: Text(l10n.favoritesTitle),
                 trailing: const Icon(Icons.chevron_right_rounded),

@@ -242,6 +242,16 @@
 
   "chatComingSoon": "Full chat — polling, read receipts, image attachments — launches soon. Your conversation was created and is ready.",
   "@chatComingSoon": {},
+  "chatTitle": "Messages",
+  "@chatTitle": {},
+  "chatEmptyTitle": "No messages yet",
+  "@chatEmptyTitle": {},
+  "chatEmptyBody": "Message a seller from a product or shop page to start a conversation.",
+  "@chatEmptyBody": {},
+  "chatTyping": "Typing…",
+  "@chatTyping": {},
+  "chatMessageHint": "Message",
+  "@chatMessageHint": {},
 
   "shopViewAction": "View shop",
   "@shopViewAction": {},
@@ -457,5 +467,14 @@
   "@orderCancelReason": {},
 
   "commonCancel": "Cancel",
-  "@commonCancel": {}
+  "@commonCancel": {},
+
+  "reviewLeaveReview": "Leave a review",
+  "@reviewLeaveReview": {},
+  "reviewCommentHint": "Comment (optional)",
+  "@reviewCommentHint": {},
+  "reviewSubmit": "Submit",
+  "@reviewSubmit": {},
+  "reviewReply": "Reply",
+  "@reviewReply": {}
 }

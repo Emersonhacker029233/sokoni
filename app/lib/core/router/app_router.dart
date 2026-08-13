@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/chat/presentation/conversation_placeholder_screen.dart';
+import '../../features/chat/presentation/conversation_list_screen.dart';
+import '../../features/chat/presentation/conversation_thread_screen.dart';
 import '../../features/debug/motion_gallery_screen.dart';
 import '../../features/discovery/presentation/home_screen.dart';
 import '../../features/orders/presentation/cart_screen.dart';
@@ -63,11 +64,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: SokoniRoutes.conversations,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const ConversationListScreen()),
+      ),
+      GoRoute(
         path: SokoniRoutes.conversationPattern,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => sharedAxisXPage(
           key: state.pageKey,
-          child: ConversationPlaceholderScreen(
+          child: ConversationThreadScreen(
             conversationId: int.parse(state.pathParameters['id']!),
           ),
         ),
