@@ -1,0 +1,55 @@
+{
+  "@@locale": "sw",
+
+  "appName": "Sokoni",
+
+  "motionGalleryTitle": "Onyesho la Mienendo",
+
+  "motionGalleryPageTransitions": "Mabadiliko ya kurasa",
+  "motionGalleryPageTransitionsDesc": "Mhimili-shirikishi X kwa kurasa sawa, Z kwa kuingia ndani, ufifio kwa vichupo.",
+
+  "motionGalleryHeroImages": "Picha kuu za bidhaa",
+  "motionGalleryHeroImagesDesc": "Kadi hadi maelezo kwa mpito unaobadilisha pembe za picha.",
+
+  "motionGalleryStaggeredList": "Uonyeshaji wa orodha kwa mfuatano",
+  "motionGalleryStaggeredListDesc": "Ufifio na kuinuka, mfuatano wa milisekunde 40, kikomo cha vitu 8.",
+
+  "motionGalleryShimmer": "Viashiria vya kupakia",
+  "motionGalleryShimmerDesc": "Kila orodha, kadi na skrini ya maelezo ina kiashiria chake cha kupakia.",
+
+  "motionGalleryChips": "Vitufe vya kategoria vyenye mwendo",
+  "motionGalleryChipsDesc": "Kitufe kilichochaguliwa hubadilika kuwa njano na kiashiria kinachoteleza.",
+
+  "motionGalleryBadge": "Alama ya kikapu / oda",
+  "motionGalleryBadgeDesc": "Mruko wa spring pamoja na nukta ya njano inayopiga mapigo.",
+
+  "motionGalleryBottomSheet": "Karatasi za chini",
+  "motionGalleryBottomSheetDesc": "Zinazoburutwa, zenye fizikia, na mrudisho wa mpira zinapovutwa kupita kiasi.",
+
+  "motionGalleryOpenSheet": "Fungua karatasi",
+
+  "motionGallerySuccess": "Wakati wa mafanikio",
+  "motionGallerySuccessDesc": "Alama ya vema inayochorwa skrini nzima, hujifunga yenyewe baada ya sekunde 1.6.",
+
+  "motionGalleryPlaySuccess": "Cheza wakati wa mafanikio",
+
+  "motionGalleryNavBar": "Upau wa uongozaji",
+  "motionGalleryNavBarDesc": "Ukuzaji wa aikoni na mabadiliko ya rangi kubadilishapo kichupo.",
+
+  "motionGalleryPullToRefresh": "Vuta ili kuonyesha upya",
+  "motionGalleryPullToRefreshDesc": "Kiashiria maalum kinachotumia alama ya mfuko wa Sokoni ikizunguka.",
+
+  "motionGalleryPullDownHint": "Vuta chini ili kuonyesha upya",
+
+  "motionGalleryCarousel": "Kiendeshi cha picha",
+  "motionGalleryCarouselDesc": "Mwendo wa parallax unaposogeza kwa mlalo, nukta za ukurasa hunyoosha kwa ukurasa hai.",
+
+  "motionGallerySplash": "Kutoka mwanzo hadi nyumbani",
+  "motionGallerySplashDesc": "Nembo hukua na kutulia, kisha hupungua hadi eneo la upau wa uongozaji.",
+
+  "motionGalleryReplay": "Rudia",
+
+  "commonRetry": "Jaribu tena",
+  "commonSkip": "Ruka",
+  "commonClose": "Funga"
+}

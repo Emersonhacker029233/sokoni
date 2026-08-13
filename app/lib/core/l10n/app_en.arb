@@ -1,0 +1,102 @@
+{
+  "@@locale": "en",
+
+  "appName": "Sokoni",
+  "@appName": {"description": "App display name, shown on splash and app switcher"},
+
+  "motionGalleryTitle": "Motion Gallery",
+  "@motionGalleryTitle": {"description": "Title of the debug route demonstrating all motion primitives"},
+
+  "motionGalleryPageTransitions": "Page transitions",
+  "@motionGalleryPageTransitions": {"description": "Motion primitive 1: shared-axis / fade-through route transitions"},
+
+  "motionGalleryPageTransitionsDesc": "Shared-axis X for siblings, shared-axis Z for drill-down, fade-through for tabs.",
+  "@motionGalleryPageTransitionsDesc": {},
+
+  "motionGalleryHeroImages": "Hero product images",
+  "@motionGalleryHeroImages": {"description": "Motion primitive 2: hero image transition card to detail"},
+
+  "motionGalleryHeroImagesDesc": "Card to detail with a corner-radius-animating hero transition.",
+  "@motionGalleryHeroImagesDesc": {},
+
+  "motionGalleryStaggeredList": "Staggered list reveal",
+  "@motionGalleryStaggeredList": {"description": "Motion primitive 3"},
+
+  "motionGalleryStaggeredListDesc": "Fade and rise, 40ms stagger, capped at 8 items.",
+  "@motionGalleryStaggeredListDesc": {},
+
+  "motionGalleryShimmer": "Shimmer skeletons",
+  "@motionGalleryShimmer": {"description": "Motion primitive 4"},
+
+  "motionGalleryShimmerDesc": "Every list, card and detail screen has a matching loading skeleton.",
+  "@motionGalleryShimmerDesc": {},
+
+  "motionGalleryChips": "Animated category chips",
+  "@motionGalleryChips": {"description": "Motion primitive 5"},
+
+  "motionGalleryChipsDesc": "Selected chip morphs to yellow with a sliding indicator.",
+  "@motionGalleryChipsDesc": {},
+
+  "motionGalleryBadge": "Cart / order badge",
+  "@motionGalleryBadge": {"description": "Motion primitive 6"},
+
+  "motionGalleryBadgeDesc": "Spring scale bounce plus a single yellow pulse dot.",
+  "@motionGalleryBadgeDesc": {},
+
+  "motionGalleryBottomSheet": "Bottom sheets",
+  "@motionGalleryBottomSheet": {"description": "Motion primitive 7"},
+
+  "motionGalleryBottomSheetDesc": "Draggable, physics-based, with rubber-band overscroll.",
+  "@motionGalleryBottomSheetDesc": {},
+
+  "motionGalleryOpenSheet": "Open sheet",
+  "@motionGalleryOpenSheet": {"description": "Button label to trigger the demo bottom sheet"},
+
+  "motionGallerySuccess": "Success moments",
+  "@motionGallerySuccess": {"description": "Motion primitive 8"},
+
+  "motionGallerySuccessDesc": "Full-screen drawn checkmark, auto-dismisses at 1.6s.",
+  "@motionGallerySuccessDesc": {},
+
+  "motionGalleryPlaySuccess": "Play success moment",
+  "@motionGalleryPlaySuccess": {},
+
+  "motionGalleryNavBar": "Nav bar",
+  "@motionGalleryNavBar": {"description": "Motion primitive 9"},
+
+  "motionGalleryNavBarDesc": "Icon scale and colour tween on tab change.",
+  "@motionGalleryNavBarDesc": {},
+
+  "motionGalleryPullToRefresh": "Pull-to-refresh",
+  "@motionGalleryPullToRefresh": {"description": "Motion primitive 10"},
+
+  "motionGalleryPullToRefreshDesc": "Custom indicator using the Sokoni bag mark rotating.",
+  "@motionGalleryPullToRefreshDesc": {},
+
+  "motionGalleryPullDownHint": "Pull down to refresh",
+  "@motionGalleryPullDownHint": {},
+
+  "motionGalleryCarousel": "Image carousel",
+  "@motionGalleryCarousel": {"description": "Motion primitive 11"},
+
+  "motionGalleryCarouselDesc": "Parallax on horizontal scroll, page dots stretch for the active dot.",
+  "@motionGalleryCarouselDesc": {},
+
+  "motionGallerySplash": "Splash to home",
+  "@motionGallerySplash": {"description": "Motion primitive 12"},
+
+  "motionGallerySplashDesc": "Logo scale-and-settle, then shrinks into the nav bar position.",
+  "@motionGallerySplashDesc": {},
+
+  "motionGalleryReplay": "Replay",
+  "@motionGalleryReplay": {"description": "Button to replay a motion demo"},
+
+  "commonRetry": "Retry",
+  "@commonRetry": {"description": "Generic retry action label"},
+
+  "commonSkip": "Skip",
+  "@commonSkip": {"description": "Generic skip action label"},
+
+  "commonClose": "Close",
+  "@commonClose": {}
+}

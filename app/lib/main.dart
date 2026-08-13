@@ -1,121 +1,92 @@
 import 'package:flutter/material.dart';
 
+import 'core/l10n/gen/app_localizations.dart';
+import 'core/motion/motion.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/dimens.dart';
+import 'features/debug/motion_gallery_screen.dart';
+
 void main() {
-  runApp(const MyApp());
+  runApp(const SokoniApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SokoniApp extends StatelessWidget {
+  const SokoniApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
+      debugShowCheckedModeBanner: false,
+      theme: SokoniTheme.light,
+      darkTheme: SokoniTheme.dark,
+      themeMode: ThemeMode.system,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const _AppEntry(),
+      routes: {'/motion-gallery': (context) => const MotionGalleryScreen()},
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+/// Temporary app entry point ahead of Phase 3's go_router shell + tab
+/// navigation: plays the splash primitive once, then lands on a minimal
+/// placeholder home with a way into the motion gallery.
+class _AppEntry extends StatefulWidget {
+  const _AppEntry();
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<_AppEntry> createState() => _AppEntryState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+class _AppEntryState extends State<_AppEntry> {
+  bool _splashDone = false;
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    if (!_splashDone) {
+      return SokoniSplashTransition(
+        onComplete: () => setState(() => _splashDone = true),
+      );
+    }
+    return const _PlaceholderHome();
+  }
+}
+
+class _PlaceholderHome extends StatelessWidget {
+  const _PlaceholderHome();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
+      appBar: AppBar(title: Text(l10n.appName)),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(SokoniDimens.space24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.shopping_bag_rounded, size: 56),
+              const SizedBox(height: SokoniDimens.space16),
+              Text(
+                l10n.appName,
+                style: Theme.of(context).textTheme.displayLarge,
+              ),
+              const SizedBox(height: SokoniDimens.space8),
+              Text(
+                'App shell lands in Phase 3 — this is the Phase 1 design-system checkpoint.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: SokoniDimens.space24),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pushNamed('/motion-gallery'),
+                child: Text(l10n.motionGalleryTitle),
+              ),
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }

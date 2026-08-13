@@ -20,6 +20,7 @@ app/.pub-cache/
 app/.pub/
 app/build/
 app/**/generated_plugin_registrant.dart
+app/lib/core/l10n/gen/
 app/*.iml
 app/*.g.dart
 app/*.freezed.dart
