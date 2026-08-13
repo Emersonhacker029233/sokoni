@@ -15,6 +15,8 @@ _Product _$ProductFromJson(Map<String, dynamic> json) => _Product(
   stock: (json['stock'] as num?)?.toInt() ?? 0,
   condition: json['condition'] as String? ?? 'new',
   views: (json['views'] as num?)?.toInt() ?? 0,
+  isActive: json['is_active'] as bool? ?? true,
+  isHidden: json['is_hidden'] as bool? ?? false,
   distanceKm: (json['distance_km'] as num?)?.toDouble(),
   category: json['category'] == null
       ? null
@@ -42,6 +44,8 @@ Map<String, dynamic> _$ProductToJson(_Product instance) => <String, dynamic>{
   'stock': instance.stock,
   'condition': instance.condition,
   'views': instance.views,
+  'is_active': instance.isActive,
+  'is_hidden': instance.isHidden,
   'distance_km': instance.distanceKm,
   'category': instance.category?.toJson(),
   'seller': instance.seller?.toJson(),

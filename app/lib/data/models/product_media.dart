@@ -11,6 +11,7 @@ abstract class ProductMediaItem with _$ProductMediaItem {
     required String type, // 'image' | 'video'
     required String path,
     @JsonKey(name: 'thumb_path') String? thumbPath,
+    @JsonKey(name: 'card_path') String? cardPath,
     int? duration,
     @Default(0) int sort,
   }) = _ProductMediaItem;

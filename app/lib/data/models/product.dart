@@ -19,6 +19,8 @@ abstract class Product with _$Product {
     @Default(0) int stock,
     @Default('new') String condition,
     @Default(0) int views,
+    @JsonKey(name: 'is_active') @Default(true) bool isActive,
+    @JsonKey(name: 'is_hidden') @Default(false) bool isHidden,
     @JsonKey(name: 'distance_km') double? distanceKm,
     SokoniCategory? category,
     SellerSummary? seller,

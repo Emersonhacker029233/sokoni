@@ -16,6 +16,7 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepository(
     api: ref.watch(catalogApiProvider),
     cache: ref.watch(appDatabaseProvider),
+    dio: ref.watch(dioProvider),
   );
 });
 

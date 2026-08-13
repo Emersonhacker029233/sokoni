@@ -15,6 +15,7 @@ import '../../../shared/widgets/connectivity_banner.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/product_card.dart';
+import '../../orders/providers/order_providers.dart';
 import '../providers/discovery_location.dart';
 import '../providers/discovery_providers.dart';
 import 'widgets/discovery_map_view.dart';
@@ -75,6 +76,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: Text(l10n.appName),
         actions: [
+          IconButton(
+            icon: BadgeBounce(
+              icon: const Icon(Icons.shopping_bag_outlined),
+              count: ref.watch(cartProvider).fold(0, (sum, line) => sum + line.qty),
+            ),
+            onPressed: () => context.push(SokoniRoutes.cart),
+          ),
           IconButton(
             icon: Icon(isMapView ? Icons.list_rounded : Icons.map_outlined),
             onPressed: () => ref.read(feedIsMapViewProvider.notifier).state = !isMapView,

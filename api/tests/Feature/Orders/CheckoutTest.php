@@ -87,6 +87,9 @@ class CheckoutTest extends TestCase
             'seller_id' => $seller->id,
             'order_id' => $response->json('data.id'),
         ]);
+        // The app opens this thread automatically right after checkout
+        // (CLAUDE.md feature 8), so the order response needs the id directly.
+        $this->assertNotNull($response->json('data.conversation_id'));
     }
 
     public function test_only_the_seller_can_advance_order_status(): void

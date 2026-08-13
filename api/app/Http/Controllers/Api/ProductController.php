@@ -42,6 +42,24 @@ class ProductController extends Controller
         return ProductResource::collection($paginated);
     }
 
+    /**
+     * The signed-in seller's own products — unlike the public index, this
+     * bypasses `visible()` so hidden/pending products still show up on the
+     * seller's own My Shop dashboard (CLAUDE.md feature 4: "Pending
+     * sellers can build their shop and add products, but products stay
+     * hidden from the public feed until verified").
+     */
+    public function mine(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    {
+        $seller = $request->user()->sellerProfile()->firstOrFail();
+        $products = $seller->products()
+            ->with(['category', 'media'])
+            ->latest()
+            ->paginate(self::PER_PAGE);
+
+        return ProductResource::collection($products);
+    }
+
     public function show(Request $request, Product $product): ProductResource
     {
         $isOwner = $request->user()?->sellerProfileId() === $product->seller_id;

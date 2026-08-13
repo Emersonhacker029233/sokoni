@@ -29,4 +29,19 @@ abstract class CatalogApi {
 
   @DELETE('/products/{id}/favorite')
   Future<void> unfavorite(@Path('id') int id);
+
+  @GET('/shop/products')
+  Future<dynamic> myProducts(@Query('page') int page);
+
+  @POST('/products')
+  Future<dynamic> createProduct(@Body() Map<String, dynamic> body);
+
+  @PATCH('/products/{id}')
+  Future<dynamic> updateProduct(@Path('id') int id, @Body() Map<String, dynamic> body);
+
+  @DELETE('/products/{id}')
+  Future<void> deleteProduct(@Path('id') int id);
+
+  @DELETE('/products/{productId}/media/{mediaId}')
+  Future<void> deleteMedia(@Path('productId') int productId, @Path('mediaId') int mediaId);
 }

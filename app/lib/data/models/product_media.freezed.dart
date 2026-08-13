@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ProductMediaItem {
 
- int get id; String get type; String get path;@JsonKey(name: 'thumb_path') String? get thumbPath; int? get duration; int get sort;
+ int get id; String get type; String get path;@JsonKey(name: 'thumb_path') String? get thumbPath;@JsonKey(name: 'card_path') String? get cardPath; int? get duration; int get sort;
 /// Create a copy of ProductMediaItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ProductMediaItemCopyWith<ProductMediaItem> get copyWith => _$ProductMediaItemCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductMediaItem&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.path, path) || other.path == path)&&(identical(other.thumbPath, thumbPath) || other.thumbPath == thumbPath)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.sort, sort) || other.sort == sort));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductMediaItem&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.path, path) || other.path == path)&&(identical(other.thumbPath, thumbPath) || other.thumbPath == thumbPath)&&(identical(other.cardPath, cardPath) || other.cardPath == cardPath)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.sort, sort) || other.sort == sort));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,path,thumbPath,duration,sort);
+int get hashCode => Object.hash(runtimeType,id,type,path,thumbPath,cardPath,duration,sort);
 
 @override
 String toString() {
-  return 'ProductMediaItem(id: $id, type: $type, path: $path, thumbPath: $thumbPath, duration: $duration, sort: $sort)';
+  return 'ProductMediaItem(id: $id, type: $type, path: $path, thumbPath: $thumbPath, cardPath: $cardPath, duration: $duration, sort: $sort)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ProductMediaItemCopyWith<$Res>  {
   factory $ProductMediaItemCopyWith(ProductMediaItem value, $Res Function(ProductMediaItem) _then) = _$ProductMediaItemCopyWithImpl;
 @useResult
 $Res call({
- int id, String type, String path,@JsonKey(name: 'thumb_path') String? thumbPath, int? duration, int sort
+ int id, String type, String path,@JsonKey(name: 'thumb_path') String? thumbPath,@JsonKey(name: 'card_path') String? cardPath, int? duration, int sort
 });
 
 
@@ -65,12 +65,13 @@ class _$ProductMediaItemCopyWithImpl<$Res>
 
 /// Create a copy of ProductMediaItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? path = null,Object? thumbPath = freezed,Object? duration = freezed,Object? sort = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? path = null,Object? thumbPath = freezed,Object? cardPath = freezed,Object? duration = freezed,Object? sort = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
 as String,thumbPath: freezed == thumbPath ? _self.thumbPath : thumbPath // ignore: cast_nullable_to_non_nullable
+as String?,cardPath: freezed == cardPath ? _self.cardPath : cardPath // ignore: cast_nullable_to_non_nullable
 as String?,duration: freezed == duration ? _self.duration : duration // ignore: cast_nullable_to_non_nullable
 as int?,sort: null == sort ? _self.sort : sort // ignore: cast_nullable_to_non_nullable
 as int,
@@ -158,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String type,  String path, @JsonKey(name: 'thumb_path')  String? thumbPath,  int? duration,  int sort)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String type,  String path, @JsonKey(name: 'thumb_path')  String? thumbPath, @JsonKey(name: 'card_path')  String? cardPath,  int? duration,  int sort)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ProductMediaItem() when $default != null:
-return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.duration,_that.sort);case _:
+return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.cardPath,_that.duration,_that.sort);case _:
   return orElse();
 
 }
@@ -179,10 +180,10 @@ return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.duration,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String type,  String path, @JsonKey(name: 'thumb_path')  String? thumbPath,  int? duration,  int sort)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String type,  String path, @JsonKey(name: 'thumb_path')  String? thumbPath, @JsonKey(name: 'card_path')  String? cardPath,  int? duration,  int sort)  $default,) {final _that = this;
 switch (_that) {
 case _ProductMediaItem():
-return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.duration,_that.sort);case _:
+return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.cardPath,_that.duration,_that.sort);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +200,10 @@ return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.duration,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String type,  String path, @JsonKey(name: 'thumb_path')  String? thumbPath,  int? duration,  int sort)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String type,  String path, @JsonKey(name: 'thumb_path')  String? thumbPath, @JsonKey(name: 'card_path')  String? cardPath,  int? duration,  int sort)?  $default,) {final _that = this;
 switch (_that) {
 case _ProductMediaItem() when $default != null:
-return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.duration,_that.sort);case _:
+return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.cardPath,_that.duration,_that.sort);case _:
   return null;
 
 }
@@ -214,13 +215,14 @@ return $default(_that.id,_that.type,_that.path,_that.thumbPath,_that.duration,_t
 @JsonSerializable()
 
 class _ProductMediaItem implements ProductMediaItem {
-  const _ProductMediaItem({required this.id, required this.type, required this.path, @JsonKey(name: 'thumb_path') this.thumbPath, this.duration, this.sort = 0});
+  const _ProductMediaItem({required this.id, required this.type, required this.path, @JsonKey(name: 'thumb_path') this.thumbPath, @JsonKey(name: 'card_path') this.cardPath, this.duration, this.sort = 0});
   factory _ProductMediaItem.fromJson(Map<String, dynamic> json) => _$ProductMediaItemFromJson(json);
 
 @override final  int id;
 @override final  String type;
 @override final  String path;
 @override@JsonKey(name: 'thumb_path') final  String? thumbPath;
+@override@JsonKey(name: 'card_path') final  String? cardPath;
 @override final  int? duration;
 @override@JsonKey() final  int sort;
 
@@ -237,16 +239,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProductMediaItem&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.path, path) || other.path == path)&&(identical(other.thumbPath, thumbPath) || other.thumbPath == thumbPath)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.sort, sort) || other.sort == sort));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProductMediaItem&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.path, path) || other.path == path)&&(identical(other.thumbPath, thumbPath) || other.thumbPath == thumbPath)&&(identical(other.cardPath, cardPath) || other.cardPath == cardPath)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.sort, sort) || other.sort == sort));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,path,thumbPath,duration,sort);
+int get hashCode => Object.hash(runtimeType,id,type,path,thumbPath,cardPath,duration,sort);
 
 @override
 String toString() {
-  return 'ProductMediaItem(id: $id, type: $type, path: $path, thumbPath: $thumbPath, duration: $duration, sort: $sort)';
+  return 'ProductMediaItem(id: $id, type: $type, path: $path, thumbPath: $thumbPath, cardPath: $cardPath, duration: $duration, sort: $sort)';
 }
 
 
@@ -257,7 +259,7 @@ abstract mixin class _$ProductMediaItemCopyWith<$Res> implements $ProductMediaIt
   factory _$ProductMediaItemCopyWith(_ProductMediaItem value, $Res Function(_ProductMediaItem) _then) = __$ProductMediaItemCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String type, String path,@JsonKey(name: 'thumb_path') String? thumbPath, int? duration, int sort
+ int id, String type, String path,@JsonKey(name: 'thumb_path') String? thumbPath,@JsonKey(name: 'card_path') String? cardPath, int? duration, int sort
 });
 
 
@@ -274,12 +276,13 @@ class __$ProductMediaItemCopyWithImpl<$Res>
 
 /// Create a copy of ProductMediaItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? path = null,Object? thumbPath = freezed,Object? duration = freezed,Object? sort = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? path = null,Object? thumbPath = freezed,Object? cardPath = freezed,Object? duration = freezed,Object? sort = null,}) {
   return _then(_ProductMediaItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
 as String,thumbPath: freezed == thumbPath ? _self.thumbPath : thumbPath // ignore: cast_nullable_to_non_nullable
+as String?,cardPath: freezed == cardPath ? _self.cardPath : cardPath // ignore: cast_nullable_to_non_nullable
 as String?,duration: freezed == duration ? _self.duration : duration // ignore: cast_nullable_to_non_nullable
 as int?,sort: null == sort ? _self.sort : sort // ignore: cast_nullable_to_non_nullable
 as int,

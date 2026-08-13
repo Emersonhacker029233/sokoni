@@ -109,6 +109,8 @@ class OrderController extends Controller
                 ['last_message_at' => now()]
             );
 
+            $order->setRelation('conversation', $order->conversation()->first());
+
             return $order;
         });
 

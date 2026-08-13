@@ -26,6 +26,10 @@ class OrderResource extends JsonResource
             'buyer' => new UserResource($this->whenLoaded('buyer')),
             'seller' => new SellerSummaryResource($this->whenLoaded('seller')),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
+            'conversation_id' => $this->when(
+                $this->relationLoaded('conversation'),
+                fn () => $this->conversation?->id
+            ),
             'timeline' => $this->timeline(),
             'has_review' => $this->when($this->relationLoaded('review'), fn () => $this->review !== null),
             'created_at' => $this->created_at,

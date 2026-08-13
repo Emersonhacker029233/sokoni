@@ -24,6 +24,7 @@ class ProductMediaFactory extends Factory
             'type' => 'image',
             'path' => "https://picsum.photos/seed/{$seed}/1600/1600",
             'thumb_path' => "https://picsum.photos/seed/{$seed}/300/300",
+            'card_path' => "https://picsum.photos/seed/{$seed}/800/800",
             'duration' => null,
             'sort' => 0,
         ];
@@ -37,6 +38,7 @@ class ProductMediaFactory extends Factory
             'type' => 'video',
             'path' => 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
             'thumb_path' => "https://picsum.photos/seed/{$seed}/800/800",
+            'card_path' => null,
             'duration' => fake()->numberBetween(8, 60),
         ]);
     }

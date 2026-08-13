@@ -15,6 +15,7 @@ class ProductMediaResource extends JsonResource
             'type' => $this->type,
             'path' => $this->path,
             'thumb_path' => $this->thumb_path,
+            'card_path' => $this->card_path,
             'duration' => $this->duration,
             'sort' => $this->sort,
         ];

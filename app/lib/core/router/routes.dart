@@ -25,4 +25,14 @@ abstract final class SokoniRoutes {
   static const favorites = '/favorites';
 
   static const sellerOnboarding = '/sell/onboarding';
+
+  static const cart = '/cart';
+  static const checkout = '/checkout';
+
+  static String orderDetail(int id) => '/orders/$id';
+  static const orderDetailPattern = '/orders/:id';
+
+  static const newProduct = '/sell/products/new';
+  static String editProduct(int id) => '/sell/products/$id/edit';
+  static const editProductPattern = '/sell/products/:id/edit';
 }

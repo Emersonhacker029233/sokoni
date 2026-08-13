@@ -19,6 +19,8 @@ class ProductResource extends JsonResource
             'stock' => $this->stock,
             'condition' => $this->condition,
             'views' => $this->views,
+            'is_active' => $this->is_active,
+            'is_hidden' => $this->is_hidden,
             // Present only when the query attached a computed distance
             // (see ProductController::index / DistanceQuery).
             'distance_km' => $this->when(

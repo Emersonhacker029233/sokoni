@@ -2,12 +2,16 @@
 // secure storage instance for the whole app. Feature-level data providers
 // (Phase 4+) depend on these rather than constructing their own.
 
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/api/device_api.dart';
 import 'location/location_service.dart';
 import 'network/dio_client.dart';
+import 'push/push_service.dart';
 import 'storage/app_database.dart';
 import 'storage/secure_storage.dart';
 
@@ -53,10 +57,12 @@ class AuthStateController extends Notifier<AuthState> {
   Future<void> _loadInitial() async {
     final token = await ref.read(secureStorageProvider).readToken();
     state = AuthState(isAuthenticated: token != null, isLoading: false);
+    if (token != null) unawaited(ref.read(pushServiceProvider).registerDevice());
   }
 
   void markAuthenticated() {
     state = state.copyWith(isAuthenticated: true, isLoading: false);
+    unawaited(ref.read(pushServiceProvider).registerDevice());
   }
 
   Future<void> signOut() async {
@@ -75,6 +81,12 @@ final dioProvider = Provider<Dio>((ref) {
     storage: ref.watch(secureStorageProvider),
     onUnauthenticated: () async => ref.read(authStateProvider.notifier).signOut(),
   );
+});
+
+final deviceApiProvider = Provider<DeviceApi>((ref) => DeviceApi(ref.watch(dioProvider)));
+
+final pushServiceProvider = Provider<PushService>((ref) {
+  return PushService(api: ref.watch(deviceApiProvider));
 });
 
 /// Live connectivity stream — drives the "showing saved results" banner

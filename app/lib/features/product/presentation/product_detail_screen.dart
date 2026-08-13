@@ -13,6 +13,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../data/models/product.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/report_sheet.dart';
+import '../../orders/providers/order_providers.dart';
 import '../../seller/providers/seller_providers.dart';
 import '../providers/favorites_providers.dart';
 import '../providers/product_detail_providers.dart';
@@ -166,7 +167,19 @@ class _ActionButtons extends ConsumerWidget {
 
     return Column(
       children: [
-        FilledButton.icon(
+        if (product.stock > 0)
+          FilledButton.icon(
+            onPressed: () {
+              ref.read(cartProvider.notifier).add(product);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.productAddedToCart)),
+              );
+            },
+            icon: const Icon(Icons.shopping_bag_outlined),
+            label: Text(l10n.productAddToCart),
+          ),
+        const SizedBox(height: SokoniDimens.space8),
+        OutlinedButton.icon(
           onPressed: () async {
             final conversationId = await ref
                 .read(sellerRepositoryProvider)

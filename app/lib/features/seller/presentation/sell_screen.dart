@@ -11,13 +11,13 @@ import '../../../data/models/user.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../auth/presentation/phone_sign_in_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
+import 'dashboard/my_shop_dashboard.dart';
 
 /// Centre nav tab ("+"). Browsing works without an account, but selling
 /// requires one (CLAUDE.md feature 4). Once a user has started (or
 /// completed) the onboarding wizard, this tab morphs from a plain
 /// "start selling" prompt into a status/dashboard view — CLAUDE.md: "the
-/// nav gains a 'My Shop' tab once one exists." The full dashboard
-/// (products, orders) is Phase 7; this is the real, functional status view.
+/// nav gains a 'My Shop' tab once one exists."
 class SellScreen extends ConsumerWidget {
   const SellScreen({super.key});
 
@@ -78,30 +78,41 @@ class _MyShopStatus extends StatelessWidget {
       _ => (l10n.myShopStatusPending, SokoniColors.sokoniYellow),
     };
 
-    return Padding(
-      padding: const EdgeInsets.all(SokoniDimens.space20),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: SokoniDimens.space20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.myShopTitle, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: SokoniDimens.space12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space12, vertical: SokoniDimens.space8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.circle, size: 8, color: color),
-                const SizedBox(width: SokoniDimens.space8),
-                Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+                Text(l10n.myShopTitle, style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: SokoniDimens.space12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: SokoniDimens.space12,
+                    vertical: SokoniDimens.space8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.circle, size: 8, color: color),
+                      const SizedBox(width: SokoniDimens.space8),
+                      Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(height: SokoniDimens.space24),
-          Text(l10n.myShopDashboardComingSoon, style: Theme.of(context).textTheme.bodyMedium),
+          const MyShopDashboard(),
         ],
       ),
     );

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductMediaController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SellerProfileController;
@@ -53,10 +54,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/sellers/{seller}/licence', [SellerProfileController::class, 'updateLicence']);
     Route::patch('/sellers/{seller}', [SellerProfileController::class, 'update']);
 
+    Route::get('/shop/products', [ProductController::class, 'mine']);
+
     Route::middleware('throttle:api-write')->group(function () {
         Route::post('/products', [ProductController::class, 'store']);
         Route::patch('/products/{product}', [ProductController::class, 'update']);
         Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+        Route::post('/products/{product}/media', [ProductMediaController::class, 'store']);
+        Route::delete('/products/{product}/media/{media}', [ProductMediaController::class, 'destroy']);
     });
 
     Route::get('/favorites', [FavoriteController::class, 'index']);
