@@ -14,9 +14,21 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            $table->string('email')->nullable()->unique();
+            $table->string('phone')->nullable()->unique();
+            // Only staff/admins signing into the Filament panel set a
+            // password — buyers/sellers authenticate via social login or
+            // phone OTP and never have one.
+            $table->string('password')->nullable();
+            $table->string('avatar')->nullable();
+            $table->string('provider')->nullable();
+            $table->string('provider_id')->nullable();
+            $table->string('locale', 2)->default('en');
+            $table->string('fcm_token')->nullable();
+            $table->timestamp('terms_accepted_at')->nullable();
+            $table->string('terms_version')->nullable();
+            $table->timestamp('banned_at')->nullable();
+            $table->boolean('is_admin')->default(false);
             $table->rememberToken();
             $table->timestamps();
         });

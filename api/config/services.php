@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    // Social sign-in — see BLOCKERS.md. HttpSocialAuthVerifier fails closed
+    // (InvalidSocialTokenException) until these are set.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+    ],
+
+    'facebook' => [
+        'client_id' => env('FACEBOOK_APP_ID'),
+        'client_secret' => env('FACEBOOK_APP_SECRET'),
+    ],
+
+    'apple' => [
+        'client_id' => env('APPLE_SERVICE_ID'),
+    ],
+
 ];
