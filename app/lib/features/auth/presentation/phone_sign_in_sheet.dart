@@ -8,6 +8,7 @@ import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../providers/auth_providers.dart';
+import 'social_sign_in_buttons.dart';
 
 /// Phone OTP sign-in as a bottom sheet (CLAUDE.md feature 4: "Google /
 /// Facebook / Apple / phone OTP + full name, under 30 seconds"). Social
@@ -118,7 +119,22 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
           children: [
             Text(l10n.profileSignInAction, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: SokoniDimens.space16),
-            if (_step == _Step.phone) ..._phoneStep() else ..._otpStep(),
+            if (_step == _Step.phone) ...[
+              SocialSignInButtons(onSignedIn: () => Navigator.of(context).pop()),
+              const SizedBox(height: SokoniDimens.space16),
+              Row(
+                children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space12),
+                    child: Text(l10n.signInOr, style: Theme.of(context).textTheme.bodySmall),
+                  ),
+                  const Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: SokoniDimens.space16),
+            ],
+            if (_step == _Step.phone) ..._phoneStep(l10n) else ..._otpStep(l10n),
             if (_errorText != null) ...[
               const SizedBox(height: SokoniDimens.space8),
               Text(_errorText!, style: const TextStyle(color: Colors.red, fontSize: 13)),
@@ -134,7 +150,7 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_step == _Step.phone ? 'Send code' : 'Verify'),
+                  : Text(_step == _Step.phone ? l10n.phoneSignInSendCode : l10n.phoneSignInVerify),
             ),
           ],
         ),
@@ -142,33 +158,36 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
     );
   }
 
-  List<Widget> _phoneStep() {
+  List<Widget> _phoneStep(AppLocalizations l10n) {
     return [
       TextFormField(
         controller: _phoneController,
         keyboardType: TextInputType.phone,
         autofocus: true,
-        decoration: const InputDecoration(labelText: 'Phone number', hintText: '0754 123 456'),
+        decoration: InputDecoration(
+          labelText: l10n.phoneSignInPhoneLabel,
+          hintText: l10n.phoneSignInPhoneHint,
+        ),
         validator: SokoniValidators.phone,
       ),
     ];
   }
 
-  List<Widget> _otpStep() {
+  List<Widget> _otpStep(AppLocalizations l10n) {
     return [
-      Text('Code sent to ${SokoniFormat.phoneLocal(_e164Phone!)}'),
+      Text(l10n.phoneSignInCodeSentTo(SokoniFormat.phoneLocal(_e164Phone!))),
       const SizedBox(height: SokoniDimens.space12),
       TextFormField(
         controller: _codeController,
         keyboardType: TextInputType.number,
         autofocus: true,
         maxLength: 6,
-        decoration: const InputDecoration(labelText: 'Verification code'),
+        decoration: InputDecoration(labelText: l10n.phoneSignInCodeLabel),
         validator: SokoniValidators.otpCode,
       ),
       TextFormField(
         controller: _nameController,
-        decoration: const InputDecoration(labelText: 'Full name (new accounts only)'),
+        decoration: InputDecoration(labelText: l10n.phoneSignInNameLabel),
       ),
     ];
   }

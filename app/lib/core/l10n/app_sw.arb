@@ -130,5 +130,62 @@
 
   "chatComingSoon": "Mazungumzo kamili — kuangalia mara kwa mara, uthibitisho wa kusoma, viambatisho vya picha — vitaanza hivi karibuni. Mazungumzo yako yameundwa na yako tayari.",
 
-  "shopViewAction": "Angalia duka"
+  "shopViewAction": "Angalia duka",
+
+  "signInWithGoogle": "Endelea na Google",
+  "signInWithFacebook": "Endelea na Facebook",
+  "signInWithApple": "Endelea na Apple",
+  "signInWithPhone": "Endelea na simu",
+  "signInOr": "au",
+  "signInFailed": "Kuingia kumeshindwa. Tafadhali jaribu tena.",
+  "signInNotConfigured": "Bado haipatikani",
+  "phoneSignInPhoneLabel": "Nambari ya simu",
+  "phoneSignInPhoneHint": "0754 123 456",
+  "phoneSignInSendCode": "Tuma msimbo",
+  "phoneSignInVerify": "Thibitisha",
+  "phoneSignInCodeSentTo": "Msimbo umetumwa kwa {phone}",
+  "phoneSignInCodeLabel": "Msimbo wa uthibitisho",
+  "phoneSignInNameLabel": "Jina kamili (akaunti mpya pekee)",
+
+  "onboardingTitle": "Anza kuuza",
+  "onboardingStepBusiness": "Biashara",
+  "onboardingStepLocation": "Mahali",
+  "onboardingStepIdentity": "Utambulisho",
+  "onboardingStepLicence": "Leseni",
+
+  "onboardingShopName": "Jina la duka",
+  "onboardingHandle": "Jina la mtumiaji",
+  "onboardingHandleHint": "jina-la-duka-lako",
+  "onboardingCategory": "Kategoria",
+  "onboardingBio": "Maelezo ya duka",
+  "onboardingWhatsapp": "Namba ya WhatsApp (si lazima)",
+
+  "onboardingLocationInstructions": "Buruta pini hadi mahali halisi pa duka lako.",
+  "onboardingAddress": "Anwani",
+  "onboardingRegion": "Mkoa",
+  "onboardingDistrict": "Wilaya",
+  "onboardingConfirmLocation": "Thibitisha mahali",
+
+  "onboardingNidaNumber": "Namba ya NIDA (tarakimu 20)",
+  "onboardingNidaPhoto": "Picha ya kitambulisho",
+  "onboardingTakePhoto": "Piga picha",
+  "onboardingChooseFromGallery": "Chagua kutoka kwenye picha",
+
+  "onboardingLicenceFile": "Leseni ya biashara",
+  "onboardingLicenceHint": "Picha au PDF, upeo MB 5",
+  "onboardingChooseFile": "Chagua faili",
+
+  "onboardingNext": "Endelea",
+  "onboardingSubmit": "Wasilisha kwa ukaguzi",
+  "onboardingBack": "Rudi",
+
+  "onboardingPendingTitle": "Umekamilisha!",
+  "onboardingPendingBody": "Duka lako linasubiri uthibitisho. Unaweza kuongeza bidhaa sasa — zitaonekana hadharani mara akaunti yako itakapothibitishwa.",
+  "onboardingPendingAction": "Nenda kwenye duka langu",
+
+  "myShopTitle": "Duka Langu",
+  "myShopStatusPending": "Inasubiri uthibitisho",
+  "myShopStatusVerified": "Imethibitishwa",
+  "myShopStatusRejected": "Uthibitishaji umekataliwa",
+  "myShopDashboardComingSoon": "Dashibodi kamili ya duka — oda, usimamizi wa bidhaa — inaanza hivi karibuni."
 }

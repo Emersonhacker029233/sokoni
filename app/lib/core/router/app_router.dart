@@ -10,6 +10,7 @@ import '../../features/product/presentation/favorites_screen.dart';
 import '../../features/product/presentation/product_detail_screen.dart';
 import '../../features/product/presentation/search_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/seller/presentation/onboarding/seller_onboarding_screen.dart';
 import '../../features/seller/presentation/sell_screen.dart';
 import '../../features/seller/presentation/shop_profile_screen.dart';
 import '../motion/splash_transition.dart';
@@ -71,6 +72,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: SokoniRoutes.favorites,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const FavoritesScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.sellerOnboarding,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisZPage(key: state.pageKey, child: const SellerOnboardingScreen()),
       ),
 
       StatefulShellRoute(

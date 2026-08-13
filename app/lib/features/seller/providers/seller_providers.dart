@@ -10,7 +10,7 @@ import '../../../data/repositories/seller_repository.dart';
 final sellerApiProvider = Provider<SellerApi>((ref) => SellerApi(ref.watch(dioProvider)));
 
 final sellerRepositoryProvider = Provider<SellerRepository>((ref) {
-  return SellerRepository(api: ref.watch(sellerApiProvider));
+  return SellerRepository(api: ref.watch(sellerApiProvider), dio: ref.watch(dioProvider));
 });
 
 final sellerProfileProvider = FutureProvider.family<SellerProfile, String>((ref, handle) {

@@ -74,9 +74,12 @@ dependencies:
 # win32 is a transitive Windows-desktop-only dependency pulled in by file_picker,
 # share_plus and wakelock_plus. This app only targets Android/iOS, so the actual
 # win32 API surface is never compiled into the app — this override only settles
-# a semver mismatch between those three packages' pinned win32 ranges.
+# a semver mismatch between those three packages' pinned win32 ranges. Pinned to
+# the 5.x line (not 6.x): file_picker 11.0.3's Windows implementation is written
+# against win32 5.x's API and fails to compile under 6.x's breaking changes
+# (HRESULT typedef, renamed FFI helpers) — see DECISIONS.md.
 dependency_overrides:
-  win32: ^6.3.0
+  win32: ^5.9.0
 
 dev_dependencies:
   flutter_test:

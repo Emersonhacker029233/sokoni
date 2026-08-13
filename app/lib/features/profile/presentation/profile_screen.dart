@@ -62,9 +62,7 @@ class _SignedInProfile extends ConsumerWidget {
               ),
               const SizedBox(height: SokoniDimens.space12),
               OutlinedButton(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.sellerWizardComingSoon)),
-                ),
+                onPressed: () => context.push(SokoniRoutes.sellerOnboarding),
                 child: Text(l10n.profileStartSelling),
               ),
               const SizedBox(height: SokoniDimens.space12),

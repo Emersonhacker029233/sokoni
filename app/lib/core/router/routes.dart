@@ -23,4 +23,6 @@ abstract final class SokoniRoutes {
   static const conversationPattern = '/conversations/:id';
 
   static const favorites = '/favorites';
+
+  static const sellerOnboarding = '/sell/onboarding';
 }
