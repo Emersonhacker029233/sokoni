@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -182,7 +183,12 @@ class _PinnedProductContext extends StatelessWidget {
               if (product.coverImageUrl != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                  child: Image.network(product.coverImageUrl!, width: 40, height: 40, fit: BoxFit.cover),
+                  child: CachedNetworkImage(
+                    imageUrl: product.coverImageUrl!,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               const SizedBox(width: SokoniDimens.space8),
               Expanded(
@@ -237,7 +243,11 @@ class _MessageBubble extends ConsumerWidget {
                   if (message.attachment != null)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                      child: Image.network(message.attachment!, width: 180, fit: BoxFit.cover),
+                      child: CachedNetworkImage(
+                        imageUrl: message.attachment!,
+                        width: 180,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   if (message.body != null && message.body!.isNotEmpty) Text(message.body!),
                 ],

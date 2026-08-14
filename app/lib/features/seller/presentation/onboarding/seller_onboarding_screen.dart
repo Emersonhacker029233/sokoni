@@ -7,6 +7,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../data/models/seller_profile.dart';
+import '../../../../shared/widgets/error_state.dart';
 import '../../providers/seller_onboarding_providers.dart';
 import 'onboarding_pending_screen.dart';
 import 'step1_business.dart';
@@ -53,7 +54,10 @@ class _SellerOnboardingScreenState extends ConsumerState<SellerOnboardingScreen>
       appBar: AppBar(title: Text(l10n.onboardingTitle)),
       body: draftAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('$error')),
+        error: (error, _) => SokoniErrorState(
+          message: '$error',
+          onRetry: () => ref.invalidate(sellerOnboardingProvider),
+        ),
         data: (draft) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_pageController.hasClients && _pageController.page?.round() != draft.step) {

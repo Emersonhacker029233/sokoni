@@ -7,8 +7,8 @@ import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
-import '../../../data/models/user.dart';
 import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../auth/presentation/phone_sign_in_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
 import 'dashboard/my_shop_dashboard.dart';
@@ -39,15 +39,17 @@ class SellScreen extends ConsumerWidget {
       );
     }
 
+    final userAsync = ref.watch(currentUserProvider);
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.navSell)),
-      body: FutureBuilder<SokoniUser>(
-        future: ref.read(authRepositoryProvider).me(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final user = snapshot.data!;
+      body: userAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => SokoniErrorState(
+          message: '$error',
+          onRetry: () => ref.invalidate(currentUserProvider),
+        ),
+        data: (user) {
           if (!user.isSeller) {
             return SokoniEmptyState(
               icon: Icons.storefront_outlined,

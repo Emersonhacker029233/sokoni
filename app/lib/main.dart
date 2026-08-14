@@ -6,6 +6,15 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
 void main() {
+  // Flutter's default in-memory image cache (1000 entries / 100MB) is sized
+  // for a generic app, not a mid-range-Android-on-3G target (CLAUDE.md).
+  // Product photos are already served at three real, purpose-sized
+  // variants (thumb/card/full — see ProductMediaController server-side),
+  // so this cap is just a ceiling against unbounded growth while browsing
+  // a long feed, not a substitute for requesting the right size.
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 60 << 20; // 60MB
+  PaintingBinding.instance.imageCache.maximumSize = 200;
+
   runApp(const ProviderScope(child: SokoniApp()));
 }
 

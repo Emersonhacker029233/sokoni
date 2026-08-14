@@ -4,8 +4,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// secrets Sokoni persists on-device: the Sanctum bearer token and the
 /// signed-in user's id (used to key the drift cache per-account).
 class SokoniSecureStorage {
-  // AndroidOptions() defaults to AES-GCM storage encryption with RSA OAEP
-  // key wrapping in flutter_secure_storage 11.x — no extra flags needed.
   SokoniSecureStorage({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage(aOptions: AndroidOptions());
 

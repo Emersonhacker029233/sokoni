@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -284,7 +285,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         final locale = Localizations.localeOf(context).languageCode;
                         return categoriesAsync.when(
                           loading: () => const LinearProgressIndicator(),
-                          error: (e, _) => Text('$e'),
+                          error: (e, _) => Row(
+                            children: [
+                              Expanded(child: Text('$e', style: const TextStyle(color: Colors.red))),
+                              TextButton(
+                                onPressed: () => ref.invalidate(categoriesProvider),
+                                child: Text(l10n.commonRetry),
+                              ),
+                            ],
+                          ),
                           data: (categories) => DropdownButtonFormField<int>(
                             initialValue: _categoryId,
                             decoration: InputDecoration(labelText: l10n.productFormCategory),
@@ -366,11 +375,13 @@ class _MediaGrid extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                child: Image.network(
-                  item.thumbPath ?? item.path,
+                child: CachedNetworkImage(
+                  imageUrl: item.thumbPath ?? item.path,
                   width: 84,
                   height: 84,
                   fit: BoxFit.cover,
+                  placeholder: (context, url) =>
+                      Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
                 ),
               ),
               if (item.isVideo)

@@ -45,7 +45,16 @@ dependencies:
   json_annotation: ^4.12.0
   drift: ^2.34.3
   sqlite3_flutter_libs: ^0.6.0+eol
-  flutter_secure_storage: ^11.0.0
+  # Pinned below ^11.0.0 (Android: compileSdk 37, an unreleased/preview API
+  # level not resolvable in this SDK install) and below ^10.3.1 in turn
+  # (its flutter_secure_storage_windows dependency needs win32 6.x, which
+  # conflicts with the win32 5.x pin file_picker needs below) — 9.2.4 is
+  # the newest line compatible with both. Windows is a dev-machine-only
+  # concern (this app ships Android/iOS only) but Dart's whole-program
+  # kernel compilation type-checks every reachable package regardless of
+  # build target, so a Windows-incompatible transitive dependency still
+  # fails `flutter build apk` on this machine. See DECISIONS.md.
+  flutter_secure_storage: ^9.2.4
   google_maps_flutter: ^2.18.0
   geolocator: ^14.0.3
   geocoding: ^5.0.0
@@ -78,8 +87,16 @@ dependencies:
 # the 5.x line (not 6.x): file_picker 11.0.3's Windows implementation is written
 # against win32 5.x's API and fails to compile under 6.x's breaking changes
 # (HRESULT typedef, renamed FFI helpers) — see DECISIONS.md.
+#
+# package_info_plus is pinned below its normally-resolved 10.x for the same
+# reason, in the opposite direction: 10.x requires win32 ^6.0.1, which is
+# incompatible with the 5.x pin above. 9.0.0 targets win32 ^5.5.3 and is
+# otherwise a drop-in — nothing in this app calls package_info_plus
+# directly, it's pulled in transitively by other packages' Windows/desktop
+# support code, so the version bump has no functional effect on Android/iOS.
 dependency_overrides:
   win32: ^5.9.0
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:

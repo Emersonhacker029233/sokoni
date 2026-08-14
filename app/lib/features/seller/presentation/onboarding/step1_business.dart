@@ -95,7 +95,15 @@ class _OnboardingStep1BusinessState extends ConsumerState<OnboardingStep1Busines
             const SizedBox(height: SokoniDimens.space16),
             categoriesAsync.when(
               loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text('$e'),
+              error: (e, _) => Row(
+                children: [
+                  Expanded(child: Text('$e', style: const TextStyle(color: Colors.red))),
+                  TextButton(
+                    onPressed: () => ref.invalidate(categoriesProvider),
+                    child: Text(l10n.commonRetry),
+                  ),
+                ],
+              ),
               data: (categories) => DropdownButtonFormField<int>(
                 initialValue: _categoryId,
                 decoration: InputDecoration(labelText: l10n.onboardingCategory),

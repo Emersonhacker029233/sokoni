@@ -6,9 +6,9 @@ import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
-import '../../../data/models/user.dart';
 import '../../../features/auth/providers/auth_providers.dart';
 import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../auth/presentation/phone_sign_in_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -39,13 +39,15 @@ class _SignedInProfile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
 
-    return FutureBuilder<SokoniUser>(
-      future: ref.read(authRepositoryProvider).me(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final user = snapshot.data!;
+    final userAsync = ref.watch(currentUserProvider);
+
+    return userAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => SokoniErrorState(
+        message: '$error',
+        onRetry: () => ref.invalidate(currentUserProvider),
+      ),
+      data: (user) {
         return Padding(
           padding: const EdgeInsets.all(SokoniDimens.space20),
           child: Column(

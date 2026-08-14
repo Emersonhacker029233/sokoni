@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/l10n/gen/app_localizations.dart';
-import '../../../../core/theme/colors.dart';
-import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/product.dart';
 import '../../../../data/models/seller_summary.dart';
+import '../../../../shared/widgets/empty_state.dart';
 
 /// Map view for the discovery feed — one marker per seller (deduplicated
 /// across that seller's products in the current results) at that seller's
@@ -36,7 +35,12 @@ class DiscoveryMapView extends StatelessWidget {
     }
 
     if (sellers.isEmpty) {
-      return const _MapUnavailable();
+      final l10n = AppLocalizations.of(context);
+      return SokoniEmptyState(
+        icon: Icons.map_outlined,
+        title: l10n.feedEmptyTitle,
+        message: l10n.feedEmptyBody,
+      );
     }
 
     final markers = <Marker>{
@@ -53,28 +57,6 @@ class DiscoveryMapView extends StatelessWidget {
       initialCameraPosition: CameraPosition(target: LatLng(center.$1, center.$2), zoom: 12),
       markers: markers,
       myLocationButtonEnabled: false,
-    );
-  }
-}
-
-class _MapUnavailable extends StatelessWidget {
-  const _MapUnavailable();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      color: SokoniColors.surfaceAlt,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(SokoniDimens.space24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.map_outlined, size: 40),
-          const SizedBox(height: SokoniDimens.space12),
-          Text(l10n.feedEmptyTitle, textAlign: TextAlign.center),
-        ],
-      ),
     );
   }
 }

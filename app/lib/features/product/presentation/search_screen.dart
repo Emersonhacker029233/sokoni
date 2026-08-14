@@ -8,6 +8,7 @@ import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
+import '../../../shared/widgets/connectivity_banner.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/product_card.dart';
@@ -73,32 +74,41 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ),
       body: _controller.text.isEmpty
           ? _HistoryList(history: history.value ?? [], onSelect: _selectHistory)
-          : results.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => SokoniErrorState(
-                message: error is ApiException ? error.message : l10n.feedErrorBody,
-                onRetry: () => ref.read(searchResultsProvider.notifier).search(_controller.text),
+          : ConnectivityBanner(
+              child: results.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => SokoniErrorState(
+                  message: error is ApiException
+                      ? error.message
+                      : l10n.feedErrorBody,
+                  onRetry: () => ref
+                      .read(searchResultsProvider.notifier)
+                      .search(_controller.text),
+                ),
+                data: (items) => items.isEmpty
+                    ? SokoniEmptyState(
+                        icon: Icons.search_off_rounded,
+                        title: l10n.feedEmptyTitle,
+                        message: l10n.feedEmptyBody,
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(SokoniDimens.space16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: SokoniDimens.space12,
+                              crossAxisSpacing: SokoniDimens.space12,
+                              childAspectRatio: 0.62,
+                            ),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) => ProductCard(
+                          product: items[index],
+                          onTap: () => context.push(
+                            SokoniRoutes.product(items[index].id),
+                          ),
+                        ),
+                      ),
               ),
-              data: (items) => items.isEmpty
-                  ? SokoniEmptyState(
-                      icon: Icons.search_off_rounded,
-                      title: l10n.feedEmptyTitle,
-                      message: l10n.feedEmptyBody,
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(SokoniDimens.space16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: SokoniDimens.space12,
-                        crossAxisSpacing: SokoniDimens.space12,
-                        childAspectRatio: 0.62,
-                      ),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) => ProductCard(
-                        product: items[index],
-                        onTap: () => context.push(SokoniRoutes.product(items[index].id)),
-                      ),
-                    ),
             ),
     );
   }

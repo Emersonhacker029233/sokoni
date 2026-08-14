@@ -16,7 +16,7 @@ assets/  Shared brand assets (logo, palette source)
 ## Stack
 
 - **Client**: Flutter 3.x, Riverpod 2/3 + code generation, go_router, dio + retrofit + freezed, drift (offline cache), flutter_secure_storage.
-- **API**: Laravel (PHP 8.3+ target, developed here on PHP 8.4 via Laravel Herd), Sanctum tokens, MySQL 8 with `ST_Distance_Sphere` for geo queries, Filament v3 admin.
+- **API**: Laravel 13 (PHP 8.3+ target, developed here on PHP 8.4 via Laravel Herd), Sanctum tokens, MySQL 8 with `ST_Distance_Sphere` for geo queries, Filament v5 admin (v3 isn't compatible with Laravel 13 — see DECISIONS.md).
 - **Push**: Firebase Cloud Messaging. **Maps**: google_maps_flutter + geolocator.
 - **Deploy target**: Namecheap cPanel shared hosting (`sokoni.co.tz`) — no Docker, no queue workers, no WebSocket server. See [docs/DEPLOY.md](docs/DEPLOY.md).
 
@@ -61,3 +61,13 @@ cd app && flutter test
 ## Debug routes
 
 - `/motion-gallery` — demonstrates all twelve motion primitives used throughout the app (page transitions, hero images, staggered reveal, shimmer skeletons, animated chips, badge bounce, bottom sheets, success moments, nav bar, pull-to-refresh, carousel parallax, splash).
+
+## Building a release
+
+```powershell
+cd app
+flutter build apk --release --dart-define=API_BASE_URL=https://api.sokoni.co.tz/api
+flutter build appbundle --release --dart-define=API_BASE_URL=https://api.sokoni.co.tz/api
+```
+
+Needs `android/key.properties` + `android/sokoni-release.jks` (both gitignored — not in this repo). Without them, the release build falls back to debug signing. See [docs/DEPLOY.md](docs/DEPLOY.md) for the full deployment runbook and [docs/DEMO.md](docs/DEMO.md) for a client demo script.

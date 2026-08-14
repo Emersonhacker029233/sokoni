@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import '../../../../core/theme/dimens.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../data/models/product.dart';
 import '../../../../shared/widgets/empty_state.dart';
+import '../../../../shared/widgets/error_state.dart';
 import '../../../discovery/providers/discovery_providers.dart';
 
 final myProductsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
@@ -51,9 +53,9 @@ class MyShopDashboard extends ConsumerWidget {
             padding: EdgeInsets.all(SokoniDimens.space24),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (error, _) => Padding(
-            padding: const EdgeInsets.all(SokoniDimens.space16),
-            child: Text(error is ApiException ? error.message : '$error'),
+          error: (error, _) => SokoniErrorState(
+            message: error is ApiException ? error.message : '$error',
+            onRetry: () => ref.invalidate(myProductsProvider),
           ),
           data: (products) {
             if (products.isEmpty) {
@@ -96,7 +98,13 @@ class _ProductRow extends ConsumerWidget {
         borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
         child: cover == null
             ? Container(width: 48, height: 48, color: Theme.of(context).colorScheme.surfaceContainerHighest)
-            : Image.network(cover.thumbPath ?? cover.path, width: 48, height: 48, fit: BoxFit.cover),
+            : CachedNetworkImage(
+                imageUrl: cover.thumbPath ?? cover.path,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+              ),
       ),
       title: Text(product.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(

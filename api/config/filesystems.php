@@ -38,10 +38,16 @@ return [
             'report' => false,
         ],
 
+        // On cPanel shared hosting, symlinks (what `storage:link` relies on)
+        // are often blocked — PUBLIC_UPLOADS_ROOT/PUBLIC_UPLOADS_URL point
+        // this disk directly at a real path under public_html instead, so
+        // uploaded media is served with no symlink involved. Local dev
+        // leaves both unset and gets the normal storage_path()-based
+        // default. See docs/DEPLOY.md.
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'root' => env('PUBLIC_UPLOADS_ROOT', storage_path('app/public')),
+            'url' => env('PUBLIC_UPLOADS_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

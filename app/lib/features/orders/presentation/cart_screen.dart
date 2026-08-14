@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -45,7 +46,14 @@ class CartScreen extends ConsumerWidget {
                                   height: 48,
                                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                 )
-                              : Image.network(line.product.coverImageUrl!, width: 48, height: 48, fit: BoxFit.cover),
+                              : CachedNetworkImage(
+                                  imageUrl: line.product.coverImageUrl!,
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) =>
+                                      Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                                ),
                         ),
                         title: Text(line.product.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: Text(SokoniFormat.tzs(line.product.price)),

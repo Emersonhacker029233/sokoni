@@ -51,7 +51,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels > _scrollController.position.maxScrollExtent - 400) {
+    if (_scrollController.position.pixels >
+        _scrollController.position.maxScrollExtent - 400) {
       ref.read(discoveryFeedProvider.notifier).loadMore();
     }
   }
@@ -79,85 +80,118 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           IconButton(
             icon: BadgeBounce(
               icon: const Icon(Icons.shopping_bag_outlined),
-              count: ref.watch(cartProvider).fold(0, (sum, line) => sum + line.qty),
+              count: ref
+                  .watch(cartProvider)
+                  .fold(0, (sum, line) => sum + line.qty),
             ),
             onPressed: () => context.push(SokoniRoutes.cart),
           ),
           IconButton(
             icon: Icon(isMapView ? Icons.list_rounded : Icons.map_outlined),
-            onPressed: () => ref.read(feedIsMapViewProvider.notifier).state = !isMapView,
+            onPressed: () =>
+                ref.read(feedIsMapViewProvider.notifier).state = !isMapView,
           ),
           IconButton(
             icon: const Icon(Icons.tune_rounded),
             onPressed: () async {
-              final picked = await showRadiusFilterSheet(context, ref.read(radiusPresetProvider));
-              if (picked != null) ref.read(radiusPresetProvider.notifier).state = picked;
+              final picked = await showRadiusFilterSheet(
+                context,
+                ref.read(radiusPresetProvider),
+              );
+              if (picked != null) {
+                ref.read(radiusPresetProvider.notifier).state = picked;
+              }
             },
           ),
         ],
       ),
       body: isMapView
-          ? feed.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => SokoniErrorState(
-                message: error is ApiException ? error.message : l10n.feedErrorBody,
-                onRetry: () => ref.read(discoveryFeedProvider.notifier).refresh(),
-              ),
-              data: (state) => DiscoveryMapView(
-                products: state.items,
-                center: location.value?.coords != null
-                    ? (location.value!.coords!.lat, location.value!.coords!.lng)
-                    : const (-6.7924, 39.2083), // Dar es Salaam city centre fallback.
-                onSellerTap: (seller) => _showSellerQuickView(context, seller),
+          ? ConnectivityBanner(
+              child: feed.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => SokoniErrorState(
+                  message: error is ApiException
+                      ? error.message
+                      : l10n.feedErrorBody,
+                  onRetry: () =>
+                      ref.read(discoveryFeedProvider.notifier).refresh(),
+                ),
+                data: (state) => DiscoveryMapView(
+                  products: state.items,
+                  center: location.value?.coords != null
+                      ? (
+                          location.value!.coords!.lat,
+                          location.value!.coords!.lng,
+                        )
+                      : const (
+                          -6.7924,
+                          39.2083,
+                        ), // Dar es Salaam city centre fallback.
+                  onSellerTap: (seller) =>
+                      _showSellerQuickView(context, seller),
+                ),
               ),
             )
           : ConnectivityBanner(
-        child: SokoniRefreshIndicator(
-          onRefresh: () => ref.read(discoveryFeedProvider.notifier).refresh(),
-          child: CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: StickyCategoryHeaderDelegate(child: _CategoryChips()),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space16, vertical: SokoniDimens.space8),
-                sliver: _SortSelector(),
-              ),
-              if (location.isLoading && !location.hasValue)
-                const SliverToBoxAdapter(child: SizedBox.shrink()),
-              feed.when(
-                loading: () => SliverPadding(
-                  padding: const EdgeInsets.all(SokoniDimens.space16),
-                  sliver: _SkeletonGrid(),
-                ),
-                error: (error, _) => SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: SokoniErrorState(
-                    message: error is ApiException ? error.message : l10n.feedErrorBody,
-                    onRetry: () => ref.read(discoveryFeedProvider.notifier).refresh(),
-                  ),
-                ),
-                data: (state) => state.items.isEmpty
-                    ? SliverFillRemaining(
+              child: SokoniRefreshIndicator(
+                onRefresh: () =>
+                    ref.read(discoveryFeedProvider.notifier).refresh(),
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: StickyCategoryHeaderDelegate(
+                        child: _CategoryChips(),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: SokoniDimens.space16,
+                        vertical: SokoniDimens.space8,
+                      ),
+                      sliver: _SortSelector(),
+                    ),
+                    if (location.isLoading && !location.hasValue)
+                      const SliverToBoxAdapter(child: SizedBox.shrink()),
+                    feed.when(
+                      loading: () => SliverPadding(
+                        padding: const EdgeInsets.all(SokoniDimens.space16),
+                        sliver: _SkeletonGrid(),
+                      ),
+                      error: (error, _) => SliverFillRemaining(
                         hasScrollBody: false,
-                        child: SokoniEmptyState(
-                          icon: Icons.storefront_outlined,
-                          title: l10n.feedEmptyTitle,
-                          message: l10n.feedEmptyBody,
+                        child: SokoniErrorState(
+                          message: error is ApiException
+                              ? error.message
+                              : l10n.feedErrorBody,
+                          onRetry: () => ref
+                              .read(discoveryFeedProvider.notifier)
+                              .refresh(),
                         ),
-                      )
-                    : _ProductGrid(items: state.items),
+                      ),
+                      data: (state) => state.items.isEmpty
+                          ? SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: SokoniEmptyState(
+                                icon: Icons.storefront_outlined,
+                                title: l10n.feedEmptyTitle,
+                                message: l10n.feedEmptyBody,
+                              ),
+                            )
+                          : _ProductGrid(items: state.items),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
-  Future<void> _showSellerQuickView(BuildContext context, SellerSummary seller) {
+  Future<void> _showSellerQuickView(
+    BuildContext context,
+    SellerSummary seller,
+  ) {
     return showSokoniBottomSheet<void>(
       context: context,
       initialChildSize: 0.32,
@@ -170,10 +204,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               if (seller.isVerified)
                 const Padding(
                   padding: EdgeInsets.only(right: 4),
-                  child: Icon(Icons.verified_rounded, color: SokoniColors.sokoniYellow, size: 18),
+                  child: Icon(
+                    Icons.verified_rounded,
+                    color: SokoniColors.sokoniYellow,
+                    size: 18,
+                  ),
                 ),
               Expanded(
-                child: Text(seller.shopName, style: Theme.of(context).textTheme.titleMedium),
+                child: Text(
+                  seller.shopName,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
             ],
           ),
@@ -182,9 +223,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.star_rounded, size: 16, color: SokoniColors.sokoniYellow),
+              const Icon(
+                Icons.star_rounded,
+                size: 16,
+                color: SokoniColors.sokoniYellow,
+              ),
               const SizedBox(width: 4),
-              Text('${seller.ratingAvg.toStringAsFixed(1)} (${seller.ratingCount})'),
+              Text(
+                '${seller.ratingAvg.toStringAsFixed(1)} (${seller.ratingCount})',
+              ),
             ],
           ),
           const SizedBox(height: SokoniDimens.space16),
@@ -236,7 +283,10 @@ class _CategoryChips extends ConsumerWidget {
       loading: () => const SizedBox(height: 44),
       error: (error, _) => const SizedBox(height: 44),
       data: (categories) {
-        final labels = [l10n.categoryAll, ...categories.map((c) => c.name(locale))];
+        final labels = [
+          l10n.categoryAll,
+          ...categories.map((c) => c.name(locale)),
+        ];
         final selectedIndex = selected == null
             ? 0
             : categories.indexWhere((c) => c.id == selected) + 1;
@@ -245,8 +295,9 @@ class _CategoryChips extends ConsumerWidget {
           labels: labels,
           selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
           onSelected: (index) {
-            ref.read(selectedCategoryIdProvider.notifier).state =
-                index == 0 ? null : categories[index - 1].id;
+            ref.read(selectedCategoryIdProvider.notifier).state = index == 0
+                ? null
+                : categories[index - 1].id;
           },
         );
       },
@@ -304,18 +355,15 @@ class _ProductGrid extends StatelessWidget {
           crossAxisSpacing: SokoniDimens.space12,
           childAspectRatio: 0.62,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = items[index];
-            final card = ProductCard(
-              product: product,
-              onTap: () => context.push(SokoniRoutes.product(product.id)),
-            );
-            if (index >= staggeredCount) return card;
-            return _StaggeredGridItem(index: index, child: card);
-          },
-          childCount: items.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = items[index];
+          final card = ProductCard(
+            product: product,
+            onTap: () => context.push(SokoniRoutes.product(product.id)),
+          );
+          if (index >= staggeredCount) return card;
+          return _StaggeredGridItem(index: index, child: card);
+        }, childCount: items.length),
       ),
     );
   }
@@ -341,7 +389,10 @@ class _StaggeredGridItemState extends State<_StaggeredGridItem>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
   }
 
   @override
@@ -373,7 +424,10 @@ class _StaggeredGridItemState extends State<_StaggeredGridItem>
         final t = Curves.easeOutCubic.transform(_controller.value);
         return Opacity(
           opacity: t,
-          child: Transform.translate(offset: Offset(0, (1 - t) * 16), child: widget.child),
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 16),
+            child: widget.child,
+          ),
         );
       },
     );
