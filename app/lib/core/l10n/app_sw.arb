@@ -258,5 +258,12 @@
   "reviewLeaveReview": "Toa maoni",
   "reviewCommentHint": "Maoni (hiari)",
   "reviewSubmit": "Wasilisha",
-  "reviewReply": "Jibu"
+  "reviewReply": "Jibu",
+
+  "legalTermsTitle": "Masharti ya Huduma",
+  "legalPrivacyTitle": "Sera ya Faragha",
+  "legalAcceptanceTitle": "Kabla ya kuendelea",
+  "legalAcceptanceBody": "Tafadhali soma Masharti yetu ya Huduma na Sera ya Faragha. Unahitaji kuvikubali ili kutumia Sokoni.",
+  "legalAcceptCheckbox": "Nimesoma na ninakubaliana na Masharti ya Huduma na Sera ya Faragha.",
+  "legalContinue": "Endelea"
 }

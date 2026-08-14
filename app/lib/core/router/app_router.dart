@@ -6,6 +6,9 @@ import '../../features/chat/presentation/conversation_list_screen.dart';
 import '../../features/chat/presentation/conversation_thread_screen.dart';
 import '../../features/debug/motion_gallery_screen.dart';
 import '../../features/discovery/presentation/home_screen.dart';
+import '../../features/legal/presentation/privacy_screen.dart';
+import '../../features/legal/presentation/terms_acceptance_screen.dart';
+import '../../features/legal/presentation/terms_screen.dart';
 import '../../features/orders/presentation/cart_screen.dart';
 import '../../features/orders/presentation/checkout_screen.dart';
 import '../../features/orders/presentation/order_detail_screen.dart';
@@ -118,6 +121,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
           child: ProductFormScreen(productId: int.parse(state.pathParameters['id']!)),
         ),
+      ),
+      GoRoute(
+        path: SokoniRoutes.terms,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const TermsScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.privacy,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const PrivacyScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.termsAcceptance,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const TermsAcceptanceScreen()),
       ),
 
       StatefulShellRoute(

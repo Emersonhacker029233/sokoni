@@ -36,6 +36,7 @@ class User extends Authenticatable implements FilamentUser
             'password' => 'hashed',
             'terms_accepted_at' => 'datetime',
             'banned_at' => 'datetime',
+            'banned_until' => 'datetime',
             'is_admin' => 'boolean',
         ];
     }
@@ -103,13 +104,23 @@ class User extends Authenticatable implements FilamentUser
         return $this->sellerProfile()->value('id');
     }
 
+    /** True for both a permanent ban (`banned_until` null) and an active suspension (`banned_until` in the future). */
     public function isBanned(): bool
     {
-        return $this->banned_at !== null;
+        if ($this->banned_at === null) {
+            return false;
+        }
+
+        return $this->banned_until === null || $this->banned_until->isFuture();
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->is_admin;
+        // A model instance that hasn't been refreshed since an insert that
+        // relied on the column's DB-level default (e.g. most factory-made
+        // users never set is_admin explicitly) can read this attribute as
+        // null in memory even though the stored value is false — cast
+        // explicitly rather than let that violate the bool return type.
+        return (bool) $this->is_admin;
     }
 }

@@ -36,4 +36,8 @@ abstract final class SokoniRoutes {
   static const newProduct = '/sell/products/new';
   static String editProduct(int id) => '/sell/products/$id/edit';
   static const editProductPattern = '/sell/products/:id/edit';
+
+  static const terms = '/terms';
+  static const privacy = '/privacy';
+  static const termsAcceptance = '/terms-acceptance';
 }

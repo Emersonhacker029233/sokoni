@@ -33,4 +33,19 @@ class Report extends Model
     {
         return $this->belongsTo(User::class, 'resolved_by');
     }
+
+    /**
+     * The user "behind" the reported content — who a warn/suspend/ban
+     * action (CLAUDE.md feature 11) actually applies to. Each reportable
+     * type reaches its owning user through a different path.
+     */
+    public function offendingUser(): ?User
+    {
+        return match (true) {
+            $this->reportable instanceof Product => $this->reportable->seller?->user,
+            $this->reportable instanceof SellerProfile => $this->reportable->user,
+            $this->reportable instanceof Message => $this->reportable->sender,
+            default => null,
+        };
+    }
 }

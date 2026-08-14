@@ -18,6 +18,11 @@
         </include>
     </source>
     <php>
+        <!-- Default CLI memory_limit (128M) isn't enough once Filament's
+             panel/resources are bootstrapped alongside Intervention
+             Image's GD driver decoding fake uploaded images across the
+             full suite in one process — bump it for test runs only. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

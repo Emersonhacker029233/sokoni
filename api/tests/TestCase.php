@@ -22,4 +22,15 @@ abstract class TestCase extends BaseTestCase
 
         return $this;
     }
+
+    /**
+     * The Filament admin panel authenticates on the `web` session guard,
+     * not `sanctum` — the global actingAs() override above is specifically
+     * for the API's bearer-token routes and would leave panel requests
+     * unauthenticated (redirected to /admin/login) if used here instead.
+     */
+    public function actingAsAdmin($user): static
+    {
+        return parent::actingAs($user, 'web');
+    }
 }

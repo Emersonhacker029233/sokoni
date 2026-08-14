@@ -16,6 +16,7 @@ import '../../../data/models/conversation.dart';
 import '../../../data/models/message.dart';
 import '../../../data/models/product.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/report_sheet.dart';
 import '../providers/chat_providers.dart';
 
 /// The message thread — pinned product/order context, polling + read
@@ -219,23 +220,28 @@ class _MessageBubble extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: align,
         children: [
-          Container(
-            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.72),
-            padding: const EdgeInsets.all(SokoniDimens.space12),
-            decoration: BoxDecoration(
-              color: bubbleColor,
-              borderRadius: BorderRadius.circular(SokoniDimens.radiusCard),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (message.attachment != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                    child: Image.network(message.attachment!, width: 180, fit: BoxFit.cover),
-                  ),
-                if (message.body != null && message.body!.isNotEmpty) Text(message.body!),
-              ],
+          GestureDetector(
+            onLongPress: message.isMine
+                ? null
+                : () => showReportSheet(context, ref, reportableType: 'message', reportableId: message.id),
+            child: Container(
+              constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.72),
+              padding: const EdgeInsets.all(SokoniDimens.space12),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.circular(SokoniDimens.radiusCard),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (message.attachment != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
+                      child: Image.network(message.attachment!, width: 180, fit: BoxFit.cover),
+                    ),
+                  if (message.body != null && message.body!.isNotEmpty) Text(message.body!),
+                ],
+              ),
             ),
           ),
           Padding(

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductMedia;
+use App\Models\Report;
 use App\Models\Review;
 use App\Models\SellerProfile;
 use App\Models\User;
@@ -133,5 +134,41 @@ class DatabaseSeeder extends Seeder
                     'buyer_id' => $order->buyer_id,
                 ]);
         }
+
+        // A handful of reports so the Filament moderation queue (Phase 9)
+        // isn't empty on a fresh seed: 5 pending (the actual queue), 2
+        // upheld against the same product (below the 3-strike auto-hide
+        // threshold — see ReportObserver — so it stays a realistic "being
+        // watched" case rather than already-resolved), 1 dismissed.
+        $reportTargets = [
+            ...$products->random(6)->map(fn ($p) => ['type' => Product::class, 'id' => $p->id]),
+            ...$sellers->random(2)->map(fn ($s) => ['type' => SellerProfile::class, 'id' => $s->id]),
+        ];
+        foreach (array_slice($reportTargets, 0, 5) as $target) {
+            Report::factory()->create([
+                'reporter_id' => $buyers->random()->id,
+                'reportable_type' => $target['type'],
+                'reportable_id' => $target['id'],
+            ]);
+        }
+        $watchedProduct = $products->random();
+        for ($i = 0; $i < 2; $i++) {
+            Report::factory()->create([
+                'reporter_id' => $buyers->random()->id,
+                'reportable_type' => Product::class,
+                'reportable_id' => $watchedProduct->id,
+                'status' => 'upheld',
+                'resolved_by' => User::where('is_admin', true)->value('id'),
+                'resolution' => 'Upheld by admin review.',
+            ]);
+        }
+        Report::factory()->create([
+            'reporter_id' => $buyers->random()->id,
+            'reportable_type' => Product::class,
+            'reportable_id' => $products->random()->id,
+            'status' => 'dismissed',
+            'resolved_by' => User::where('is_admin', true)->value('id'),
+            'resolution' => 'Dismissed — no action taken.',
+        ]);
     }
 }

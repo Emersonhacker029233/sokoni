@@ -7,6 +7,7 @@ import '../../../core/providers.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
+import '../../legal/presentation/legal_gate.dart';
 import '../providers/auth_providers.dart';
 import 'social_sign_in_buttons.dart';
 
@@ -86,12 +87,13 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
       _errorText = null;
     });
     try {
-      await ref.read(authRepositoryProvider).verifyOtp(
+      final user = await ref.read(authRepositoryProvider).verifyOtp(
         phoneE164: _e164Phone!,
         code: _codeController.text.trim(),
         name: _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
       );
       ref.read(authStateProvider.notifier).markAuthenticated();
+      if (mounted) await ensureTermsAccepted(context, user);
       if (mounted) Navigator.of(context).pop();
     } on ApiException catch (e) {
       setState(() => _errorText = e.message);

@@ -77,6 +77,19 @@ class _SignedInProfile extends ConsumerWidget {
                 onPressed: () => ref.read(authStateProvider.notifier).signOut(),
                 child: Text(l10n.profileSignOut),
               ),
+              const Spacer(),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => context.push(SokoniRoutes.terms),
+                    child: Text(l10n.legalTermsTitle),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push(SokoniRoutes.privacy),
+                    child: Text(l10n.legalPrivacyTitle),
+                  ),
+                ],
+              ),
             ],
           ),
         );

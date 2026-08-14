@@ -9,6 +9,7 @@ import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/dimens.dart';
+import '../../legal/presentation/legal_gate.dart';
 import '../providers/auth_providers.dart';
 
 enum _Provider { google, facebook, apple }
@@ -35,8 +36,9 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
   GoogleSignIn? _googleSignIn;
 
   Future<void> _completeLogin({required String provider, required String token}) async {
-    await ref.read(authRepositoryProvider).socialLogin(provider: provider, token: token);
+    final user = await ref.read(authRepositoryProvider).socialLogin(provider: provider, token: token);
     ref.read(authStateProvider.notifier).markAuthenticated();
+    if (mounted) await ensureTermsAccepted(context, user);
     widget.onSignedIn();
   }
 
