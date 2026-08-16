@@ -65,7 +65,6 @@ dependencies:
   video_compress: ^3.1.4
   visibility_detector: ^0.4.0+2
   shimmer: ^3.0.0
-  google_fonts: ^8.2.1
   intl: ^0.20.3
   share_plus: ^13.3.0
   url_launcher: ^6.3.2
@@ -74,7 +73,6 @@ dependencies:
   firebase_core: ^4.13.0
   firebase_messaging: ^16.5.0
   google_sign_in: ^7.2.0
-  flutter_facebook_auth: ^6.0.4
   sign_in_with_apple: ^8.1.0
   path_provider: ^2.1.6
   connectivity_plus: ^7.3.1
@@ -123,10 +121,14 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/brand/sokoni_logo.png"
+  # Icon-only crop of the lockup (bag+S mark, no "Sokoni" wordmark) — the
+  # full lockup's wordmark becomes illegible at launcher-icon sizes and gets
+  # clipped by the adaptive-icon mask's safe zone. See DECISIONS.md for how
+  # this was cropped from sokoni_logo.png.
+  image_path: "assets/brand/sokoni_logo_icon.png"
   min_sdk_android: 21
   adaptive_icon_background: "#0A0A0A"
-  adaptive_icon_foreground: "assets/brand/sokoni_logo.png"
+  adaptive_icon_foreground: "assets/brand/sokoni_logo_icon.png"
   remove_alpha_ios: true
 
 flutter_native_splash:
@@ -153,3 +155,23 @@ flutter:
 
   assets:
     - assets/brand/sokoni_logo.png
+    - assets/brand/sokoni_logo_icon.png
+
+  # Plus Jakarta Sans, bundled locally rather than fetched at runtime by
+  # google_fonts (removed — see core/theme/typography.dart and
+  # DECISIONS.md). The four weight files landed in assets/fonts/ during
+  # the device-testing round's PART 5 (Part 5 explicitly flagged this as
+  # the change that matters most for how polished the app reads) —
+  # typography.dart already referenced this family name throughout, so
+  # wiring it up here was the only step left.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700

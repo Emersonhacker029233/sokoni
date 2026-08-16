@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -49,6 +52,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Future<void> _placeOrder() async {
     final cart = ref.read(cartProvider);
     if (cart.isEmpty) return;
+    unawaited(HapticFeedback.mediumImpact());
     if (_deliveryMethod == 'delivery' && _addressController.text.trim().isEmpty) {
       setState(() => _error = AppLocalizations.of(context).checkoutAddress);
       return;

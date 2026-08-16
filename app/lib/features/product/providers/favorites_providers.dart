@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/product.dart';
@@ -24,7 +27,12 @@ bool isProductFavorited(WidgetRef ref, Product product) {
   return ref.watch(favoriteOverridesProvider)[product.id] ?? product.isFavorited;
 }
 
+/// Haptic on every toggle (CLAUDE.md Part 5: "Haptic feedback on Save,
+/// Follow and Order") — centralised here rather than at each of this
+/// function's several call sites, so it's guaranteed consistent
+/// everywhere the heart is tapped.
 Future<void> toggleProductFavorite(WidgetRef ref, Product product) async {
+  unawaited(HapticFeedback.lightImpact());
   final current = ref.read(favoriteOverridesProvider)[product.id] ?? product.isFavorited;
   final next = !current;
   ref.read(favoriteOverridesProvider.notifier).set(product.id, next);

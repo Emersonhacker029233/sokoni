@@ -54,8 +54,9 @@ void main() {
 
     expect(find.text('Samsung Galaxy A54'), findsOneWidget);
     expect(find.text('TSh 850,000'), findsOneWidget);
-    expect(find.text('4.5'), findsOneWidget);
-    expect(find.text('2.3 km away'), findsOneWidget);
+    // Rating and distance are collapsed into one muted caption line
+    // (CLAUDE.md Part 5), not two separately-styled widgets.
+    expect(find.text('4.5 · 2.3 km away'), findsOneWidget);
     expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
 
     await tester.tap(find.byType(ProductCard));
