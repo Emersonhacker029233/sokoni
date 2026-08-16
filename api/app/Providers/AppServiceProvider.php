@@ -8,6 +8,7 @@ use App\Services\Payment\PaymentGateway;
 use App\Services\Payment\UnimplementedPaymentGateway;
 use App\Services\Push\LogPushNotifier;
 use App\Services\Push\PushNotifier;
+use App\Services\Sms\BeemSmsGateway;
 use App\Services\Sms\LogSmsGateway;
 use App\Services\Sms\SmsGateway;
 use App\Services\SocialAuth\HttpSocialAuthVerifier;
@@ -26,7 +27,18 @@ class AppServiceProvider extends ServiceProvider
     {
         // MOCK bindings — see BLOCKERS.md. Swap these for real
         // implementations as credentials/agreements land.
-        $this->app->bind(SmsGateway::class, LogSmsGateway::class);
+        $this->app->bind(SmsGateway::class, function () {
+            $apiKey = config('services.beem.api_key');
+            $secretKey = config('services.beem.secret_key');
+
+            if ($apiKey && $secretKey) {
+                return new BeemSmsGateway($apiKey, $secretKey, config('services.beem.sender_id'));
+            }
+
+            // No Beem credentials configured (local dev, CI) — log the
+            // code instead of sending it. See docs/SMS.md.
+            return new LogSmsGateway;
+        });
         $this->app->bind(NidaVerifier::class, ManualReviewNidaVerifier::class);
         $this->app->bind(PaymentGateway::class, UnimplementedPaymentGateway::class);
         $this->app->bind(SocialAuthVerifier::class, HttpSocialAuthVerifier::class);

@@ -89,4 +89,69 @@ class PhoneOtpTest extends TestCase
         $this->postJson('/api/auth/otp/request', ['phone' => '0754123456'])
             ->assertStatus(422);
     }
+
+    public function test_otp_request_flags_a_never_seen_number_as_a_new_account(): void
+    {
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])
+            ->assertOk()
+            ->assertJsonPath('is_new_account', true);
+    }
+
+    public function test_otp_request_does_not_flag_an_existing_number_as_a_new_account(): void
+    {
+        User::factory()->create(['phone' => self::PHONE]);
+
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])
+            ->assertOk()
+            ->assertJsonPath('is_new_account', false);
+    }
+
+    public function test_verifying_a_brand_new_number_reports_is_new_account_true(): void
+    {
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE]);
+        $code = Cache::get('otp:'.self::PHONE);
+
+        $this->postJson('/api/auth/otp/verify', ['phone' => self::PHONE, 'code' => $code, 'name' => 'Amina'])
+            ->assertOk()
+            ->assertJsonPath('is_new_account', true);
+    }
+
+    public function test_verifying_an_existing_number_reports_is_new_account_false(): void
+    {
+        User::factory()->create(['phone' => self::PHONE]);
+
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE]);
+        $code = Cache::get('otp:'.self::PHONE);
+
+        $this->postJson('/api/auth/otp/verify', ['phone' => self::PHONE, 'code' => $code])
+            ->assertOk()
+            ->assertJsonPath('is_new_account', false);
+    }
+
+    public function test_signed_in_user_can_record_their_account_intent(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/auth/intent', ['intent' => 'sell'])
+            ->assertOk()
+            ->assertJsonPath('data.account_intent', 'sell');
+
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'account_intent' => 'sell']);
+    }
+
+    public function test_account_intent_rejects_a_value_outside_the_fixed_set(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/auth/intent', ['intent' => 'browse'])
+            ->assertStatus(422);
+    }
+
+    public function test_account_intent_requires_authentication(): void
+    {
+        $this->postJson('/api/auth/intent', ['intent' => 'buy'])
+            ->assertStatus(401);
+    }
 }

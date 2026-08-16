@@ -3,12 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/providers.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
-import '../../legal/presentation/legal_gate.dart';
 import '../providers/auth_providers.dart';
+import 'post_sign_in.dart';
 import 'social_sign_in_buttons.dart';
 
 /// Phone OTP sign-in as a bottom sheet (CLAUDE.md feature 4: "Google /
@@ -47,6 +46,7 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
   _Step _step = _Step.phone;
   String? _e164Phone;
   bool _isSubmitting = false;
+  bool _isNewAccount = false;
   String? _errorText;
 
   @override
@@ -66,10 +66,11 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
       _errorText = null;
     });
     try {
-      await ref.read(authRepositoryProvider).requestOtp(e164);
+      final isNewAccount = await ref.read(authRepositoryProvider).requestOtp(e164);
       if (!mounted) return;
       setState(() {
         _e164Phone = e164;
+        _isNewAccount = isNewAccount;
         _step = _Step.otp;
       });
     } on ApiException catch (e) {
@@ -87,14 +88,12 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
       _errorText = null;
     });
     try {
-      final user = await ref.read(authRepositoryProvider).verifyOtp(
+      final response = await ref.read(authRepositoryProvider).verifyOtp(
         phoneE164: _e164Phone!,
         code: _codeController.text.trim(),
         name: _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
       );
-      ref.read(authStateProvider.notifier).markAuthenticated();
-      if (mounted) await ensureTermsAccepted(context, user);
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) await completeSignIn(context, ref, response);
     } on ApiException catch (e) {
       setState(() => _errorText = e.message);
     } finally {
@@ -119,10 +118,10 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.profileSignInAction, style: Theme.of(context).textTheme.titleLarge),
+            Text(l10n.phoneSignInHeader, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: SokoniDimens.space16),
             if (_step == _Step.phone) ...[
-              SocialSignInButtons(onSignedIn: () => Navigator.of(context).pop()),
+              const SocialSignInButtons(),
               const SizedBox(height: SokoniDimens.space16),
               Row(
                 children: [
@@ -178,6 +177,13 @@ class _PhoneSignInSheetContentState extends ConsumerState<_PhoneSignInSheetConte
   List<Widget> _otpStep(AppLocalizations l10n) {
     return [
       Text(l10n.phoneSignInCodeSentTo(SokoniFormat.phoneLocal(_e164Phone!))),
+      if (_isNewAccount) ...[
+        const SizedBox(height: SokoniDimens.space4),
+        Text(
+          l10n.phoneSignInNewAccountNotice,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
       const SizedBox(height: SokoniDimens.space12),
       TextFormField(
         controller: _codeController,

@@ -41,13 +41,17 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
     ],
 
-    'facebook' => [
-        'client_id' => env('FACEBOOK_APP_ID'),
-        'client_secret' => env('FACEBOOK_APP_SECRET'),
-    ],
-
     'apple' => [
         'client_id' => env('APPLE_SERVICE_ID'),
+    ],
+
+    // Phone OTP delivery — see docs/SMS.md. BeemSmsGateway is only bound
+    // (AppServiceProvider) when both keys below are set; otherwise the
+    // container falls back to LogSmsGateway.
+    'beem' => [
+        'api_key' => env('BEEM_SMS_API_KEY'),
+        'secret_key' => env('BEEM_SMS_SECRET_KEY'),
+        'sender_id' => env('BEEM_SMS_SENDER_ID', 'INFO'),
     ],
 
 ];

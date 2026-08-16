@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AcceptTermsRequest;
 use App\Http\Requests\RequestOtpRequest;
 use App\Http\Requests\SocialLoginRequest;
+use App\Http\Requests\UpdateIntentRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -23,12 +24,19 @@ class AuthController extends Controller
         private readonly SocialAuthVerifier $socialVerifier,
     ) {}
 
-    /** Send (log, in dev) a 6-digit OTP to the given Tanzanian phone number. */
+    /**
+     * Send (log, in dev) a 6-digit OTP to the given Tanzanian phone number.
+     * `is_new_account` lets the client say plainly, right when the code is
+     * sent, that a new account is about to be created — CLAUDE.md Part 2
+     * item 1 — rather than only finding out after the code is verified.
+     */
     public function requestOtp(RequestOtpRequest $request): JsonResponse
     {
         $this->otp->requestCode($request->string('phone'));
 
-        return response()->json(['message' => 'OTP sent.']);
+        $isNewAccount = ! User::query()->where('phone', $request->string('phone'))->exists();
+
+        return response()->json(['message' => 'OTP sent.', 'is_new_account' => $isNewAccount]);
     }
 
     /** Verify the OTP and issue a Sanctum token, creating the user on first sign-in. */
@@ -47,10 +55,10 @@ class AuthController extends Controller
             ]
         );
 
-        return $this->issueToken($user);
+        return $this->issueToken($user, $user->wasRecentlyCreated);
     }
 
-    /** Verify a Google/Facebook/Apple token server-side and issue a Sanctum token. */
+    /** Verify a Google/Apple token server-side and issue a Sanctum token. */
     public function socialLogin(SocialLoginRequest $request): JsonResponse
     {
         try {
@@ -70,6 +78,8 @@ class AuthController extends Controller
             $user = User::query()->where('email', $identity->email)->first();
         }
 
+        $isNewAccount = $user === null;
+
         if (! $user) {
             $user = User::query()->create([
                 'name' => $identity->name ?? 'Sokoni User',
@@ -85,7 +95,22 @@ class AuthController extends Controller
             ])->save();
         }
 
-        return $this->issueToken($user);
+        return $this->issueToken($user, $isNewAccount);
+    }
+
+    /**
+     * One-time "buy / sell / decide later" intent, shown client-side only
+     * right after a brand-new account's first sign-in — CLAUDE.md Part 2
+     * item 2. Presentation-only: does not create a seller_profile or
+     * change anything about the account model, just records what the
+     * onboarding screen should show (or skip) from here on.
+     */
+    public function updateIntent(UpdateIntentRequest $request): UserResource
+    {
+        $user = $request->user();
+        $user->update(['account_intent' => $request->string('intent')]);
+
+        return new UserResource($user);
     }
 
     public function me(Request $request): UserResource
@@ -112,7 +137,7 @@ class AuthController extends Controller
         return new UserResource($user);
     }
 
-    private function issueToken(User $user): JsonResponse
+    private function issueToken(User $user, bool $isNewAccount = false): JsonResponse
     {
         if ($user->isBanned()) {
             throw ValidationException::withMessages(['phone' => 'This account has been suspended.']);
@@ -123,6 +148,7 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'user' => new UserResource($user),
+            'is_new_account' => $isNewAccount,
         ]);
     }
 }

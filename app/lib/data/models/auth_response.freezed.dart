@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AuthResponse {
 
- String get token; SokoniUser get user;
+ String get token; SokoniUser get user;@JsonKey(name: 'is_new_account') bool get isNewAccount;
 /// Create a copy of AuthResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $AuthResponseCopyWith<AuthResponse> get copyWith => _$AuthResponseCopyWithImpl<A
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthResponse&&(identical(other.token, token) || other.token == token)&&(identical(other.user, user) || other.user == user));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthResponse&&(identical(other.token, token) || other.token == token)&&(identical(other.user, user) || other.user == user)&&(identical(other.isNewAccount, isNewAccount) || other.isNewAccount == isNewAccount));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,token,user);
+int get hashCode => Object.hash(runtimeType,token,user,isNewAccount);
 
 @override
 String toString() {
-  return 'AuthResponse(token: $token, user: $user)';
+  return 'AuthResponse(token: $token, user: $user, isNewAccount: $isNewAccount)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $AuthResponseCopyWith<$Res>  {
   factory $AuthResponseCopyWith(AuthResponse value, $Res Function(AuthResponse) _then) = _$AuthResponseCopyWithImpl;
 @useResult
 $Res call({
- String token, SokoniUser user
+ String token, SokoniUser user,@JsonKey(name: 'is_new_account') bool isNewAccount
 });
 
 
@@ -65,11 +65,12 @@ class _$AuthResponseCopyWithImpl<$Res>
 
 /// Create a copy of AuthResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? token = null,Object? user = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? token = null,Object? user = null,Object? isNewAccount = null,}) {
   return _then(_self.copyWith(
 token: null == token ? _self.token : token // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
-as SokoniUser,
+as SokoniUser,isNewAccount: null == isNewAccount ? _self.isNewAccount : isNewAccount // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of AuthResponse
@@ -163,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String token,  SokoniUser user)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String token,  SokoniUser user, @JsonKey(name: 'is_new_account')  bool isNewAccount)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AuthResponse() when $default != null:
-return $default(_that.token,_that.user);case _:
+return $default(_that.token,_that.user,_that.isNewAccount);case _:
   return orElse();
 
 }
@@ -184,10 +185,10 @@ return $default(_that.token,_that.user);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String token,  SokoniUser user)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String token,  SokoniUser user, @JsonKey(name: 'is_new_account')  bool isNewAccount)  $default,) {final _that = this;
 switch (_that) {
 case _AuthResponse():
-return $default(_that.token,_that.user);case _:
+return $default(_that.token,_that.user,_that.isNewAccount);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -204,10 +205,10 @@ return $default(_that.token,_that.user);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String token,  SokoniUser user)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String token,  SokoniUser user, @JsonKey(name: 'is_new_account')  bool isNewAccount)?  $default,) {final _that = this;
 switch (_that) {
 case _AuthResponse() when $default != null:
-return $default(_that.token,_that.user);case _:
+return $default(_that.token,_that.user,_that.isNewAccount);case _:
   return null;
 
 }
@@ -219,11 +220,12 @@ return $default(_that.token,_that.user);case _:
 @JsonSerializable()
 
 class _AuthResponse implements AuthResponse {
-  const _AuthResponse({required this.token, required this.user});
+  const _AuthResponse({required this.token, required this.user, @JsonKey(name: 'is_new_account') this.isNewAccount = false});
   factory _AuthResponse.fromJson(Map<String, dynamic> json) => _$AuthResponseFromJson(json);
 
 @override final  String token;
 @override final  SokoniUser user;
+@override@JsonKey(name: 'is_new_account') final  bool isNewAccount;
 
 /// Create a copy of AuthResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -238,16 +240,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthResponse&&(identical(other.token, token) || other.token == token)&&(identical(other.user, user) || other.user == user));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthResponse&&(identical(other.token, token) || other.token == token)&&(identical(other.user, user) || other.user == user)&&(identical(other.isNewAccount, isNewAccount) || other.isNewAccount == isNewAccount));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,token,user);
+int get hashCode => Object.hash(runtimeType,token,user,isNewAccount);
 
 @override
 String toString() {
-  return 'AuthResponse(token: $token, user: $user)';
+  return 'AuthResponse(token: $token, user: $user, isNewAccount: $isNewAccount)';
 }
 
 
@@ -258,7 +260,7 @@ abstract mixin class _$AuthResponseCopyWith<$Res> implements $AuthResponseCopyWi
   factory _$AuthResponseCopyWith(_AuthResponse value, $Res Function(_AuthResponse) _then) = __$AuthResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String token, SokoniUser user
+ String token, SokoniUser user,@JsonKey(name: 'is_new_account') bool isNewAccount
 });
 
 
@@ -275,11 +277,12 @@ class __$AuthResponseCopyWithImpl<$Res>
 
 /// Create a copy of AuthResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? token = null,Object? user = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? token = null,Object? user = null,Object? isNewAccount = null,}) {
   return _then(_AuthResponse(
 token: null == token ? _self.token : token // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
-as SokoniUser,
+as SokoniUser,isNewAccount: null == isNewAccount ? _self.isNewAccount : isNewAccount // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

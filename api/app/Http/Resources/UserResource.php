@@ -20,6 +20,7 @@ class UserResource extends JsonResource
             'is_seller' => $this->isSeller(),
             'seller_status' => $this->sellerProfile?->status,
             'seller_handle' => $this->sellerProfile?->handle,
+            'account_intent' => $this->account_intent,
             'terms_accepted' => $this->terms_accepted_at !== null,
             'created_at' => $this->created_at,
         ];
