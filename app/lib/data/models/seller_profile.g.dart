@@ -10,6 +10,7 @@ _SellerProfile _$SellerProfileFromJson(Map<String, dynamic> json) =>
     _SellerProfile(
       id: (json['id'] as num).toInt(),
       shopName: json['shop_name'] as String,
+      logo: json['logo'] as String?,
       handle: json['handle'] as String,
       bio: json['bio'] as String?,
       category: json['category'] == null
@@ -28,7 +29,11 @@ _SellerProfile _$SellerProfileFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['verified_at'] as String),
       ratingAvg: (json['rating_avg'] as num?)?.toDouble() ?? 0,
       ratingCount: (json['rating_count'] as num?)?.toInt() ?? 0,
+      customerCount: (json['customer_count'] as num?)?.toInt() ?? 0,
+      productsCount: (json['products_count'] as num?)?.toInt() ?? 0,
+      followingCount: (json['following_count'] as num?)?.toInt() ?? 0,
       isOwner: json['is_owner'] as bool? ?? false,
+      isFollowing: json['is_following'] as bool? ?? false,
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -38,6 +43,7 @@ Map<String, dynamic> _$SellerProfileToJson(_SellerProfile instance) =>
     <String, dynamic>{
       'id': instance.id,
       'shop_name': instance.shopName,
+      'logo': instance.logo,
       'handle': instance.handle,
       'bio': instance.bio,
       'category': instance.category?.toJson(),
@@ -52,6 +58,10 @@ Map<String, dynamic> _$SellerProfileToJson(_SellerProfile instance) =>
       'verified_at': instance.verifiedAt?.toIso8601String(),
       'rating_avg': instance.ratingAvg,
       'rating_count': instance.ratingCount,
+      'customer_count': instance.customerCount,
+      'products_count': instance.productsCount,
+      'following_count': instance.followingCount,
       'is_owner': instance.isOwner,
+      'is_following': instance.isFollowing,
       'created_at': instance.createdAt?.toIso8601String(),
     };

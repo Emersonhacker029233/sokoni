@@ -12,6 +12,7 @@ abstract class SellerProfile with _$SellerProfile {
   const factory SellerProfile({
     required int id,
     @JsonKey(name: 'shop_name') required String shopName,
+    String? logo,
     required String handle,
     String? bio,
     SokoniCategory? category,
@@ -26,7 +27,11 @@ abstract class SellerProfile with _$SellerProfile {
     @JsonKey(name: 'verified_at') DateTime? verifiedAt,
     @JsonKey(name: 'rating_avg') @Default(0) double ratingAvg,
     @JsonKey(name: 'rating_count') @Default(0) int ratingCount,
+    @JsonKey(name: 'customer_count') @Default(0) int customerCount,
+    @JsonKey(name: 'products_count') @Default(0) int productsCount,
+    @JsonKey(name: 'following_count') @Default(0) int followingCount,
     @JsonKey(name: 'is_owner') @Default(false) bool isOwner,
+    @JsonKey(name: 'is_following') @Default(false) bool isFollowing,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _SellerProfile;
 

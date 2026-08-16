@@ -29,4 +29,25 @@ abstract class SellerApi {
 
   @POST('/conversations')
   Future<dynamic> startConversation(@Body() Map<String, dynamic> body);
+
+  /// "Customer"/"Mteja" follow relationship (CLAUDE.md Part 3).
+  @GET('/customers')
+  Future<dynamic> following(@Query('page') int page);
+
+  @POST('/sellers/{handle}/follow')
+  Future<dynamic> follow(@Path('handle') String handle);
+
+  @DELETE('/sellers/{handle}/follow')
+  Future<void> unfollow(@Path('handle') String handle);
+
+  /// Owner-only dashboard strip (CLAUDE.md Part 4).
+  @GET('/sellers/{id}/dashboard')
+  Future<dynamic> dashboard(@Path('id') int id);
+
+  /// Shop profile edit (CLAUDE.md Part 4's "Edit profile" button) —
+  /// bio/WhatsApp/its visibility toggle only; shop name/handle/category
+  /// are set once at onboarding and have no edit surface, matching how
+  /// the rest of this app treats identity fields set during onboarding.
+  @PATCH('/sellers/{id}')
+  Future<dynamic> updateProfile(@Path('id') int id, @Body() Map<String, dynamic> body);
 }
