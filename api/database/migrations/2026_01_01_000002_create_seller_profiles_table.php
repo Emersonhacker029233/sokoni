@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Geo\DatabaseDialect;
+use App\Services\Geo\ShopLocationSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -49,15 +51,16 @@ return new class extends Migration
         // support, so this step is skipped there and distance search falls
         // back to a Haversine calculation over lat/lng — see
         // App\Services\Geo\DistanceQuery.
+        //
+        // MariaDB reports its driver as `mysql` too (same PDO driver name),
+        // but rejects this exact generated-column syntax — see
+        // ShopLocationSchema for the MariaDB-vs-MySQL split; on MariaDB this
+        // returns no statements at all, and DistanceQuery falls back to
+        // computing the distance inline from lat/lng instead of this column.
         if (Schema::getConnection()->getDriverName() === 'mysql') {
-            DB::statement(
-                'ALTER TABLE seller_profiles ' .
-                'ADD shop_location POINT SRID 4326 ' .
-                'GENERATED ALWAYS AS (IF(lat IS NULL OR lng IS NULL, NULL, ST_SRID(POINT(lng, lat), 4326))) STORED NULL'
-            );
-            DB::statement(
-                'ALTER TABLE seller_profiles ADD SPATIAL INDEX seller_profiles_shop_location_spatial (shop_location)'
-            );
+            foreach (ShopLocationSchema::statements(DatabaseDialect::isMariaDb()) as $statement) {
+                DB::statement($statement);
+            }
         }
     }
 

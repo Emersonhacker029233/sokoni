@@ -10,12 +10,16 @@ use Illuminate\Support\Facades\Schema;
  *
  * On MySQL (production) this delegates to `ST_Distance_Sphere` against the
  * generated+spatially-indexed `shop_location` column (see the
- * seller_profiles migration). SQLite (local dev/tests) has no spatial
- * functions, so it falls back to a Haversine calculation over plain
- * lat/lng in PHP — correct either way, just less scalable than pushing
- * the whole computation into SQL. Given Sokoni's seller counts (Dar es
- * Salaam scale, not global), that trade-off is fine for now; revisit if
- * the seller table grows into the tens of thousands.
+ * seller_profiles migration). On MariaDB — which reports the same `mysql`
+ * driver name but has no `shop_location` column, since MariaDB rejects
+ * that column's generated-column syntax (see ShopLocationSchema) — it
+ * computes `ST_Distance_Sphere` inline from the plain `lat`/`lng` columns
+ * instead, no spatial index involved. SQLite (local dev/tests) has no
+ * spatial functions at all, so it falls back to a Haversine calculation
+ * over plain lat/lng in PHP — correct either way, just less scalable than
+ * pushing the whole computation into SQL. Given Sokoni's seller counts
+ * (Dar es Salaam scale, not global), that trade-off is fine for now;
+ * revisit if the seller table grows into the tens of thousands.
  */
 class DistanceQuery
 {
@@ -29,9 +33,13 @@ class DistanceQuery
      */
     public static function nearbySellerDistances(float $lat, float $lng, ?float $radiusKm): array
     {
-        return Schema::getConnection()->getDriverName() === 'mysql'
-            ? self::mysqlDistances($lat, $lng, $radiusKm)
-            : self::phpDistances($lat, $lng, $radiusKm);
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return self::phpDistances($lat, $lng, $radiusKm);
+        }
+
+        return DatabaseDialect::isMariaDb()
+            ? self::mariaDbDistances($lat, $lng, $radiusKm)
+            : self::mysqlDistances($lat, $lng, $radiusKm);
     }
 
     private static function mysqlDistances(float $lat, float $lng, ?float $radiusKm): array
@@ -40,6 +48,30 @@ class DistanceQuery
             ->select('id')
             ->selectRaw(
                 'ST_Distance_Sphere(shop_location, ST_SRID(POINT(?, ?), 4326)) / 1000 as distance_km',
+                [$lng, $lat]
+            )
+            ->where('status', 'verified')
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->orderBy('distance_km');
+
+        if ($radiusKm !== null) {
+            $query->having('distance_km', '<=', $radiusKm);
+        }
+
+        return $query->get()->pluck('distance_km', 'id')->map(fn ($d) => (float) $d)->toArray();
+    }
+
+    // MariaDB has no `shop_location` column (see ShopLocationSchema), so
+    // this builds the same POINT inline from lat/lng on every row instead
+    // of reading a precomputed/spatially-indexed column. Confirmed
+    // ST_Distance_Sphere itself works the same on this MariaDB server.
+    private static function mariaDbDistances(float $lat, float $lng, ?float $radiusKm): array
+    {
+        $query = DB::table('seller_profiles')
+            ->select('id')
+            ->selectRaw(
+                'ST_Distance_Sphere(POINT(lng, lat), POINT(?, ?)) / 1000 as distance_km',
                 [$lng, $lat]
             )
             ->where('status', 'verified')
