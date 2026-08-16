@@ -33,9 +33,26 @@ class _TermsAcceptanceScreenState extends ConsumerState<TermsAcceptanceScreen> {
     });
     try {
       await ref.read(authRepositoryProvider).acceptTerms(sokoniTermsVersion);
-      if (mounted) Navigator.of(context).maybePop();
+      // This screen wraps itself in `PopScope(canPop: false)` so the system
+      // back button/gesture can't dismiss it before terms are accepted —
+      // but that also makes `Navigator.maybePop()` a no-op here, since it
+      // explicitly honours `PopScope.canPop` the same way a back gesture
+      // would (confirmed against the Flutter SDK's own `NavigatorState`
+      // source: `maybePop` checks `popDisposition`, `pop` doesn't). The
+      // acceptance call above already succeeded and persisted server-side
+      // at this point — `pop()` is the documented escape hatch for exactly
+      // this "block back navigation, but still allow leaving via my own
+      // button" shape, and is what actually closes this route.
+      if (mounted) context.pop();
     } on ApiException catch (e) {
       setState(() => _error = e.message);
+    } catch (e) {
+      // Never fail silently: anything other than a typed ApiException
+      // (e.g. an unexpected response shape) must still surface an error
+      // and leave the retry button live, not vanish into an unhandled
+      // Future error while the screen sits there looking like nothing
+      // happened.
+      setState(() => _error = const ServerException().message);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
