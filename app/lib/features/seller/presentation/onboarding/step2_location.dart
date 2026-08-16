@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../../core/config/maps_config.dart';
 import '../../../../core/l10n/gen/app_localizations.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/seller_profile.dart';
 import '../../providers/seller_onboarding_providers.dart';
@@ -116,30 +118,67 @@ class _OnboardingStep2LocationState extends ConsumerState<OnboardingStep2Locatio
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceAlt = isDark ? SokoniColors.darkSurfaceAlt : SokoniColors.surfaceAlt;
+    final onSurface = isDark ? SokoniColors.darkOnSurface : SokoniColors.sokoniBlack;
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(SokoniDimens.space16),
-          child: Text(l10n.onboardingLocationInstructions),
+          child: Text(
+            SokoniMapsConfig.isConfigured
+                ? l10n.onboardingLocationInstructions
+                : l10n.onboardingLocationMapUnavailableBody,
+          ),
         ),
         Expanded(
           flex: 3,
-          child: Stack(
-            children: [
-              GoogleMap(
-                initialCameraPosition: CameraPosition(target: _pin, zoom: 15),
-                onMapCreated: (controller) => _mapController = controller,
-                onCameraMove: (position) => _pin = position.target,
-                onCameraIdle: () => _reverseGeocode(_pin),
-              ),
-              const Center(
-                child: Icon(Icons.location_pin, size: 48, color: Colors.red),
-              ),
-              if (_resolving)
-                const Positioned(top: 12, right: 12, child: CircularProgressIndicator()),
-            ],
-          ),
+          child: SokoniMapsConfig.isConfigured
+              ? Stack(
+                  children: [
+                    GoogleMap(
+                      initialCameraPosition: CameraPosition(target: _pin, zoom: 15),
+                      onMapCreated: (controller) => _mapController = controller,
+                      onCameraMove: (position) => _pin = position.target,
+                      onCameraIdle: () => _reverseGeocode(_pin),
+                    ),
+                    const Center(
+                      child: Icon(Icons.location_pin, size: 48, color: Colors.red),
+                    ),
+                    if (_resolving)
+                      const Positioned(top: 12, right: 12, child: CircularProgressIndicator()),
+                  ],
+                )
+              : Container(
+                  width: double.infinity,
+                  color: surfaceAlt,
+                  padding: const EdgeInsets.all(SokoniDimens.space16),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.map_outlined, size: 40, color: onSurface),
+                      const SizedBox(height: SokoniDimens.space12),
+                      Text(
+                        l10n.onboardingLocationMapUnavailableTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: SokoniDimens.space12),
+                      OutlinedButton.icon(
+                        onPressed: _resolving ? null : _loadInitialPosition,
+                        icon: _resolving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.my_location_rounded, size: 18),
+                        label: Text(l10n.checkoutUseCurrentLocation),
+                      ),
+                    ],
+                  ),
+                ),
         ),
         Expanded(
           flex: 4,

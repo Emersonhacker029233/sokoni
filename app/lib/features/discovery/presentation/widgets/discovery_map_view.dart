@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../../core/config/maps_config.dart';
 import '../../../../core/l10n/gen/app_localizations.dart';
 import '../../../../data/models/product.dart';
 import '../../../../data/models/seller_summary.dart';
@@ -17,15 +18,28 @@ class DiscoveryMapView extends StatelessWidget {
     required this.products,
     required this.center,
     required this.onSellerTap,
+    this.onSwitchToList,
     super.key,
   });
 
   final List<Product> products;
   final (double lat, double lng) center;
   final ValueChanged<SellerSummary> onSellerTap;
+  final VoidCallback? onSwitchToList;
 
   @override
   Widget build(BuildContext context) {
+    if (!SokoniMapsConfig.isConfigured) {
+      final l10n = AppLocalizations.of(context);
+      return SokoniEmptyState(
+        icon: Icons.map_outlined,
+        title: l10n.mapUnavailableTitle,
+        message: l10n.mapUnavailableBody,
+        actionLabel: onSwitchToList != null ? l10n.mapUnavailableAction : null,
+        onAction: onSwitchToList,
+      );
+    }
+
     final sellers = <int, SellerSummary>{};
     for (final product in products) {
       final seller = product.seller;
