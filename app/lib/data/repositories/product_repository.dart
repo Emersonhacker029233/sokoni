@@ -245,6 +245,9 @@ class ProductRepository {
     'views': p.views,
     'is_active': p.isActive,
     'is_hidden': p.isHidden,
+    'is_sponsored': p.isSponsored,
+    'sponsor_contact_method': p.sponsorContactMethod,
+    'comments_count': p.commentsCount,
     'distance_km': p.distanceKm,
     'category': p.category == null ? null : _categoryToJson(p.category!),
     'seller': p.seller == null

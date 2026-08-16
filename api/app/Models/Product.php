@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
 
 #[Fillable([
     'seller_id', 'category_id', 'title', 'description', 'price', 'currency',
-    'stock', 'condition', 'is_active',
+    'stock', 'condition', 'is_active', 'is_sponsored', 'sponsored_until', 'sponsor_contact_method',
 ])]
 class Product extends Model
 {
@@ -24,6 +24,8 @@ class Product extends Model
         return [
             'is_active' => 'boolean',
             'is_hidden' => 'boolean',
+            'is_sponsored' => 'boolean',
+            'sponsored_until' => 'datetime',
         ];
     }
 
@@ -52,6 +54,12 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    /** Root-level comments only — see [[Comment::replies]] for the one level of nested replies. */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class)->whereNull('parent_id')->latest();
+    }
+
     /** Publicly visible: active, not hidden, and the seller is verified. */
     public function scopeVisible(Builder $query): Builder
     {
@@ -59,6 +67,13 @@ class Product extends Model
             ->where('is_active', true)
             ->where('is_hidden', false)
             ->whereHas('seller', fn (Builder $q) => $q->where('status', 'verified'));
+    }
+
+    /** Currently boosted — CLAUDE.md Part 3's "Sponsored" feed cards. */
+    public function scopeSponsoredActive(Builder $query): Builder
+    {
+        return $query->where('is_sponsored', true)
+            ->where('sponsored_until', '>=', now());
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

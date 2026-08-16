@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Comment;
 use App\Models\Message;
 use App\Models\Product;
 use App\Models\SellerProfile;
@@ -15,6 +16,7 @@ class StoreReportRequest extends FormRequest
         'product' => Product::class,
         'shop' => SellerProfile::class,
         'message' => Message::class,
+        'comment' => Comment::class,
     ];
 
     public function authorize(): bool

@@ -21,6 +21,12 @@ class ProductResource extends JsonResource
             'views' => $this->views,
             'is_active' => $this->is_active,
             'is_hidden' => $this->is_hidden,
+            'is_sponsored' => $this->is_sponsored && $this->sponsored_until?->isFuture(),
+            'sponsor_contact_method' => $this->when(
+                $this->is_sponsored && $this->sponsored_until?->isFuture(),
+                $this->sponsor_contact_method
+            ),
+            'comments_count' => $this->whenCounted('comments'),
             // Present only when the query attached a computed distance
             // (see ProductController::index / DistanceQuery).
             'distance_km' => $this->when(

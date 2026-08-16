@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Product {
 
- int get id; String get title; String? get description; int get price; String get currency; int get stock; String get condition; int get views;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'is_hidden') bool get isHidden;@JsonKey(name: 'distance_km') double? get distanceKm; SokoniCategory? get category; SellerSummary? get seller; List<ProductMediaItem> get media;@JsonKey(name: 'is_favorited') bool get isFavorited;@JsonKey(name: 'created_at') DateTime? get createdAt;
+ int get id; String get title; String? get description; int get price; String get currency; int get stock; String get condition; int get views;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'is_hidden') bool get isHidden;@JsonKey(name: 'is_sponsored') bool get isSponsored;@JsonKey(name: 'sponsor_contact_method') String? get sponsorContactMethod;@JsonKey(name: 'comments_count') int? get commentsCount;@JsonKey(name: 'distance_km') double? get distanceKm; SokoniCategory? get category; SellerSummary? get seller; List<ProductMediaItem> get media;@JsonKey(name: 'is_favorited') bool get isFavorited;@JsonKey(name: 'created_at') DateTime? get createdAt;
 /// Create a copy of Product
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ProductCopyWith<Product> get copyWith => _$ProductCopyWithImpl<Product>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Product&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.price, price) || other.price == price)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.stock, stock) || other.stock == stock)&&(identical(other.condition, condition) || other.condition == condition)&&(identical(other.views, views) || other.views == views)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.isHidden, isHidden) || other.isHidden == isHidden)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&(identical(other.category, category) || other.category == category)&&(identical(other.seller, seller) || other.seller == seller)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.isFavorited, isFavorited) || other.isFavorited == isFavorited)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Product&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.price, price) || other.price == price)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.stock, stock) || other.stock == stock)&&(identical(other.condition, condition) || other.condition == condition)&&(identical(other.views, views) || other.views == views)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.isHidden, isHidden) || other.isHidden == isHidden)&&(identical(other.isSponsored, isSponsored) || other.isSponsored == isSponsored)&&(identical(other.sponsorContactMethod, sponsorContactMethod) || other.sponsorContactMethod == sponsorContactMethod)&&(identical(other.commentsCount, commentsCount) || other.commentsCount == commentsCount)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&(identical(other.category, category) || other.category == category)&&(identical(other.seller, seller) || other.seller == seller)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.isFavorited, isFavorited) || other.isFavorited == isFavorited)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,description,price,currency,stock,condition,views,isActive,isHidden,distanceKm,category,seller,const DeepCollectionEquality().hash(media),isFavorited,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,title,description,price,currency,stock,condition,views,isActive,isHidden,isSponsored,sponsorContactMethod,commentsCount,distanceKm,category,seller,const DeepCollectionEquality().hash(media),isFavorited,createdAt]);
 
 @override
 String toString() {
-  return 'Product(id: $id, title: $title, description: $description, price: $price, currency: $currency, stock: $stock, condition: $condition, views: $views, isActive: $isActive, isHidden: $isHidden, distanceKm: $distanceKm, category: $category, seller: $seller, media: $media, isFavorited: $isFavorited, createdAt: $createdAt)';
+  return 'Product(id: $id, title: $title, description: $description, price: $price, currency: $currency, stock: $stock, condition: $condition, views: $views, isActive: $isActive, isHidden: $isHidden, isSponsored: $isSponsored, sponsorContactMethod: $sponsorContactMethod, commentsCount: $commentsCount, distanceKm: $distanceKm, category: $category, seller: $seller, media: $media, isFavorited: $isFavorited, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ProductCopyWith<$Res>  {
   factory $ProductCopyWith(Product value, $Res Function(Product) _then) = _$ProductCopyWithImpl;
 @useResult
 $Res call({
- int id, String title, String? description, int price, String currency, int stock, String condition, int views,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'is_hidden') bool isHidden,@JsonKey(name: 'distance_km') double? distanceKm, SokoniCategory? category, SellerSummary? seller, List<ProductMediaItem> media,@JsonKey(name: 'is_favorited') bool isFavorited,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id, String title, String? description, int price, String currency, int stock, String condition, int views,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'is_hidden') bool isHidden,@JsonKey(name: 'is_sponsored') bool isSponsored,@JsonKey(name: 'sponsor_contact_method') String? sponsorContactMethod,@JsonKey(name: 'comments_count') int? commentsCount,@JsonKey(name: 'distance_km') double? distanceKm, SokoniCategory? category, SellerSummary? seller, List<ProductMediaItem> media,@JsonKey(name: 'is_favorited') bool isFavorited,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -65,7 +65,7 @@ class _$ProductCopyWithImpl<$Res>
 
 /// Create a copy of Product
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = freezed,Object? price = null,Object? currency = null,Object? stock = null,Object? condition = null,Object? views = null,Object? isActive = null,Object? isHidden = null,Object? distanceKm = freezed,Object? category = freezed,Object? seller = freezed,Object? media = null,Object? isFavorited = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = freezed,Object? price = null,Object? currency = null,Object? stock = null,Object? condition = null,Object? views = null,Object? isActive = null,Object? isHidden = null,Object? isSponsored = null,Object? sponsorContactMethod = freezed,Object? commentsCount = freezed,Object? distanceKm = freezed,Object? category = freezed,Object? seller = freezed,Object? media = null,Object? isFavorited = null,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -77,7 +77,10 @@ as int,condition: null == condition ? _self.condition : condition // ignore: cas
 as String,views: null == views ? _self.views : views // ignore: cast_nullable_to_non_nullable
 as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,isHidden: null == isHidden ? _self.isHidden : isHidden // ignore: cast_nullable_to_non_nullable
-as bool,distanceKm: freezed == distanceKm ? _self.distanceKm : distanceKm // ignore: cast_nullable_to_non_nullable
+as bool,isSponsored: null == isSponsored ? _self.isSponsored : isSponsored // ignore: cast_nullable_to_non_nullable
+as bool,sponsorContactMethod: freezed == sponsorContactMethod ? _self.sponsorContactMethod : sponsorContactMethod // ignore: cast_nullable_to_non_nullable
+as String?,commentsCount: freezed == commentsCount ? _self.commentsCount : commentsCount // ignore: cast_nullable_to_non_nullable
+as int?,distanceKm: freezed == distanceKm ? _self.distanceKm : distanceKm // ignore: cast_nullable_to_non_nullable
 as double?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as SokoniCategory?,seller: freezed == seller ? _self.seller : seller // ignore: cast_nullable_to_non_nullable
 as SellerSummary?,media: null == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
@@ -192,10 +195,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String? description,  int price,  String currency,  int stock,  String condition,  int views, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_hidden')  bool isHidden, @JsonKey(name: 'distance_km')  double? distanceKm,  SokoniCategory? category,  SellerSummary? seller,  List<ProductMediaItem> media, @JsonKey(name: 'is_favorited')  bool isFavorited, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String? description,  int price,  String currency,  int stock,  String condition,  int views, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_hidden')  bool isHidden, @JsonKey(name: 'is_sponsored')  bool isSponsored, @JsonKey(name: 'sponsor_contact_method')  String? sponsorContactMethod, @JsonKey(name: 'comments_count')  int? commentsCount, @JsonKey(name: 'distance_km')  double? distanceKm,  SokoniCategory? category,  SellerSummary? seller,  List<ProductMediaItem> media, @JsonKey(name: 'is_favorited')  bool isFavorited, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Product() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.price,_that.currency,_that.stock,_that.condition,_that.views,_that.isActive,_that.isHidden,_that.distanceKm,_that.category,_that.seller,_that.media,_that.isFavorited,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.description,_that.price,_that.currency,_that.stock,_that.condition,_that.views,_that.isActive,_that.isHidden,_that.isSponsored,_that.sponsorContactMethod,_that.commentsCount,_that.distanceKm,_that.category,_that.seller,_that.media,_that.isFavorited,_that.createdAt);case _:
   return orElse();
 
 }
@@ -213,10 +216,10 @@ return $default(_that.id,_that.title,_that.description,_that.price,_that.currenc
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String? description,  int price,  String currency,  int stock,  String condition,  int views, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_hidden')  bool isHidden, @JsonKey(name: 'distance_km')  double? distanceKm,  SokoniCategory? category,  SellerSummary? seller,  List<ProductMediaItem> media, @JsonKey(name: 'is_favorited')  bool isFavorited, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String? description,  int price,  String currency,  int stock,  String condition,  int views, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_hidden')  bool isHidden, @JsonKey(name: 'is_sponsored')  bool isSponsored, @JsonKey(name: 'sponsor_contact_method')  String? sponsorContactMethod, @JsonKey(name: 'comments_count')  int? commentsCount, @JsonKey(name: 'distance_km')  double? distanceKm,  SokoniCategory? category,  SellerSummary? seller,  List<ProductMediaItem> media, @JsonKey(name: 'is_favorited')  bool isFavorited, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Product():
-return $default(_that.id,_that.title,_that.description,_that.price,_that.currency,_that.stock,_that.condition,_that.views,_that.isActive,_that.isHidden,_that.distanceKm,_that.category,_that.seller,_that.media,_that.isFavorited,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.description,_that.price,_that.currency,_that.stock,_that.condition,_that.views,_that.isActive,_that.isHidden,_that.isSponsored,_that.sponsorContactMethod,_that.commentsCount,_that.distanceKm,_that.category,_that.seller,_that.media,_that.isFavorited,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -233,10 +236,10 @@ return $default(_that.id,_that.title,_that.description,_that.price,_that.currenc
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String? description,  int price,  String currency,  int stock,  String condition,  int views, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_hidden')  bool isHidden, @JsonKey(name: 'distance_km')  double? distanceKm,  SokoniCategory? category,  SellerSummary? seller,  List<ProductMediaItem> media, @JsonKey(name: 'is_favorited')  bool isFavorited, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String? description,  int price,  String currency,  int stock,  String condition,  int views, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_hidden')  bool isHidden, @JsonKey(name: 'is_sponsored')  bool isSponsored, @JsonKey(name: 'sponsor_contact_method')  String? sponsorContactMethod, @JsonKey(name: 'comments_count')  int? commentsCount, @JsonKey(name: 'distance_km')  double? distanceKm,  SokoniCategory? category,  SellerSummary? seller,  List<ProductMediaItem> media, @JsonKey(name: 'is_favorited')  bool isFavorited, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Product() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.price,_that.currency,_that.stock,_that.condition,_that.views,_that.isActive,_that.isHidden,_that.distanceKm,_that.category,_that.seller,_that.media,_that.isFavorited,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.description,_that.price,_that.currency,_that.stock,_that.condition,_that.views,_that.isActive,_that.isHidden,_that.isSponsored,_that.sponsorContactMethod,_that.commentsCount,_that.distanceKm,_that.category,_that.seller,_that.media,_that.isFavorited,_that.createdAt);case _:
   return null;
 
 }
@@ -248,7 +251,7 @@ return $default(_that.id,_that.title,_that.description,_that.price,_that.currenc
 @JsonSerializable()
 
 class _Product implements Product {
-  const _Product({required this.id, required this.title, this.description, required this.price, this.currency = 'TZS', this.stock = 0, this.condition = 'new', this.views = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'is_hidden') this.isHidden = false, @JsonKey(name: 'distance_km') this.distanceKm, this.category, this.seller, final  List<ProductMediaItem> media = const <ProductMediaItem>[], @JsonKey(name: 'is_favorited') this.isFavorited = false, @JsonKey(name: 'created_at') this.createdAt}): _media = media;
+  const _Product({required this.id, required this.title, this.description, required this.price, this.currency = 'TZS', this.stock = 0, this.condition = 'new', this.views = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'is_hidden') this.isHidden = false, @JsonKey(name: 'is_sponsored') this.isSponsored = false, @JsonKey(name: 'sponsor_contact_method') this.sponsorContactMethod, @JsonKey(name: 'comments_count') this.commentsCount, @JsonKey(name: 'distance_km') this.distanceKm, this.category, this.seller, final  List<ProductMediaItem> media = const <ProductMediaItem>[], @JsonKey(name: 'is_favorited') this.isFavorited = false, @JsonKey(name: 'created_at') this.createdAt}): _media = media;
   factory _Product.fromJson(Map<String, dynamic> json) => _$ProductFromJson(json);
 
 @override final  int id;
@@ -261,6 +264,9 @@ class _Product implements Product {
 @override@JsonKey() final  int views;
 @override@JsonKey(name: 'is_active') final  bool isActive;
 @override@JsonKey(name: 'is_hidden') final  bool isHidden;
+@override@JsonKey(name: 'is_sponsored') final  bool isSponsored;
+@override@JsonKey(name: 'sponsor_contact_method') final  String? sponsorContactMethod;
+@override@JsonKey(name: 'comments_count') final  int? commentsCount;
 @override@JsonKey(name: 'distance_km') final  double? distanceKm;
 @override final  SokoniCategory? category;
 @override final  SellerSummary? seller;
@@ -287,16 +293,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Product&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.price, price) || other.price == price)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.stock, stock) || other.stock == stock)&&(identical(other.condition, condition) || other.condition == condition)&&(identical(other.views, views) || other.views == views)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.isHidden, isHidden) || other.isHidden == isHidden)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&(identical(other.category, category) || other.category == category)&&(identical(other.seller, seller) || other.seller == seller)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.isFavorited, isFavorited) || other.isFavorited == isFavorited)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Product&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.price, price) || other.price == price)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.stock, stock) || other.stock == stock)&&(identical(other.condition, condition) || other.condition == condition)&&(identical(other.views, views) || other.views == views)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.isHidden, isHidden) || other.isHidden == isHidden)&&(identical(other.isSponsored, isSponsored) || other.isSponsored == isSponsored)&&(identical(other.sponsorContactMethod, sponsorContactMethod) || other.sponsorContactMethod == sponsorContactMethod)&&(identical(other.commentsCount, commentsCount) || other.commentsCount == commentsCount)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&(identical(other.category, category) || other.category == category)&&(identical(other.seller, seller) || other.seller == seller)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.isFavorited, isFavorited) || other.isFavorited == isFavorited)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,description,price,currency,stock,condition,views,isActive,isHidden,distanceKm,category,seller,const DeepCollectionEquality().hash(_media),isFavorited,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,title,description,price,currency,stock,condition,views,isActive,isHidden,isSponsored,sponsorContactMethod,commentsCount,distanceKm,category,seller,const DeepCollectionEquality().hash(_media),isFavorited,createdAt]);
 
 @override
 String toString() {
-  return 'Product(id: $id, title: $title, description: $description, price: $price, currency: $currency, stock: $stock, condition: $condition, views: $views, isActive: $isActive, isHidden: $isHidden, distanceKm: $distanceKm, category: $category, seller: $seller, media: $media, isFavorited: $isFavorited, createdAt: $createdAt)';
+  return 'Product(id: $id, title: $title, description: $description, price: $price, currency: $currency, stock: $stock, condition: $condition, views: $views, isActive: $isActive, isHidden: $isHidden, isSponsored: $isSponsored, sponsorContactMethod: $sponsorContactMethod, commentsCount: $commentsCount, distanceKm: $distanceKm, category: $category, seller: $seller, media: $media, isFavorited: $isFavorited, createdAt: $createdAt)';
 }
 
 
@@ -307,7 +313,7 @@ abstract mixin class _$ProductCopyWith<$Res> implements $ProductCopyWith<$Res> {
   factory _$ProductCopyWith(_Product value, $Res Function(_Product) _then) = __$ProductCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String title, String? description, int price, String currency, int stock, String condition, int views,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'is_hidden') bool isHidden,@JsonKey(name: 'distance_km') double? distanceKm, SokoniCategory? category, SellerSummary? seller, List<ProductMediaItem> media,@JsonKey(name: 'is_favorited') bool isFavorited,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id, String title, String? description, int price, String currency, int stock, String condition, int views,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'is_hidden') bool isHidden,@JsonKey(name: 'is_sponsored') bool isSponsored,@JsonKey(name: 'sponsor_contact_method') String? sponsorContactMethod,@JsonKey(name: 'comments_count') int? commentsCount,@JsonKey(name: 'distance_km') double? distanceKm, SokoniCategory? category, SellerSummary? seller, List<ProductMediaItem> media,@JsonKey(name: 'is_favorited') bool isFavorited,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -324,7 +330,7 @@ class __$ProductCopyWithImpl<$Res>
 
 /// Create a copy of Product
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = freezed,Object? price = null,Object? currency = null,Object? stock = null,Object? condition = null,Object? views = null,Object? isActive = null,Object? isHidden = null,Object? distanceKm = freezed,Object? category = freezed,Object? seller = freezed,Object? media = null,Object? isFavorited = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = freezed,Object? price = null,Object? currency = null,Object? stock = null,Object? condition = null,Object? views = null,Object? isActive = null,Object? isHidden = null,Object? isSponsored = null,Object? sponsorContactMethod = freezed,Object? commentsCount = freezed,Object? distanceKm = freezed,Object? category = freezed,Object? seller = freezed,Object? media = null,Object? isFavorited = null,Object? createdAt = freezed,}) {
   return _then(_Product(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -336,7 +342,10 @@ as int,condition: null == condition ? _self.condition : condition // ignore: cas
 as String,views: null == views ? _self.views : views // ignore: cast_nullable_to_non_nullable
 as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,isHidden: null == isHidden ? _self.isHidden : isHidden // ignore: cast_nullable_to_non_nullable
-as bool,distanceKm: freezed == distanceKm ? _self.distanceKm : distanceKm // ignore: cast_nullable_to_non_nullable
+as bool,isSponsored: null == isSponsored ? _self.isSponsored : isSponsored // ignore: cast_nullable_to_non_nullable
+as bool,sponsorContactMethod: freezed == sponsorContactMethod ? _self.sponsorContactMethod : sponsorContactMethod // ignore: cast_nullable_to_non_nullable
+as String?,commentsCount: freezed == commentsCount ? _self.commentsCount : commentsCount // ignore: cast_nullable_to_non_nullable
+as int?,distanceKm: freezed == distanceKm ? _self.distanceKm : distanceKm // ignore: cast_nullable_to_non_nullable
 as double?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as SokoniCategory?,seller: freezed == seller ? _self.seller : seller // ignore: cast_nullable_to_non_nullable
 as SellerSummary?,media: null == media ? _self._media : media // ignore: cast_nullable_to_non_nullable

@@ -11,6 +11,7 @@ abstract class SellerSummary with _$SellerSummary {
   const factory SellerSummary({
     required int id,
     @JsonKey(name: 'shop_name') required String shopName,
+    String? logo,
     required String handle,
     @JsonKey(name: 'is_verified') @Default(false) bool isVerified,
     @JsonKey(name: 'rating_avg') @Default(0) double ratingAvg,
@@ -18,6 +19,7 @@ abstract class SellerSummary with _$SellerSummary {
     double? lat,
     double? lng,
     String? whatsapp,
+    @JsonKey(name: 'is_following') @Default(false) bool isFollowing,
   }) = _SellerSummary;
 
   factory SellerSummary.fromJson(Map<String, dynamic> json) => _$SellerSummaryFromJson(json);

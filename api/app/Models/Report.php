@@ -45,6 +45,7 @@ class Report extends Model
             $this->reportable instanceof Product => $this->reportable->seller?->user,
             $this->reportable instanceof SellerProfile => $this->reportable->user,
             $this->reportable instanceof Message => $this->reportable->sender,
+            $this->reportable instanceof Comment => $this->reportable->user,
             default => null,
         };
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BoostProductRequest;
 use App\Http\Requests\ProductIndexRequest;
 use App\Http\Requests\ProductStoreRequest;
 use App\Http\Requests\ProductUpdateRequest;
@@ -99,6 +100,28 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json(['message' => 'Product deleted.']);
+    }
+
+    /**
+     * Boost/un-boost a Listing into the "For You" feed's sponsored slot
+     * (CLAUDE.md Part 3) — no payment flow yet, so this is a plain
+     * seller-toggleable flag rather than anything billing-related; see
+     * `FeedService` for how sponsored Listings are ranked, and
+     * `sponsor_contact_method` for the one contact action the seller
+     * chooses to surface on the card (chat/whatsapp/call).
+     */
+    public function boost(BoostProductRequest $request, Product $product): ProductResource
+    {
+        $isSponsored = $request->boolean('is_sponsored');
+
+        $product->update([
+            'is_sponsored' => $isSponsored,
+            'sponsored_until' => $isSponsored ? now()->addDays($request->integer('duration_days')) : null,
+            'sponsor_contact_method' => $isSponsored ? $request->string('contact_method')->toString() : null,
+        ]);
+        $product->load(['category', 'seller', 'media']);
+
+        return new ProductResource($product);
     }
 
     /**

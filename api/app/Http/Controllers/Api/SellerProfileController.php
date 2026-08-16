@@ -8,12 +8,14 @@ use App\Http\Requests\SellerOnboardIdentityRequest;
 use App\Http\Requests\SellerOnboardLicenceRequest;
 use App\Http\Requests\SellerOnboardLocationRequest;
 use App\Http\Requests\SellerProfileUpdateRequest;
+use App\Http\Requests\UpdateSellerLogoRequest;
 use App\Http\Resources\SellerProfileResource;
 use App\Models\SellerProfile;
 use App\Services\Geo\DistanceQuery;
 use App\Services\Nida\NidaVerifier;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
 
 class SellerProfileController extends Controller
 {
@@ -89,6 +91,21 @@ class SellerProfileController extends Controller
     public function update(SellerProfileUpdateRequest $request, SellerProfile $seller): SellerProfileResource
     {
         $seller->update($request->validated());
+
+        return new SellerProfileResource($seller->load('category'));
+    }
+
+    /**
+     * Shop logo/avatar (CLAUDE.md Parts 3-4). Stored as a full public URL,
+     * not a disk-relative path — unlike `nida_image`/`licence_file` (which
+     * only ever a human reviewer opens directly, per `docs/DEPLOY.md`),
+     * this one is rendered as an avatar image client-side, so it follows
+     * the same URL convention `ProductMediaController` already uses.
+     */
+    public function updateLogo(UpdateSellerLogoRequest $request, SellerProfile $seller): SellerProfileResource
+    {
+        $url = Storage::disk('public')->url($request->file('logo')->store('sellers/logos', 'public'));
+        $seller->update(['logo' => $url]);
 
         return new SellerProfileResource($seller->load('category'));
     }

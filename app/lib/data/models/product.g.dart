@@ -17,6 +17,9 @@ _Product _$ProductFromJson(Map<String, dynamic> json) => _Product(
   views: (json['views'] as num?)?.toInt() ?? 0,
   isActive: json['is_active'] as bool? ?? true,
   isHidden: json['is_hidden'] as bool? ?? false,
+  isSponsored: json['is_sponsored'] as bool? ?? false,
+  sponsorContactMethod: json['sponsor_contact_method'] as String?,
+  commentsCount: (json['comments_count'] as num?)?.toInt(),
   distanceKm: (json['distance_km'] as num?)?.toDouble(),
   category: json['category'] == null
       ? null
@@ -46,6 +49,9 @@ Map<String, dynamic> _$ProductToJson(_Product instance) => <String, dynamic>{
   'views': instance.views,
   'is_active': instance.isActive,
   'is_hidden': instance.isHidden,
+  'is_sponsored': instance.isSponsored,
+  'sponsor_contact_method': instance.sponsorContactMethod,
+  'comments_count': instance.commentsCount,
   'distance_km': instance.distanceKm,
   'category': instance.category?.toJson(),
   'seller': instance.seller?.toJson(),
