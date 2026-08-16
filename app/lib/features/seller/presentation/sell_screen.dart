@@ -79,6 +79,8 @@ class _MyShopStatus extends StatelessWidget {
       'rejected' => (l10n.myShopStatusRejected, SokoniColors.danger),
       _ => (l10n.myShopStatusPending, SokoniColors.sokoniYellow),
     };
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? SokoniColors.darkOnSurface : SokoniColors.sokoniBlack;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: SokoniDimens.space20),
@@ -106,7 +108,11 @@ class _MyShopStatus extends StatelessWidget {
                     children: [
                       Icon(Icons.circle, size: 8, color: color),
                       const SizedBox(width: SokoniDimens.space8),
-                      Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+                      // onSurface, not the status accent colour — same
+                      // fix as order_detail_screen's _StatusChip: the dot
+                      // already carries the accent, sokoniYellow-as-text
+                      // fails contrast badly. See DECISIONS.md.
+                      Text(label, style: TextStyle(color: onSurface, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),

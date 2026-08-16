@@ -70,9 +70,16 @@ class _SignedInProfile extends ConsumerWidget {
                 onTap: () => context.push(SokoniRoutes.favorites),
               ),
               const SizedBox(height: SokoniDimens.space12),
+              // Now that the "+" FAB opens the create sheet instead of
+              // navigating to the Sell branch directly (CLAUDE.md Part 3),
+              // this is the one remaining entry point back into "My Shop"
+              // for an existing seller — go(), not push(), since it's a
+              // StatefulShellRoute branch, not a regular pushed screen.
               OutlinedButton(
-                onPressed: () => context.push(SokoniRoutes.sellerOnboarding),
-                child: Text(l10n.profileStartSelling),
+                onPressed: () => user.isSeller
+                    ? context.go(SokoniRoutes.sell)
+                    : context.push(SokoniRoutes.sellerOnboarding),
+                child: Text(user.isSeller ? l10n.myShopTitle : l10n.profileStartSelling),
               ),
               const SizedBox(height: SokoniDimens.space12),
               TextButton(

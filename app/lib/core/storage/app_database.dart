@@ -119,6 +119,16 @@ class AppDatabase extends _$AppDatabase {
     return row?.value;
   }
 
+  /// All key/value rows whose key starts with [prefix], as a map — used by
+  /// the Updates tray to load every shop's "last seen" mark
+  /// (`updates_seen_<sellerId>`) in one query rather than one per shop.
+  Future<Map<String, String>> getKeyValuesWithPrefix(String prefix) async {
+    final rows = await (select(
+      cachedKeyValues,
+    )..where((t) => t.key.like('$prefix%'))).get();
+    return {for (final row in rows) row.key: row.value};
+  }
+
   /// Drops all cached rows — used on logout so one account's cache never
   /// leaks into another's feed.
   Future<void> clearAll() async {

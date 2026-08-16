@@ -17,7 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
     'name', 'email', 'phone', 'password', 'avatar', 'provider', 'provider_id',
-    'locale', 'fcm_token', 'terms_accepted_at', 'terms_version',
+    'locale', 'fcm_token', 'terms_accepted_at', 'terms_version', 'account_intent',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
@@ -61,6 +61,12 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsToMany(Product::class, 'favorites')->withTimestamps();
     }
 
+    /** Shops this buyer follows — "Customer"/"Mteja" (CLAUDE.md Part 3). */
+    public function following(): BelongsToMany
+    {
+        return $this->belongsToMany(SellerProfile::class, 'customers', 'buyer_id', 'seller_id')->withTimestamps();
+    }
+
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class, 'buyer_id');
@@ -74,6 +80,11 @@ class User extends Authenticatable implements FilamentUser
     public function devices(): HasMany
     {
         return $this->hasMany(Device::class);
+    }
+
+    public function appNotifications(): HasMany
+    {
+        return $this->hasMany(AppNotification::class);
     }
 
     public function reports(): HasMany

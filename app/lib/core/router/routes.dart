@@ -4,6 +4,8 @@
 abstract final class SokoniRoutes {
   static const splash = '/splash';
   static const motionGallery = '/motion-gallery';
+  static const themeAudit = '/theme-audit';
+  static const accountIntent = '/account-intent';
 
   // Bottom nav tabs (StatefulShellRoute branches).
   static const home = '/home';
@@ -37,7 +39,15 @@ abstract final class SokoniRoutes {
   static String editProduct(int id) => '/sell/products/$id/edit';
   static const editProductPattern = '/sell/products/:id/edit';
 
+  // The social business layer (CLAUDE.md Part 3).
+  static const newUpdate = '/sell/updates/new';
+  static const newOffer = '/sell/offers/new';
+  static const newShowcase = '/sell/showcases/new';
+  static const showcaseFeed = '/showcase';
+
   static const terms = '/terms';
   static const privacy = '/privacy';
   static const termsAcceptance = '/terms-acceptance';
+
+  static const notifications = '/notifications';
 }

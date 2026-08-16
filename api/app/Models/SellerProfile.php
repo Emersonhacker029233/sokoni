@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'shop_name', 'handle', 'bio', 'category_id', 'whatsapp', 'lat', 'lng',
+    'shop_name', 'logo', 'handle', 'bio', 'category_id', 'whatsapp', 'lat', 'lng',
     'address', 'region', 'district', 'nida_number', 'nida_image',
     'licence_file', 'show_whatsapp',
 ])]
@@ -66,6 +67,27 @@ class SellerProfile extends Model
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class, 'seller_id');
+    }
+
+    public function updates(): HasMany
+    {
+        return $this->hasMany(Update::class, 'seller_id');
+    }
+
+    public function offers(): HasMany
+    {
+        return $this->hasMany(Offer::class, 'seller_id');
+    }
+
+    public function showcases(): HasMany
+    {
+        return $this->hasMany(Showcase::class, 'seller_id');
+    }
+
+    /** Buyers following this shop — "Customer"/"Mteja" (CLAUDE.md Part 3). */
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'customers', 'seller_id', 'buyer_id')->withTimestamps();
     }
 
     public function isVerified(): bool

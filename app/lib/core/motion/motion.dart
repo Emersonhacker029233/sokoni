@@ -1,4 +1,5 @@
-/// Barrel export for all twelve Sokoni motion primitives.
+/// Barrel export for all twelve Sokoni motion primitives, plus later
+/// additions built on the same skeleton (StoryRing — CLAUDE.md Part 3).
 ///
 /// See `/motion-gallery` (`lib/features/debug/motion_gallery_screen.dart`)
 /// for a live demonstration of each.
@@ -15,4 +16,5 @@ export 'sokoni_bottom_sheet.dart';
 export 'sokoni_refresh_indicator.dart';
 export 'splash_transition.dart';
 export 'staggered_reveal.dart';
+export 'story_ring.dart';
 export 'success_checkmark.dart';

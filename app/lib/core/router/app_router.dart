@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/account_intent_screen.dart';
 import '../../features/chat/presentation/conversation_list_screen.dart';
 import '../../features/chat/presentation/conversation_thread_screen.dart';
 import '../../features/debug/motion_gallery_screen.dart';
+import '../../features/debug/theme_audit_screen.dart';
 import '../../features/discovery/presentation/home_screen.dart';
 import '../../features/legal/presentation/privacy_screen.dart';
 import '../../features/legal/presentation/terms_acceptance_screen.dart';
 import '../../features/legal/presentation/terms_screen.dart';
+import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/orders/presentation/cart_screen.dart';
 import '../../features/orders/presentation/checkout_screen.dart';
 import '../../features/orders/presentation/order_detail_screen.dart';
@@ -21,9 +24,13 @@ import '../../features/seller/presentation/onboarding/seller_onboarding_screen.d
 import '../../features/seller/presentation/product_form/product_form_screen.dart';
 import '../../features/seller/presentation/sell_screen.dart';
 import '../../features/seller/presentation/shop_profile_screen.dart';
-import '../motion/splash_transition.dart';
+import '../../features/social/presentation/offer_composer_screen.dart';
+import '../../features/social/presentation/showcase_composer_screen.dart';
+import '../../features/social/presentation/showcase_screen.dart';
+import '../../features/social/presentation/update_composer_screen.dart';
 import 'app_shell.dart';
 import 'routes.dart';
+import 'splash_screen.dart';
 import 'transitions.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -37,14 +44,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: SokoniRoutes.splash,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => SokoniSplashTransition(
-          onComplete: () => context.go(SokoniRoutes.home),
-        ),
+        builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: SokoniRoutes.motionGallery,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const MotionGalleryScreen(),
+      ),
+      GoRoute(
+        path: SokoniRoutes.themeAudit,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ThemeAuditScreen(),
+      ),
+      GoRoute(
+        path: SokoniRoutes.accountIntent,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AccountIntentScreen(),
       ),
 
       // Detail routes — shared-axis Z ("drilling into detail") per motion
@@ -123,6 +138,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: SokoniRoutes.newUpdate,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const UpdateComposerScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.newOffer,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const OfferComposerScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.newShowcase,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const ShowcaseComposerScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.showcaseFeed,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(key: state.pageKey, child: const ShowcaseScreen()),
+      ),
+      GoRoute(
         path: SokoniRoutes.terms,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const TermsScreen()),
@@ -136,6 +171,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: SokoniRoutes.termsAcceptance,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const TermsAcceptanceScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.notifications,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const NotificationsScreen()),
       ),
 
       StatefulShellRoute(
