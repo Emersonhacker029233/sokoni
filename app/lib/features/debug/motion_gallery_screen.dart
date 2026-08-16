@@ -274,6 +274,9 @@ class _StaggeredListDemoState extends State<_StaggeredListDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceAlt = isDark ? SokoniColors.darkSurfaceAlt : SokoniColors.surfaceAlt;
+    final outline = isDark ? SokoniColors.darkOutline : SokoniColors.outline;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -284,9 +287,9 @@ class _StaggeredListDemoState extends State<_StaggeredListDemo> {
               margin: const EdgeInsets.only(bottom: SokoniDimens.space8),
               padding: const EdgeInsets.all(SokoniDimens.space12),
               decoration: BoxDecoration(
-                color: SokoniColors.surfaceAlt,
+                color: surfaceAlt,
                 borderRadius: BorderRadius.circular(SokoniDimens.radiusField),
-                border: Border.all(color: SokoniColors.outline),
+                border: Border.all(color: outline),
               ),
               child: Text('Item ${i + 1}'),
             );

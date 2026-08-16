@@ -31,6 +31,8 @@ class _StarRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fraction = total == 0 ? 0.0 : count / total;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final trackColor = isDark ? SokoniColors.darkSurfaceAlt : SokoniColors.surfaceAlt;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -45,7 +47,7 @@ class _StarRow extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: fraction,
                 minHeight: 6,
-                backgroundColor: SokoniColors.surfaceAlt,
+                backgroundColor: trackColor,
                 color: SokoniColors.sokoniYellow,
               ),
             ),

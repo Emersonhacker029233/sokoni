@@ -130,9 +130,8 @@ class _NavIconState extends State<_NavIcon> with SingleTickerProviderStateMixin 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inactiveColor = (isDark ? SokoniColors.darkOnSurface : SokoniColors.sokoniBlack)
-        .withValues(alpha: 0.5);
-    const activeColor = SokoniColors.sokoniBlack;
+    final onSurface = isDark ? SokoniColors.darkOnSurface : SokoniColors.sokoniBlack;
+    final inactiveColor = onSurface.withValues(alpha: 0.5);
 
     return Semantics(
       button: true,
@@ -144,18 +143,53 @@ class _NavIconState extends State<_NavIcon> with SingleTickerProviderStateMixin 
           animation: _controller,
           builder: (context, _) {
             final t = Curves.easeOutCubic.transform(_controller.value);
-            final color = Color.lerp(inactiveColor, activeColor, t)!;
+            // "Clearly Sokoni yellow" (per brief) means a yellow *fill*
+            // behind the icon, not yellow as the icon/label foreground —
+            // #FAC902 text/icons on either surface colour fail WCAG
+            // contrast badly (~1.6:1 on white, nowhere near the 3:1 a
+            // graphic needs), same reason it's never used as a text
+            // colour anywhere else in the app. The icon sits on the
+            // yellow pill in black (matching SokoniColors.onYellow,
+            // ~20:1 contrast); the label uses the theme's actual
+            // onSurface colour, which was the real bug here previously —
+            // hardcoded to sokoniBlack regardless of theme, rendering
+            // near-invisible on the dark-mode nav bar's near-black
+            // background. See DECISIONS.md.
+            final iconColor = Color.lerp(inactiveColor, SokoniColors.sokoniBlack, t)!;
+            final labelColor = Color.lerp(inactiveColor, onSurface, t)!;
             final scale = 1 + t * 0.15;
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Transform.scale(
-                  scale: scale,
-                  child: Icon(
-                    widget.selected ? widget.item.selectedIcon : widget.item.icon,
-                    color: color,
-                    size: 24,
-                  ),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (t > 0)
+                      Opacity(
+                        opacity: t,
+                        child: Transform.scale(
+                          scale: 0.6 + t * 0.4,
+                          child: const SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: SokoniColors.sokoniYellow,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    Transform.scale(
+                      scale: scale,
+                      child: Icon(
+                        widget.selected ? widget.item.selectedIcon : widget.item.icon,
+                        color: iconColor,
+                        size: 24,
+                      ),
+                    ),
+                  ],
                 ),
                 ClipRect(
                   child: Align(
@@ -166,10 +200,10 @@ class _NavIconState extends State<_NavIcon> with SingleTickerProviderStateMixin 
                         padding: const EdgeInsets.only(top: 2),
                         child: Text(
                           widget.item.label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: activeColor,
+                            color: labelColor,
                           ),
                         ),
                       ),

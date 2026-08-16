@@ -42,7 +42,13 @@ class _RadiusFilterContent extends StatelessWidget {
               for (final preset in RadiusPreset.values)
                 RadioListTile<RadiusPreset>(
                   value: preset,
-                  activeColor: SokoniColors.sokoniBlack,
+                  // Yellow, not sokoniBlack: same "active/selected" accent
+                  // language as the chip selectedColor elsewhere, and
+                  // unlike black it doesn't need a light/dark branch to
+                  // stay visible on both surfaces — sokoniBlack was
+                  // rendering near-invisible against a dark-mode sheet.
+                  // See DECISIONS.md.
+                  activeColor: SokoniColors.sokoniYellow,
                   title: Text(labelFor(preset)),
                 ),
             ],

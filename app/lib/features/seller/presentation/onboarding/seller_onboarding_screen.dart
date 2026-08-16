@@ -124,6 +124,8 @@ class _ProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final outline = isDark ? SokoniColors.darkOutline : SokoniColors.outline;
     final labels = [
       l10n.onboardingStepBusiness,
       l10n.onboardingStepLocation,
@@ -143,7 +145,7 @@ class _ProgressBar extends StatelessWidget {
                     duration: const Duration(milliseconds: 220),
                     height: 4,
                     decoration: BoxDecoration(
-                      color: i <= step ? SokoniColors.sokoniYellow : SokoniColors.outline,
+                      color: i <= step ? SokoniColors.sokoniYellow : outline,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),

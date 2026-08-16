@@ -249,7 +249,20 @@ class _MessageBubble extends ConsumerWidget {
                         fit: BoxFit.cover,
                       ),
                     ),
-                  if (message.body != null && message.body!.isNotEmpty) Text(message.body!),
+                  if (message.body != null && message.body!.isNotEmpty)
+                    Text(
+                      message.body!,
+                      // "Mine" bubbles stay sokoniYellow regardless of
+                      // theme, but with no explicit colour here the text
+                      // followed the ambient theme text colour, which
+                      // flips to near-white in dark mode — near-white on
+                      // bright yellow is poor contrast. onYellow (black)
+                      // is correct for this bubble in both themes; the
+                      // received-message bubble already tracks the theme
+                      // correctly via surfaceContainerHighest, so it's
+                      // left to inherit as before.
+                      style: message.isMine ? const TextStyle(color: SokoniColors.onYellow) : null,
+                    ),
                 ],
               ),
             ),

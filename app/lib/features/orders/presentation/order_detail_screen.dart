@@ -280,15 +280,34 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
+    final accent = switch (status) {
       'completed' => SokoniColors.success,
       'cancelled' => SokoniColors.danger,
       _ => SokoniColors.sokoniYellow,
     };
+    // The status colour tints the pill and marks a small dot — it's not
+    // the text colour. sokoniYellow as text (the pending/accepted/ready
+    // case) fails WCAG contrast badly against its own pale tint, and even
+    // success/danger were only borderline; a coloured dot + the theme's
+    // actual onSurface text reads clearly regardless of which status
+    // colour is in play. See DECISIONS.md.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? SokoniColors.darkOnSurface : SokoniColors.sokoniBlack;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space12, vertical: SokoniDimens.space4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
-      child: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+      decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(status, style: TextStyle(color: onSurface, fontWeight: FontWeight.w700)),
+        ],
+      ),
     );
   }
 }

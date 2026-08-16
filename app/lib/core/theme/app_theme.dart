@@ -178,6 +178,19 @@ abstract final class SokoniTheme {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
+        // Explicit, rather than left to AlertDialog's own Material 3
+        // default colour-role resolution — this app's ColorScheme only
+        // sets a handful of roles (primary/secondary/surface/onSurface/
+        // error/outline), so any role Flutter's defaults reach for that
+        // isn't one of those (onSurfaceVariant, in particular) falls back
+        // to a generic Material baseline with no guaranteed relationship
+        // to this app's actual dark surface (#0E0E0E) — which is exactly
+        // how the location-permission dialog ended up rendering
+        // near-invisible dark text on a dark surface. Pulling straight
+        // from textTheme (already onSurface-coloured per brightness, see
+        // SokoniTypography) removes that indirection entirely.
+        titleTextStyle: textTheme.titleLarge,
+        contentTextStyle: textTheme.bodyMedium,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(SokoniDimens.radiusCard),
         ),

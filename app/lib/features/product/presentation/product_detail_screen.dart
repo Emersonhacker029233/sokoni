@@ -98,7 +98,10 @@ class _ProductDetailBody extends ConsumerWidget {
               const SizedBox(height: SokoniDimens.space8),
               Text(
                 SokoniFormat.tzs(product.price),
-                style: textTheme.titleLarge?.copyWith(color: SokoniColors.sokoniBlack, fontWeight: FontWeight.w800),
+                // textTheme.titleLarge is already onSurface-coloured per
+                // theme — hardcoding sokoniBlack broke dark mode. See
+                // DECISIONS.md.
+                style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: SokoniDimens.space4),
               Text(

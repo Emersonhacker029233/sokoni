@@ -24,7 +24,6 @@ class SokoniEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Center(
       child: Padding(
@@ -35,12 +34,17 @@ class SokoniEmptyState extends StatelessWidget {
             Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(
-                color: isDark ? SokoniColors.darkSurfaceAlt : SokoniColors.surfaceAlt,
+              decoration: const BoxDecoration(
+                // Yellow as the fill, black icon on top — not yellow icon
+                // on surfaceAlt, which in light mode is functionally
+                // yellow-on-white (~1.6:1, fails even the 3:1 a graphic
+                // needs). Same pattern as onYellow everywhere else in the
+                // app. See DECISIONS.md.
+                color: SokoniColors.sokoniYellow,
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(icon, size: 32, color: SokoniColors.sokoniYellow),
+              child: Icon(icon, size: 32, color: SokoniColors.onYellow),
             ),
             const SizedBox(height: SokoniDimens.space20),
             Text(title, style: textTheme.titleMedium, textAlign: TextAlign.center),
