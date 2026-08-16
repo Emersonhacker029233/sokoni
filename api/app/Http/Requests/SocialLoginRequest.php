@@ -15,9 +15,9 @@ class SocialLoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'provider' => ['required', 'string', Rule::in(['google', 'facebook', 'apple'])],
-            // The provider's ID/access token (Google id_token, Facebook
-            // access_token, Apple identityToken) — verified server-side in
+            'provider' => ['required', 'string', Rule::in(['google', 'apple'])],
+            // The provider's ID/access token (Google id_token, Apple
+            // identityToken) — verified server-side in
             // HttpSocialAuthVerifier, never trusted as-is.
             'token' => ['required', 'string'],
         ];

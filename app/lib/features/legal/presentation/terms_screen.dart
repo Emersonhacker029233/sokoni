@@ -37,7 +37,7 @@ Last updated: 2026
 Sokoni ("we", "us") operates the Sokoni marketplace app and website, connecting buyers and sellers in Tanzania. These Terms govern your use of Sokoni.
 
 2. Your account
-You may browse Sokoni without an account. Creating an account (via phone number, Google, Facebook, or Apple) is required to place an order, message a seller, or save favourites. You're responsible for keeping your account credentials secure and for all activity under your account.
+You may browse Sokoni without an account. Creating an account (via phone number, Google, or Apple) is required to place an order, message a seller, or save favourites. You're responsible for keeping your account credentials secure and for all activity under your account.
 
 3. Buying on Sokoni
 Sokoni is a marketplace connecting buyers and sellers — we are not a party to the sale itself. Orders, pricing, delivery and payment terms are agreed between you and the seller. Payment on the platform today is cash on delivery or pay on pickup only.
@@ -83,7 +83,7 @@ Yalisasishwa mwisho: 2026
 Sokoni ("sisi") inaendesha programu na tovuti ya soko la Sokoni, inayounganisha wanunuzi na wauzaji nchini Tanzania. Masharti haya yanasimamia matumizi yako ya Sokoni.
 
 2. Akaunti yako
-Unaweza kutazama Sokoni bila akaunti. Kufungua akaunti (kwa nambari ya simu, Google, Facebook, au Apple) inahitajika ili kuagiza, kuzungumza na muuzaji, au kuhifadhi vipendwa. Wewe ndiye unayehusika na usalama wa taarifa za akaunti yako na shughuli zote chini yake.
+Unaweza kutazama Sokoni bila akaunti. Kufungua akaunti (kwa nambari ya simu, Google, au Apple) inahitajika ili kuagiza, kuzungumza na muuzaji, au kuhifadhi vipendwa. Wewe ndiye unayehusika na usalama wa taarifa za akaunti yako na shughuli zote chini yake.
 
 3. Kununua kwenye Sokoni
 Sokoni ni soko linalounganisha wanunuzi na wauzaji — sisi si sehemu ya mauzo yenyewe. Oda, bei, uwasilishaji na masharti ya malipo hukubaliwa kati yako na muuzaji. Malipo kwa sasa ni malipo baada ya kuletewa au wakati wa kuchukua pekee.

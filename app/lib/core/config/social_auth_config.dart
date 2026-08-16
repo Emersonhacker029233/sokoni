@@ -1,7 +1,8 @@
-/// Credentials for the three social sign-in providers (CLAUDE.md's third
-/// "stop and ask" blocker: "Facebook App ID and Apple Sign-In service ID" —
-/// Google's server client ID is the equivalent piece for Google Sign-In's
-/// ID-token flow). See BLOCKERS.md.
+/// Credentials for the remaining social sign-in providers (CLAUDE.md's
+/// third "stop and ask" blocker originally also covered a Facebook App
+/// ID — Facebook sign-in was removed entirely, not just left unconfigured;
+/// see BLOCKERS.md and DECISIONS.md. Google's server client ID is the
+/// equivalent piece for Google Sign-In's ID-token flow).
 ///
 /// The sign-in *code paths* below are fully real — real SDK calls, real
 /// tokens, real POSTs to `/auth/social` — this module only gates whether
@@ -26,14 +27,6 @@ abstract final class SokoniSocialAuthConfig {
   );
 
   static bool get isGoogleConfigured => !googleServerClientId.startsWith('REPLACE_ME');
-
-  // Facebook's App ID lives in native config (AndroidManifest.xml /
-  // Info.plist), not Dart, on mobile — flutter_facebook_auth reads it from
-  // there automatically. There's nothing to check for a placeholder client
-  // side, so this stays true; a missing native App ID surfaces as a normal
-  // provider-side login failure instead, same as any other transient
-  // Facebook login error.
-  static bool get isFacebookConfigured => true;
 
   static bool get isAppleConfigured => !appleServiceId.startsWith('REPLACE_ME');
 }

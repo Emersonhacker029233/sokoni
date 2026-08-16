@@ -21,7 +21,6 @@ class HttpSocialAuthVerifier implements SocialAuthVerifier
     {
         return match ($provider) {
             'google' => $this->verifyGoogle($token),
-            'facebook' => $this->verifyFacebook($token),
             'apple' => $this->verifyApple($token),
             default => throw new InvalidSocialTokenException("Unsupported provider: {$provider}"),
         };
@@ -48,48 +47,6 @@ class HttpSocialAuthVerifier implements SocialAuthVerifier
             email: $payload['email'] ?? null,
             name: $payload['name'] ?? null,
             avatar: $payload['picture'] ?? null,
-        );
-    }
-
-    private function verifyFacebook(string $accessToken): VerifiedIdentity
-    {
-        $appId = config('services.facebook.client_id');
-        $appSecret = config('services.facebook.client_secret');
-
-        if (! $appId || ! $appSecret) {
-            throw new InvalidSocialTokenException('Facebook app credentials are not configured.');
-        }
-
-        $debug = Http::get('https://graph.facebook.com/debug_token', [
-            'input_token' => $accessToken,
-            'access_token' => "{$appId}|{$appSecret}",
-        ]);
-
-        if ($debug->failed() || ! ($debug->json('data.is_valid') ?? false)) {
-            throw new InvalidSocialTokenException('Facebook token is invalid or expired.');
-        }
-
-        if ($debug->json('data.app_id') !== $appId) {
-            throw new InvalidSocialTokenException('Facebook token app mismatch.');
-        }
-
-        $userId = $debug->json('data.user_id');
-
-        $profile = Http::get("https://graph.facebook.com/{$userId}", [
-            'fields' => 'name,email,picture',
-            'access_token' => $accessToken,
-        ]);
-
-        if ($profile->failed()) {
-            throw new InvalidSocialTokenException('Could not fetch Facebook profile.');
-        }
-
-        return new VerifiedIdentity(
-            provider: 'facebook',
-            providerId: $userId,
-            email: $profile->json('email'),
-            name: $profile->json('name'),
-            avatar: $profile->json('picture.data.url'),
         );
     }
 

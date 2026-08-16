@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -7,24 +6,29 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../../core/config/social_auth_config.dart';
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/providers.dart';
 import '../../../core/theme/dimens.dart';
-import '../../legal/presentation/legal_gate.dart';
 import '../providers/auth_providers.dart';
+import 'post_sign_in.dart';
 
-enum _Provider { google, facebook, apple }
+enum _Provider { google, apple }
 
-/// Google / Facebook / Apple buttons (CLAUDE.md feature 4) — real native
-/// SDK flows, each ending in a POST to `/auth/social` where the token is
-/// verified server-side (never trusted client-side, see
-/// `HttpSocialAuthVerifier`). A provider's button is disabled with a
-/// tooltip rather than removed when its credential (BLOCKERS.md item 3)
-/// isn't configured yet, since attempting the flow with a placeholder ID
-/// fails or hangs inside the native SDK instead of failing cleanly.
+/// Google / Apple buttons (CLAUDE.md feature 4) — real native SDK flows,
+/// each ending in a POST to `/auth/social` where the token is verified
+/// server-side (never trusted client-side, see `HttpSocialAuthVerifier`).
+/// A provider's button is disabled with a tooltip rather than removed
+/// when its credential (BLOCKERS.md item 3) isn't configured yet, since
+/// attempting the flow with a placeholder ID fails or hangs inside the
+/// native SDK instead of failing cleanly.
+///
+/// Facebook sign-in was removed entirely (not just left unconfigured) —
+/// `flutter_facebook_auth`'s Android plugin constructs a `FacebookAuth`
+/// (and, through it, initialises the native Facebook SDK) at plugin
+/// registration time, unconditionally on every app launch, before any
+/// Dart code runs — with no App ID ever configured, this was hanging the
+/// app before Flutter's first frame on at least one real device. See
+/// DECISIONS.md.
 class SocialSignInButtons extends ConsumerStatefulWidget {
-  const SocialSignInButtons({required this.onSignedIn, super.key});
-
-  final VoidCallback onSignedIn;
+  const SocialSignInButtons({super.key});
 
   @override
   ConsumerState<SocialSignInButtons> createState() => _SocialSignInButtonsState();
@@ -36,10 +40,8 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
   GoogleSignIn? _googleSignIn;
 
   Future<void> _completeLogin({required String provider, required String token}) async {
-    final user = await ref.read(authRepositoryProvider).socialLogin(provider: provider, token: token);
-    ref.read(authStateProvider.notifier).markAuthenticated();
-    if (mounted) await ensureTermsAccepted(context, user);
-    widget.onSignedIn();
+    final response = await ref.read(authRepositoryProvider).socialLogin(provider: provider, token: token);
+    if (mounted) await completeSignIn(context, ref, response);
   }
 
   Future<void> _signInWithGoogle() async {
@@ -59,33 +61,6 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
     } on GoogleSignInException catch (e) {
       if (e.code != GoogleSignInExceptionCode.canceled && mounted) {
         setState(() => _error = AppLocalizations.of(context).signInFailed);
-      }
-    } on ApiException catch (e) {
-      setState(() => _error = e.message);
-    } on StateError {
-      if (mounted) setState(() => _error = AppLocalizations.of(context).signInFailed);
-    } finally {
-      if (mounted) setState(() => _loading = null);
-    }
-  }
-
-  Future<void> _signInWithFacebook() async {
-    setState(() {
-      _loading = _Provider.facebook;
-      _error = null;
-    });
-    try {
-      final result = await FacebookAuth.instance.login(permissions: const ['email', 'public_profile']);
-      switch (result.status) {
-        case LoginStatus.success:
-          final token = result.accessToken?.token;
-          if (token == null) throw StateError('Facebook did not return an access token.');
-          await _completeLogin(provider: 'facebook', token: token);
-        case LoginStatus.cancelled:
-          break;
-        case LoginStatus.failed:
-        case LoginStatus.operationInProgress:
-          if (mounted) setState(() => _error = AppLocalizations.of(context).signInFailed);
       }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -141,15 +116,6 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
           enabled: _loading == null && SokoniSocialAuthConfig.isGoogleConfigured,
           notConfiguredMessage: l10n.signInNotConfigured,
           onPressed: _signInWithGoogle,
-        ),
-        const SizedBox(height: SokoniDimens.space12),
-        _SocialButton(
-          icon: Icons.facebook_rounded,
-          label: l10n.signInWithFacebook,
-          loading: _loading == _Provider.facebook,
-          enabled: _loading == null && SokoniSocialAuthConfig.isFacebookConfigured,
-          notConfiguredMessage: l10n.signInNotConfigured,
-          onPressed: _signInWithFacebook,
         ),
         const SizedBox(height: SokoniDimens.space12),
         _SocialButton(

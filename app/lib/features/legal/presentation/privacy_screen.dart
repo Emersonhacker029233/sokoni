@@ -28,7 +28,7 @@ Privacy Policy — version $sokoniTermsVersion
 Last updated: 2026
 
 1. What we collect
-Account: name, phone number or email, and profile photo, from you directly or from Google/Facebook/Apple when you sign in that way.
+Account: name, phone number or email, and profile photo, from you directly or from Google/Apple when you sign in that way.
 Seller verification: NIDA number, a photo of your national ID, and your business/trading licence — used only by our verification team, never shown publicly.
 Location: your device's approximate or precise location, if you grant permission, used to show nearby sellers and products. You can decline and pick a region/district manually instead.
 Usage: products you view or favourite, orders you place, messages you send, and reviews you leave.
@@ -65,7 +65,7 @@ Sera ya Faragha — toleo $sokoniTermsVersion
 Ilisasishwa mwisho: 2026
 
 1. Tunachokusanya
-Akaunti: jina, nambari ya simu au barua pepe, na picha ya wasifu, kutoka kwako moja kwa moja au kutoka Google/Facebook/Apple ukijisajili kwa njia hiyo.
+Akaunti: jina, nambari ya simu au barua pepe, na picha ya wasifu, kutoka kwako moja kwa moja au kutoka Google/Apple ukijisajili kwa njia hiyo.
 Uthibitisho wa muuzaji: namba ya NIDA, picha ya kitambulisho cha taifa, na leseni yako ya biashara — hutumika tu na timu yetu ya uthibitisho, haionyeshwi hadharani.
 Mahali: mahali pa kifaa chako, kwa ridhaa yako, hutumika kuonyesha wauzaji na bidhaa za karibu. Unaweza kukataa na kuchagua mkoa/wilaya kwa mkono badala yake.
 Matumizi: bidhaa unazotazama au kupenda, oda unazoweka, ujumbe unaotuma, na maoni unayotoa.
