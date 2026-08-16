@@ -16,6 +16,7 @@ _SokoniUser _$SokoniUserFromJson(Map<String, dynamic> json) => _SokoniUser(
   isSeller: json['is_seller'] as bool,
   sellerStatus: json['seller_status'] as String?,
   sellerHandle: json['seller_handle'] as String?,
+  accountIntent: json['account_intent'] as String?,
   termsAccepted: json['terms_accepted'] as bool,
   createdAt: json['created_at'] == null
       ? null
@@ -33,6 +34,7 @@ Map<String, dynamic> _$SokoniUserToJson(_SokoniUser instance) =>
       'is_seller': instance.isSeller,
       'seller_status': instance.sellerStatus,
       'seller_handle': instance.sellerHandle,
+      'account_intent': instance.accountIntent,
       'terms_accepted': instance.termsAccepted,
       'created_at': instance.createdAt?.toIso8601String(),
     };

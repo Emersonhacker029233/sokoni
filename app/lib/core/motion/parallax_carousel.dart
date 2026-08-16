@@ -71,22 +71,28 @@ class _ParallaxCarouselState extends State<ParallaxCarousel> {
           ),
         ),
         const SizedBox(height: 12),
-        _StretchDots(count: widget.itemCount, activeIndex: _page),
+        StretchDots(count: widget.itemCount, activeIndex: _page),
       ],
     );
   }
 }
 
-class _StretchDots extends StatelessWidget {
-  const _StretchDots({required this.count, required this.activeIndex});
+/// The page-dot-stretch treatment on its own — active dot stretches to a
+/// 20×6 pill, inactive dots stay 6×6 circles. [inactiveColor] defaults to
+/// the theme's outline colour (right for a carousel on a normal surface);
+/// pass an explicit override for content that sits over its own dark
+/// background regardless of app theme (e.g. the Showcase video feed).
+class StretchDots extends StatelessWidget {
+  const StretchDots({required this.count, required this.activeIndex, this.inactiveColor, super.key});
 
   final int count;
   final int activeIndex;
+  final Color? inactiveColor;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inactive = isDark ? SokoniColors.darkOutline : SokoniColors.outline;
+    final inactive = inactiveColor ?? (isDark ? SokoniColors.darkOutline : SokoniColors.outline);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(count, (index) {

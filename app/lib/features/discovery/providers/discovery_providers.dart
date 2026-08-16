@@ -24,6 +24,14 @@ final categoriesProvider = FutureProvider<List<SokoniCategory>>((ref) async {
   return ref.watch(productRepositoryProvider).categories();
 });
 
+/// The signed-in seller's own Listings, unpaginated to a single page — used
+/// by the Offer/Showcase/Update composers' "pick one of your own Listings"
+/// step (CLAUDE.md Part 3), not the My Shop dashboard's own paginated list.
+final myProductsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
+  final result = await ref.watch(productRepositoryProvider).myProducts();
+  return result.items;
+});
+
 /// Radius presets from CLAUDE.md feature 1 — null means "All" (unbounded).
 enum RadiusPreset {
   km1(1),

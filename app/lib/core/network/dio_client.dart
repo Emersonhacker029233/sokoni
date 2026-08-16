@@ -7,14 +7,17 @@ import '../storage/secure_storage.dart';
 import 'api_exception.dart';
 import 'auth_interceptor.dart';
 
-/// Base URL for the Laravel API. Defaults to a loopback address reachable
-/// from each dev target (Android emulators can't reach the host machine's
-/// `127.0.0.1` directly — they need the special `10.0.2.2` alias). Override
-/// with `--dart-define=API_BASE_URL=https://api.sokoni.co.tz/api` for
-/// staging/production builds.
+/// Base URL for the Laravel API. In release builds this defaults to the
+/// live production API; in debug/profile builds it defaults to a loopback
+/// address reachable from each dev target (Android emulators can't reach
+/// the host machine's `127.0.0.1` directly — they need the special
+/// `10.0.2.2` alias). `--dart-define=API_BASE_URL=...` overrides either
+/// default, for a staging build or pointing a debug build at a real server.
 String get sokoniApiBaseUrl {
   const override = String.fromEnvironment('API_BASE_URL');
   if (override.isNotEmpty) return override;
+
+  if (kReleaseMode) return 'https://api.sokoni.co.tz/api';
 
   if (kIsWeb) return 'http://127.0.0.1:8000/api';
   if (Platform.isAndroid) return 'http://10.0.2.2:8000/api';

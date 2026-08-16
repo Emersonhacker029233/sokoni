@@ -16,6 +16,7 @@ abstract class SokoniUser with _$SokoniUser {
     @JsonKey(name: 'is_seller') required bool isSeller,
     @JsonKey(name: 'seller_status') String? sellerStatus,
     @JsonKey(name: 'seller_handle') String? sellerHandle,
+    @JsonKey(name: 'account_intent') String? accountIntent,
     @JsonKey(name: 'terms_accepted') required bool termsAccepted,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _SokoniUser;
