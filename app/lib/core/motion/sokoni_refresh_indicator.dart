@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/colors.dart';
-
 /// Motion primitive 10 — pull-to-refresh.
 ///
 /// A ground-up replacement for [RefreshIndicator]: rather than the stock
@@ -170,10 +168,20 @@ class _SokoniBagSpinnerState extends State<SokoniBagSpinner>
   Widget build(BuildContext context) {
     return RotationTransition(
       turns: _controller,
-      child: Icon(
-        Icons.shopping_bag_rounded,
-        size: widget.size,
-        color: SokoniColors.sokoniYellow,
+      child: ClipOval(
+        child: Image.asset(
+          'assets/brand/sokoni_logo_icon.png',
+          width: widget.size,
+          height: widget.size,
+          fit: BoxFit.cover,
+          // Fixed regardless of widget.size (which varies continuously
+          // during the pull gesture) so every frame reuses one decoded
+          // image instead of re-decoding at a slightly different target
+          // each time — see splash_transition.dart for why a cache hint
+          // matters here at all.
+          cacheWidth: 96,
+          cacheHeight: 96,
+        ),
       ),
     );
   }

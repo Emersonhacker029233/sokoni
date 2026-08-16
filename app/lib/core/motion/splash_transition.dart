@@ -93,18 +93,22 @@ class _SokoniSplashTransitionState extends State<SokoniSplashTransition>
                 offset: Offset(0, dy),
                 child: Transform.scale(
                   scale: scale.clamp(0.0, 1.3),
-                  child: Container(
-                    width: 96,
-                    height: 96,
-                    decoration: BoxDecoration(
-                      color: SokoniColors.sokoniBlack,
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.shopping_bag_rounded,
-                      color: SokoniColors.sokoniYellow,
-                      size: 48,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Image.asset(
+                      'assets/brand/sokoni_logo_icon.png',
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      // Caps decode resolution regardless of the source
+                      // asset's actual size — see DECISIONS.md: a
+                      // placeholder asset was found at 6250x6250
+                      // (~149MB decoded as raw RGBA) being decoded fresh
+                      // on every AnimatedBuilder rebuild for a 96x96
+                      // target with no cache hint at all. 192 covers up to
+                      // 2x device pixel ratio at this display size.
+                      cacheWidth: 192,
+                      cacheHeight: 192,
                     ),
                   ),
                 ),
