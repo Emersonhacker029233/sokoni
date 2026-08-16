@@ -1,0 +1,40 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Diagnostic build only (see DECISIONS.md). Removing
+         flutter_facebook_auth entirely (the prior top suspect) did NOT fix
+         the real Android 16 device's startup hang, so this now bisects
+         plugin registration one at a time (see DiagnosticMainActivity)
+         instead of registering zero plugins.
+
+         Firebase's native-SDK auto-init ContentProvider — which runs at
+         process start, before any of our code, independent of Dart/plugin
+         registration entirely — is deliberately left IN this build (no
+         tools:node="remove" here), unlike the previous version of this
+         flavor: firebase_core/firebase_messaging are still real
+         dependencies, so if the hang is actually at that pre-onCreate
+         level rather than in plugin registration, this build will hang
+         too, before ever showing DiagnosticMainActivity's first frame or
+         writing its first log line — itself a diagnostic result. There is
+         no equivalent Facebook provider to restore: flutter_facebook_auth
+         is gone from pubspec.yaml, so no Facebook AAR is part of this
+         build at all anymore, and nothing merges that provider in. -->
+    <application>
+        <activity
+            android:name=".MainActivity"
+            tools:node="remove" />
+
+        <activity
+            android:name=".DiagnosticMainActivity"
+            android:exported="true"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

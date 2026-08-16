@@ -55,7 +55,16 @@ class AuthStateController extends Notifier<AuthState> {
   }
 
   Future<void> _loadInitial() async {
-    final token = await ref.read(secureStorageProvider).readToken();
+    // Keystore-backed reads are usually instant but aren't guaranteed to
+    // be — nothing at startup should be able to hang waiting on this, so a
+    // timeout (or any other failure) just falls back to "signed out"
+    // rather than leaving isLoading true forever.
+    String? token;
+    try {
+      token = await ref.read(secureStorageProvider).readToken().timeout(const Duration(seconds: 5));
+    } catch (_) {
+      token = null;
+    }
     state = AuthState(isAuthenticated: token != null, isLoading: false);
     if (token != null) unawaited(ref.read(pushServiceProvider).registerDevice());
   }

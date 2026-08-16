@@ -6,6 +6,9 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Applies google-services.json (present in this directory) at build
+    // time so Firebase (FCM push) actually initialises.
+    id("com.google.gms.google-services")
 }
 
 // key.properties (gitignored — see root .gitignore) holds the release
@@ -67,8 +70,42 @@ android {
             }
         }
     }
+
+    // "diagnostic" isolates whether Flutter's engine itself boots on a
+    // device where the full app hangs before ever reaching Dart (see
+    // DECISIONS.md) — a separate applicationId so it installs alongside
+    // the real app rather than replacing it. "prod" is the real app,
+    // unchanged in every respect (same applicationId/output) from before
+    // these flavors existed — every future build command just needs an
+    // explicit `--flavor prod` now that any flavor is declared at all.
+    flavorDimensions += "environment"
+    productFlavors {
+        create("prod") {
+            dimension = "environment"
+        }
+        create("diagnostic") {
+            dimension = "environment"
+            applicationIdSuffix = ".diagnostic"
+            versionNameSuffix = "-diagnostic"
+        }
+    }
 }
 
 flutter {
     source = "../.."
+}
+
+// The Google Services plugin processes every build variant by default and
+// fails the build outright if google-services.json has no client entry
+// for that variant's applicationId — true for every "diagnostic" variant,
+// since applicationIdSuffix changes the package name and the diagnostic
+// flavor deliberately runs with no Firebase config at all (its manifest
+// also strips Firebase's own auto-init provider — see DECISIONS.md).
+// Disabling the task for that flavor is simpler and less fragile than
+// fabricating a second client entry in a file that otherwise holds real
+// production credentials.
+tasks.configureEach {
+    if (name.contains("GoogleServices") && name.contains("Diagnostic", ignoreCase = true)) {
+        enabled = false
+    }
 }

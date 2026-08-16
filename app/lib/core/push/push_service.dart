@@ -25,25 +25,32 @@ class PushService {
 
   final DeviceApi _api;
 
+  static const _stepTimeout = Duration(seconds: 8);
+
+  /// Every awaited step here is individually time-boxed. None of these
+  /// calls have a timeout of their own, and this method already only ever
+  /// runs `unawaited` from AuthStateController — but "not awaited by our
+  /// own code" doesn't mean a hung Future is harmless, so each step still
+  /// gets a hard bound and a catch, same as if it mattered directly.
   Future<void> registerDevice() async {
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp().timeout(_stepTimeout);
     } catch (e) {
-      developer.log('Firebase unavailable (no config files yet) — push disabled.', name: 'PushService', error: e);
+      developer.log('Firebase unavailable or timed out initialising — push disabled.', name: 'PushService', error: e);
       return;
     }
 
     try {
       final messaging = FirebaseMessaging.instance;
-      final settings = await messaging.requestPermission();
+      final settings = await messaging.requestPermission().timeout(_stepTimeout);
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
-      final token = await messaging.getToken();
+      final token = await messaging.getToken().timeout(_stepTimeout);
       if (token != null) await _register(token);
 
       messaging.onTokenRefresh.listen(_register);
     } catch (e) {
-      developer.log('FCM registration failed.', name: 'PushService', error: e);
+      developer.log('FCM registration failed or timed out.', name: 'PushService', error: e);
     }
   }
 
@@ -52,9 +59,9 @@ class PushService {
       await _api.register({
         'fcm_token': token,
         'platform': Platform.isIOS ? 'ios' : 'android',
-      });
+      }).timeout(_stepTimeout);
     } catch (e) {
-      developer.log('Device registration request failed.', name: 'PushService', error: e);
+      developer.log('Device registration request failed or timed out.', name: 'PushService', error: e);
     }
   }
 }

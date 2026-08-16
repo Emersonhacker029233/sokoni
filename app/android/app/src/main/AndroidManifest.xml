@@ -38,6 +38,22 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="REPLACE_ME" />
+        <!-- Now that google-services.json exists, Firebase's Android SDK
+             auto-initialises FirebaseMessaging via a ContentProvider at
+             process start — before Dart even runs, independent of and
+             earlier than PushService.registerDevice()'s explicit
+             Firebase.initializeApp() call. That auto-init tries to
+             register for an FCM token immediately, which can hang on a
+             device with no network or stale/missing Play Services and
+             was blocking the app from ever reaching its first frame.
+             Push registration is meant to be explicit and deferred until
+             after sign-in anyway (see PushService) — this defers FCM's
+             own init to match, rather than firing automatically at
+             startup. Does not affect explicit calls to
+             FirebaseMessaging.instance later. -->
+        <meta-data
+            android:name="firebase_messaging_auto_init_enabled"
+            android:value="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

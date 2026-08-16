@@ -39,7 +39,23 @@ class LocationService {
   /// reason it couldn't. On success, also updates the cached last-known
   /// position so [cachedPosition] has something to show next launch even
   /// before a fresh fix arrives.
+  ///
+  /// The whole thing is time-boxed: `Geolocator.getCurrentPosition` has no
+  /// timeout of its own and can hang indefinitely waiting for a GPS fix
+  /// (indoors, poor signal, an emulator with no simulated location) — never
+  /// block the app on location (CLAUDE.md feature 1) means never block it
+  /// waiting on this either. Anything that goes wrong here, including a
+  /// timeout, degrades to [LocationServiceDisabled] — the same fallback
+  /// callers already handle by offering the region/district picker.
   Future<LocationResult> current() async {
+    try {
+      return await _currentUnbounded().timeout(const Duration(seconds: 8));
+    } catch (_) {
+      return const LocationServiceDisabled();
+    }
+  }
+
+  Future<LocationResult> _currentUnbounded() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       return const LocationServiceDisabled();
     }

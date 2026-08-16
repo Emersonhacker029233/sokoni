@@ -14,35 +14,22 @@ rootProject.layout.buildDirectory.value(newBuildDir)
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
-
-    // Several plugins (e.g. flutter_facebook_auth 6.0.4) ship an Android
-    // build.gradle with no explicit compileOptions/kotlinOptions — Gradle
-    // then defaults their Java compilation to JVM 1.8 while the Kotlin
-    // compiler task picks up whatever JVM is actually running the build
-    // (21, via Android Studio's bundled JDK on this machine), which fails
-    // as an "Inconsistent JVM Target Compatibility" error. Force every
-    // subproject (app included) onto a single consistent JVM 17 target
-    // rather than patching each outdated plugin template individually.
-    // Must be registered here, before evaluationDependsOn(":app") below
-    // forces early evaluation — afterEvaluate errors on an already-
-    // evaluated project.
-    afterEvaluate {
-        extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
-            compileOptions {
-                sourceCompatibility = JavaVersion.VERSION_17
-                targetCompatibility = JavaVersion.VERSION_17
-            }
-        }
-        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-            compilerOptions {
-                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-            }
-        }
-    }
 }
 subprojects {
     project.evaluationDependsOn(":app")
 }
+
+// A `subprojects { afterEvaluate { ... } }` block forcing every subproject
+// onto a consistent JVM 17 target used to live here, worked around an
+// "Inconsistent JVM Target Compatibility" failure caused specifically by
+// flutter_facebook_auth 6.0.4's Android build.gradle (no explicit
+// compileOptions/kotlinOptions, so its Java compilation defaulted to JVM
+// 1.8 while its Kotlin compilation picked up the JDK actually running the
+// build). Confirmed by removing the workaround and doing a clean rebuild
+// after removing that package (see DECISIONS.md) — it now builds with only
+// harmless "source value 8 is obsolete" warnings from whichever plugins
+// still don't set compileOptions explicitly, not a hard failure, so the
+// workaround was specific to that one package and not needed generally.
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
