@@ -28,7 +28,7 @@ Seed the API first (`php artisan migrate:fresh --seed`) so the feed isn't empty 
 ## 4. Sign in (Device A, if not already)
 
 - From Profile, sign in with phone OTP — enter a number, the code is logged server-side (`storage/logs/laravel.log`) rather than SMS-sent (BLOCKERS.md item — no SMS gateway configured yet). Read the code from the log, or from an admin's terminal, and enter it.
-- **Talking point**: Google/Facebook/Apple buttons are real, working native flows, currently shown disabled with a tooltip — they light up the moment the four blocked credentials (BLOCKERS.md) are supplied, no code changes needed.
+- **Talking point**: Google/Apple buttons are real, working native flows, currently shown disabled with a tooltip — they light up the moment their blocked credentials (BLOCKERS.md) are supplied, no code changes needed. Facebook sign-in was removed entirely (not just disabled) after it was found hanging app startup on at least one real Android 16 device.
 - First-ever sign-in shows the Terms & Privacy acceptance screen — can't be dismissed without accepting, matching CLAUDE.md's acceptance-recording requirement.
 
 ## 5. Become a seller (Device A)

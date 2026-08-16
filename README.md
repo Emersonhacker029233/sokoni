@@ -66,8 +66,8 @@ cd app && flutter test
 
 ```powershell
 cd app
-flutter build apk --release --dart-define=API_BASE_URL=https://api.sokoni.co.tz/api
-flutter build appbundle --release --dart-define=API_BASE_URL=https://api.sokoni.co.tz/api
+flutter build apk --release --flavor prod
+flutter build appbundle --release --flavor prod
 ```
 
-Needs `android/key.properties` + `android/sokoni-release.jks` (both gitignored — not in this repo). Without them, the release build falls back to debug signing. See [docs/DEPLOY.md](docs/DEPLOY.md) for the full deployment runbook and [docs/DEMO.md](docs/DEMO.md) for a client demo script.
+Needs `android/key.properties` + `android/sokoni-release.jks` (both gitignored — not in this repo). Without them, the release build falls back to debug signing. `--flavor prod` is required (a `diagnostic` flavor also exists — see DECISIONS.md); the release API base URL is already the default in any `--release` build, no `--dart-define` needed. See [docs/DEPLOY.md](docs/DEPLOY.md) for the full deployment runbook and [docs/DEMO.md](docs/DEMO.md) for a client demo script.

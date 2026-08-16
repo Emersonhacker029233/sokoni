@@ -59,7 +59,7 @@ SESSION_DRIVER=database
 QUEUE_CONNECTION=sync             # no persistent worker on shared hosting — see step 9
 ```
 
-Plus the credentials for whichever of the four BLOCKERS.md items are ready by launch (`GOOGLE_CLIENT_ID`, `FACEBOOK_APP_ID`/`FACEBOOK_APP_SECRET`, `APPLE_SERVICE_ID`, `FIREBASE_CREDENTIALS`, `GOOGLE_MAPS_SERVER_KEY`) — everything works with these left blank, just with social login/push/NIDA-adjacent server-side geocoding disabled until they're supplied.
+Plus the credentials for whichever of the BLOCKERS.md items are ready by launch (`GOOGLE_CLIENT_ID`, `APPLE_SERVICE_ID`, `FIREBASE_CREDENTIALS`, `GOOGLE_MAPS_SERVER_KEY`) — everything works with these left blank, just with social login/push/NIDA-adjacent server-side geocoding disabled until they're supplied. Facebook sign-in was removed entirely (see DECISIONS.md), not just left as a pending credential — there's no `FACEBOOK_APP_ID`/`FACEBOOK_APP_SECRET` to set anymore.
 
 If `php artisan key:generate` isn't runnable (no SSH), generate a 32-byte base64 key any other way and set `APP_KEY=base64:<key>` directly.
 
@@ -135,9 +135,11 @@ Skip `config:cache`/`route:cache` while actively debugging a deploy — they mas
 
 The signed release APK/AAB is built locally (or in CI), not on the cPanel server — cPanel only hosts the API/admin. See the repo root `README.md` for the local build commands and `android/key.properties` (gitignored) for where the release keystore credentials live. Once built, the AAB goes to the Play Console; the APK can be distributed directly for a client demo.
 
-The app's API base URL defaults to a local-dev loopback address (`app/lib/core/network/dio_client.dart`). For a release build pointed at the deployed API, pass:
+The app's API base URL (`app/lib/core/network/dio_client.dart`) defaults to a local-dev loopback address in debug/profile builds and to the live production API automatically in any `--release` build — no flag needed for the common case. `--dart-define=API_BASE_URL=...` still overrides either default, for a staging build or pointing a debug build at a real server:
 
 ```bash
-flutter build appbundle --release --dart-define=API_BASE_URL=https://api.sokoni.co.tz/api
-flutter build apk --release --dart-define=API_BASE_URL=https://api.sokoni.co.tz/api
+flutter build appbundle --release --flavor prod
+flutter build apk --release --flavor prod
 ```
+
+`--flavor prod` is required as of the `diagnostic` build variant (see DECISIONS.md) — any flavor being declared at all means Gradle no longer has a flavor-less default. Output paths gain the flavor name too: `build/app/outputs/flutter-apk/app-prod-release.apk`, `build/app/outputs/bundle/prodRelease/app-prod-release.aab`.
