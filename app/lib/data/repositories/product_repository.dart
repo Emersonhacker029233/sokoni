@@ -11,9 +11,11 @@ import '../models/product.dart';
 import '../models/product_media.dart';
 
 /// Cache-aware: every list read tries the network first and falls back to
-/// the drift cache on [NetworkException] specifically (device offline or
-/// unreachable host) — other failures (validation, server errors) surface
-/// as-is, since a cached feed can't fix a broken request.
+/// the drift cache on [NetworkException] or [RequestTimeoutException]
+/// (device offline, unreachable host, or too slow to answer in time —
+/// CLAUDE.md's patchy-3G target makes the latter routine, not exceptional)
+/// — other failures (validation, server errors) surface as-is, since a
+/// cached feed can't fix a broken request.
 class ProductRepository {
   ProductRepository({required CatalogApi api, required dynamic cache, required Dio dio})
     : _api = api,
@@ -40,7 +42,7 @@ class ProductRepository {
       return categories;
     } catch (e) {
       final mapped = mapDioError(e);
-      if (mapped is! NetworkException) rethrow;
+      if (mapped is! NetworkException && mapped is! RequestTimeoutException) rethrow;
       final rows = await _cache.readCachedCategoriesJson() as List<String>;
       return rows.map((row) => SokoniCategory.fromJson(jsonDecode(row) as Map<String, dynamic>)).toList();
     }
@@ -79,7 +81,7 @@ class ProductRepository {
       return result;
     } catch (e) {
       final mapped = mapDioError(e);
-      if (mapped is! NetworkException) rethrow;
+      if (mapped is! NetworkException && mapped is! RequestTimeoutException) rethrow;
       final rows = await _cache.readCachedProductsJson(categoryId: categoryId) as List<String>;
       final items = rows
           .map((row) => Product.fromJson(jsonDecode(row) as Map<String, dynamic>))

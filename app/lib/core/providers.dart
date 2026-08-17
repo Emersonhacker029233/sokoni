@@ -99,7 +99,15 @@ final pushServiceProvider = Provider<PushService>((ref) {
 });
 
 /// Live connectivity stream — drives the "showing saved results" banner
-/// (CLAUDE.md feature 10) and gates network-only actions.
+/// (CLAUDE.md feature 10) only. Advisory, not a gate: no repository or
+/// provider in this app checks this before attempting a request — a
+/// device reported as "offline" here still gets a real network attempt,
+/// and only a genuine connection failure (see ApiException/mapDioError)
+/// ever short-circuits anything. That split matters concretely on Android
+/// 16, where connectivity_plus has been observed reporting stale or
+/// contradictory results when both Wi-Fi and mobile radios are active —
+/// this provider being wrong in that situation now only mis-colours a
+/// banner, never blocks a request that would otherwise have succeeded.
 final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) {
   return Connectivity().onConnectivityChanged;
 });
@@ -107,7 +115,12 @@ final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) {
 final isOnlineProvider = Provider<bool>((ref) {
   final result = ref.watch(connectivityProvider);
   return result.maybeWhen(
-    data: (results) => !results.contains(ConnectivityResult.none),
+    // `any(!= none)` rather than `!contains(none)`: some Android versions
+    // report a list containing both a real connection type and a stale
+    // `none` entry when radios change state — treat "has at least one real
+    // connection" as online rather than letting a spurious `none` alongside
+    // it flip the banner to "offline" while a connection genuinely exists.
+    data: (results) => results.any((r) => r != ConnectivityResult.none),
     orElse: () => true,
   );
 });

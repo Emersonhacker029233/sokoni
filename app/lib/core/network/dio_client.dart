@@ -26,6 +26,15 @@ String get sokoniApiBaseUrl {
 
 /// Builds the shared [Dio] instance: base URL, timeouts, the auth
 /// interceptor, and a logging interceptor in debug builds only.
+///
+/// Timeouts are deliberately generous — CLAUDE.md targets "mid-range
+/// Android on patchy 3G/4G", and a real device on 3G was seen timing out
+/// against the previous 15s/20s defaults on a plain product-list request,
+/// which [mapDioError] then (wrongly, see its own docs) reported as "no
+/// internet connection" rather than "that was slow". 30s is the floor for
+/// establishing a connection at all on a congested 3G cell; receive gets
+/// longer still since it covers the full response body transfer, not just
+/// the handshake.
 Dio buildDioClient({
   required SokoniSecureStorage storage,
   required Future<void> Function() onUnauthenticated,
@@ -33,8 +42,9 @@ Dio buildDioClient({
   final dio = Dio(
     BaseOptions(
       baseUrl: sokoniApiBaseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 20),
+      connectTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 45),
       headers: {'Accept': 'application/json'},
     ),
   );
@@ -52,25 +62,46 @@ Dio buildDioClient({
 
 /// Maps a [DioException] (or anything else thrown during a request) to a
 /// typed [ApiException] repositories and UI code can branch on.
+///
+/// Every case below maps to its own distinct message — a real reported bug
+/// was every one of timeout/DNS-failure/TLS-failure/5xx/unrecognised-error
+/// collapsing into the same "No internet connection." text, which made a
+/// slow-3G timeout indistinguishable from the device genuinely being
+/// offline (and was diagnosed as exactly that: the API was reachable and
+/// answering in the browser at the same moment the app reported "offline",
+/// because the app's own request had already timed out against the old
+/// 15s connect timeout and gotten misclassified).
 ApiException mapDioError(Object error) {
-  if (error is! DioException) return const ServerException();
+  if (error is! DioException) return UnknownException('Unexpected error: $error');
 
   switch (error.type) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
     case DioExceptionType.transformTimeout:
+      return const RequestTimeoutException();
     case DioExceptionType.connectionError:
       return const NetworkException();
     case DioExceptionType.badCertificate:
-      return const NetworkException('Could not securely connect to the server.');
+      return const TlsException();
     case DioExceptionType.cancel:
       return const ServerException('Request cancelled.');
     case DioExceptionType.badResponse:
       return _mapResponse(error.response);
     case DioExceptionType.unknown:
-      return const NetworkException();
+      return UnknownException(_describeUnknown(error));
   }
+}
+
+/// Dio's catch-all bucket has no reliable shape — `error.error` is
+/// whatever the underlying platform/plugin call threw, if anything. Prefer
+/// that (it's the actual cause), fall back to Dio's own message, and only
+/// then to a generic line — never silently reuse another category's text.
+String _describeUnknown(DioException error) {
+  final inner = error.error;
+  if (inner != null) return inner.toString();
+  if (error.message != null && error.message!.isNotEmpty) return error.message!;
+  return 'An unexpected error occurred.';
 }
 
 ApiException _mapResponse(Response? response) {
@@ -97,6 +128,6 @@ ApiException _mapResponse(Response? response) {
     case 429:
       return const RateLimitedException();
     default:
-      return ServerException(message ?? 'Something went wrong. Please try again.');
+      return ServerException(message ?? 'Server error${status != null ? ' ($status)' : ''}. Please try again.');
   }
 }
