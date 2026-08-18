@@ -13,9 +13,10 @@ use Illuminate\Support\Facades\Storage;
 /**
  * The seller verification queue's core screen (CLAUDE.md feature 9: "the
  * seller verification queue (NIDA image + licence + map location side by
- * side)"). Verify/reject actions live on the table/list, not here, so a
- * reviewer can act straight from the queue without an extra click into
- * each record — this page is purely the side-by-side evidence view.
+ * side)"). Verify/reject actions also live on this page's header (see
+ * ViewSellerProfile::getHeaderActions()), not only on the list table —
+ * this is the only screen that actually shows the evidence a reviewer
+ * needs, so it must be able to act on it directly.
  */
 class SellerProfileInfolist
 {

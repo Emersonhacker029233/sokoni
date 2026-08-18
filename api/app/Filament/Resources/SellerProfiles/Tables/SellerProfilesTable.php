@@ -2,13 +2,11 @@
 
 namespace App\Filament\Resources\SellerProfiles\Tables;
 
+use App\Filament\Resources\SellerProfiles\SellerProfileResource;
 use App\Models\SellerProfile;
-use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Textarea;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -56,36 +54,8 @@ class SellerProfilesTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                Action::make('verify')
-                    ->label('Verify')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn (SellerProfile $record) => $record->status !== 'verified')
-                    ->requiresConfirmation()
-                    ->action(function (SellerProfile $record) {
-                        $record->forceFill([
-                            'status' => 'verified',
-                            'verified_at' => now(),
-                            'rejection_reason' => null,
-                        ])->save();
-                        Notification::make()->title('Seller verified')->success()->send();
-                    }),
-                Action::make('reject')
-                    ->label('Reject')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->visible(fn (SellerProfile $record) => $record->status !== 'rejected')
-                    ->schema([
-                        Textarea::make('reason')->label('Reason')->required(),
-                    ])
-                    ->action(function (SellerProfile $record, array $data) {
-                        $record->forceFill([
-                            'status' => 'rejected',
-                            'rejection_reason' => $data['reason'],
-                            'verified_at' => null,
-                        ])->save();
-                        Notification::make()->title('Seller rejected')->warning()->send();
-                    }),
+                SellerProfileResource::verifyAction(),
+                SellerProfileResource::rejectAction(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

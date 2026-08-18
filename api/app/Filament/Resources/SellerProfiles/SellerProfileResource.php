@@ -7,7 +7,11 @@ use App\Filament\Resources\SellerProfiles\Pages\ViewSellerProfile;
 use App\Filament\Resources\SellerProfiles\Schemas\SellerProfileInfolist;
 use App\Filament\Resources\SellerProfiles\Tables\SellerProfilesTable;
 use App\Models\SellerProfile;
+use App\Support\ActivityLogger;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -22,11 +26,92 @@ use Filament\Tables\Table;
  */
 class SellerProfileResource extends Resource
 {
+    /**
+     * Shared with {@see ViewSellerProfile}'s header actions, not just the
+     * table row action — a real bug (not a guess: reproduced directly via
+     * `Livewire::test(ViewSellerProfile::class)->instance()
+     * ->getCachedHeaderActions()`, which came back empty) was that the
+     * *only* place these actions existed was the list table, which shows
+     * no NIDA photo, no licence, no map — none of the evidence a reviewer
+     * actually needs to decide. The view page (`SellerProfileInfolist`,
+     * literally docblocked as "the seller verification queue's core
+     * screen") had no way to act on what it was showing. The backend
+     * logic itself (forceFill/save, the policy) was never the problem —
+     * confirmed by invoking the table action directly via Livewire before
+     * touching any code, which worked with no error.
+     */
+    public static function verifyAction(): Action
+    {
+        return Action::make('verify')
+            ->label('Verify')
+            ->icon('heroicon-o-check-circle')
+            ->color('success')
+            ->visible(fn (SellerProfile $record) => $record->status !== 'verified')
+            ->requiresConfirmation()
+            ->action(function (SellerProfile $record) {
+                $record->forceFill([
+                    'status' => 'verified',
+                    'verified_at' => now(),
+                    'rejection_reason' => null,
+                ])->save();
+                ActivityLogger::record(auth()->user(), 'seller.verified', $record);
+                Notification::make()->title('Seller verified')->success()->send();
+            });
+    }
+
+    public static function rejectAction(): Action
+    {
+        return Action::make('reject')
+            ->label('Reject')
+            ->icon('heroicon-o-x-circle')
+            ->color('danger')
+            ->visible(fn (SellerProfile $record) => $record->status !== 'rejected')
+            ->schema([
+                Textarea::make('reason')->label('Reason')->required(),
+            ])
+            ->action(function (SellerProfile $record, array $data) {
+                $record->forceFill([
+                    'status' => 'rejected',
+                    'rejection_reason' => $data['reason'],
+                    'verified_at' => null,
+                ])->save();
+                ActivityLogger::record(auth()->user(), 'seller.rejected', $record, $data['reason']);
+                Notification::make()->title('Seller rejected')->warning()->send();
+            });
+    }
+
     protected static ?string $model = SellerProfile::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
 
     protected static \UnitEnum|string|null $navigationGroup = 'Trust & Safety';
+
+    protected static ?string $navigationLabel = 'Seller Verification';
+
+    protected static ?string $modelLabel = 'seller verification';
+
+    // See CategoryResource for why this matters.
+    protected static ?string $recordTitleAttribute = 'shop_name';
+
+    /** "Global search across products, shops, users and orders" (CLAUDE.md admin rebuild, Section 6) — "shops" means this resource, even though it's off the main nav (see below). */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['shop_name', 'handle'];
+    }
+
+    /**
+     * Off the main nav — {@see \App\Filament\Pages\SellerVerificationQueue}
+     * is the one "Seller Verification" nav item now (CLAUDE.md admin
+     * rebuild, Section 4: "a dedicated queue page, not a filtered list").
+     * This resource's routes stay live and unregistered-but-reachable so
+     * Products/Media can still deep-link to a specific seller's full
+     * record regardless of status (verified/rejected sellers included,
+     * which the queue page deliberately never shows).
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public static function infolist(Schema $schema): Schema
     {
