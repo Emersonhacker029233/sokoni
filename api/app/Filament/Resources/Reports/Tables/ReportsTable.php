@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Reports\Tables;
 
 use App\Models\Report;
 use App\Services\Push\PushNotifier;
+use App\Support\ActivityLogger;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -82,6 +83,7 @@ class ReportsTable
                             'resolved_by' => auth()->id(),
                             'resolution' => 'Upheld by admin review.',
                         ])->save();
+                        ActivityLogger::record(auth()->user(), 'report.upheld', $record);
                         Notification::make()->title('Report upheld')->success()->send();
                     }),
                 Action::make('dismiss')
@@ -95,6 +97,7 @@ class ReportsTable
                             'resolved_by' => auth()->id(),
                             'resolution' => 'Dismissed — no action taken.',
                         ])->save();
+                        ActivityLogger::record(auth()->user(), 'report.dismissed', $record);
                         Notification::make()->title('Report dismissed')->send();
                     }),
                 Action::make('hide')
@@ -109,6 +112,7 @@ class ReportsTable
                     ->requiresConfirmation()
                     ->action(function (Report $record) {
                         $record->reportable->forceFill(['is_hidden' => true])->save();
+                        ActivityLogger::record(auth()->user(), 'content.hidden', $record->reportable, 'Reported: '.$record->reason);
                         Notification::make()->title('Content hidden')->success()->send();
                     }),
                 Action::make('warn')
@@ -125,6 +129,7 @@ class ReportsTable
                             'Warning from Sokoni',
                             $data['reason'],
                         );
+                        ActivityLogger::record(auth()->user(), 'user.warned', $record->offendingUser(), $data['reason']);
                         Notification::make()->title('Warning sent')->success()->send();
                     }),
                 Action::make('suspend')
@@ -145,6 +150,7 @@ class ReportsTable
                         ])->save();
                         $user->tokens()->delete();
                         app(PushNotifier::class)->notify($user, 'Account suspended', $data['reason']);
+                        ActivityLogger::record(auth()->user(), 'user.suspended', $user, $data['reason'], ['days' => (int) $data['days']]);
                         Notification::make()->title('User suspended')->success()->send();
                     }),
                 Action::make('ban')
@@ -165,6 +171,7 @@ class ReportsTable
                         ])->save();
                         $user->tokens()->delete();
                         app(PushNotifier::class)->notify($user, 'Account banned', $data['reason']);
+                        ActivityLogger::record(auth()->user(), 'user.banned', $user, $data['reason']);
                         Notification::make()->title('User banned')->success()->send();
                     }),
             ])

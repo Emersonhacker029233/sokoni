@@ -8,19 +8,21 @@ use App\Http\Resources\ProductMediaResource;
 use App\Models\Product;
 use App\Models\ProductMedia;
 use App\Services\Media\ImageVariants;
+use App\Support\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ProductMediaController extends Controller
 {
-    /** CLAUDE.md feature 7: "Up to 8 items per product". */
-    private const MAX_ITEMS = 8;
-
     public function store(ProductMediaStoreRequest $request, Product $product): ProductMediaResource
     {
-        if ($product->media()->count() >= self::MAX_ITEMS) {
-            throw ValidationException::withMessages(['file' => 'A product can have at most 8 photos/videos.']);
+        // CLAUDE.md feature 7: "Up to 8 items per product" — 8 is the
+        // config default (config/sokoni.php), admin-overridable via the
+        // Settings page (App\Support\Settings).
+        $maxItems = Settings::maxMediaPerProduct();
+        if ($product->media()->count() >= $maxItems) {
+            throw ValidationException::withMessages(['file' => "A product can have at most {$maxItems} photos/videos."]);
         }
 
         $directory = "products/{$product->id}";

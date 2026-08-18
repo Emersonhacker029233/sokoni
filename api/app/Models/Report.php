@@ -16,9 +16,6 @@ class Report extends Model
 {
     use HasFactory;
 
-    /** Reports upheld against the same reportable at/above this count auto-hide it. */
-    public const AUTO_HIDE_THRESHOLD = 3;
-
     public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reporter_id');

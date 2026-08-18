@@ -39,12 +39,23 @@ class UserFactory extends Factory
         ]);
     }
 
-    /** A platform admin, able to sign into the Filament panel with a password. */
+    /** A platform admin, able to sign into the Filament panel with a password and full access once inside. */
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
             'password' => bcrypt('password'),
             'is_admin' => true,
+            'role' => 'admin',
+        ]);
+    }
+
+    /** Staff: can sign into the panel, but limited to moderation/verification — see User::isStaffRole(). */
+    public function staff(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'password' => bcrypt('password'),
+            'is_admin' => true,
+            'role' => 'staff',
         ]);
     }
 }

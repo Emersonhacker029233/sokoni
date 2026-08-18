@@ -134,4 +134,23 @@ class User extends Authenticatable implements FilamentUser
         // explicitly rather than let that violate the bool return type.
         return (bool) $this->is_admin;
     }
+
+    /**
+     * 'admin' = full panel access. 'staff' = moderation and verification
+     * only (Section 6 of the admin rebuild) — no user management, no
+     * settings, enforced by policies (`AdminOnly`/each resource's own
+     * policy), not just hidden nav items. `is_admin` stays the actual
+     * panel-access gate; `role` only distinguishes *which* level of
+     * access once inside, so a `role` of null with `is_admin=false` (an
+     * ordinary buyer/seller) is simply "not applicable", not an error.
+     */
+    public function isAdminRole(): bool
+    {
+        return $this->is_admin && $this->role === 'admin';
+    }
+
+    public function isStaffRole(): bool
+    {
+        return $this->is_admin && $this->role === 'staff';
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Product;
+use App\Support\Settings;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -22,8 +23,10 @@ class StoreOfferRequest extends FormRequest
             'discount_value' => ['required', 'numeric', 'min:1'],
             // A countdown length, not a date range (CLAUDE.md: "countdown
             // 1-7 days") — the offer always starts immediately on creation;
-            // the controller computes starts_at/ends_at from this.
-            'duration_days' => ['required', 'integer', 'between:1,7'],
+            // the controller computes starts_at/ends_at from this. The
+            // ceiling is admin-overridable (Settings page); 7 is the
+            // config default.
+            'duration_days' => ['required', 'integer', 'between:1,'.Settings::offerMaxDurationDays()],
         ];
     }
 

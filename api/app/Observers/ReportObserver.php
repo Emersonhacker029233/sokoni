@@ -3,9 +3,10 @@
 namespace App\Observers;
 
 use App\Models\Report;
+use App\Support\Settings;
 use Illuminate\Database\Eloquent\Model;
 
-/** Three upheld reports against the same content auto-hide it pending review. */
+/** Upheld reports against the same content, at/above the configured threshold, auto-hide it pending review. */
 class ReportObserver
 {
     public function updated(Report $report): void
@@ -20,7 +21,7 @@ class ReportObserver
             ->where('status', 'upheld')
             ->count();
 
-        if ($upheldCount < Report::AUTO_HIDE_THRESHOLD) {
+        if ($upheldCount < Settings::reportAutoHideThreshold()) {
             return;
         }
 
