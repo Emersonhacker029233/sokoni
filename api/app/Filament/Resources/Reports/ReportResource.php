@@ -27,6 +27,9 @@ class ReportResource extends Resource
 
     protected static \UnitEnum|string|null $navigationGroup = 'Trust & Safety';
 
+    // See CategoryResource for why this matters — `reason` is the closest thing this model has to a natural title.
+    protected static ?string $recordTitleAttribute = 'reason';
+
     public static function infolist(Schema $schema): Schema
     {
         return ReportInfolist::configure($schema);

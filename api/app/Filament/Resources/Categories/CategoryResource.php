@@ -24,6 +24,12 @@ class CategoryResource extends Resource
 
     protected static \UnitEnum|string|null $navigationGroup = 'Catalog';
 
+    // Without this, Filament falls back to the generic model label
+    // ("category") everywhere a record needs a display title — global
+    // search results, delete confirmations, breadcrumbs — indistinguishable
+    // between records. Found while wiring up Section 6's global search.
+    protected static ?string $recordTitleAttribute = 'name_en';
+
     public static function form(Schema $schema): Schema
     {
         return CategoryForm::configure($schema);

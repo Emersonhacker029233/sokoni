@@ -24,6 +24,15 @@ class UserResource extends Resource
 
     protected static \UnitEnum|string|null $navigationGroup = 'Trust & Safety';
 
+    // See CategoryResource for why this matters.
+    protected static ?string $recordTitleAttribute = 'name';
+
+    /** "Global search across products, shops, users and orders" (CLAUDE.md admin rebuild, Section 6). */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'phone', 'email'];
+    }
+
     public static function form(Schema $schema): Schema
     {
         return UserForm::configure($schema);
