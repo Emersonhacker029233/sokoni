@@ -17,7 +17,8 @@ class CommentController extends Controller
     public function index(Product $product): AnonymousResourceCollection
     {
         $comments = $product->comments()
-            ->with(['user', 'product', 'replies.user', 'replies.product'])
+            ->where('is_hidden', false)
+            ->with(['user', 'product', 'replies' => fn ($query) => $query->where('is_hidden', false), 'replies.user', 'replies.product'])
             ->paginate(20);
 
         return CommentResource::collection($comments);

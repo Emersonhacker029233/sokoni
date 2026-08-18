@@ -20,6 +20,13 @@ class Comment extends Model
 {
     use HasFactory;
 
+    protected function casts(): array
+    {
+        return [
+            'is_hidden' => 'boolean',
+        ];
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

@@ -44,11 +44,12 @@ class ReviewController extends Controller
     {
         $seller = SellerProfile::query()->where('handle', $handle)->firstOrFail();
 
-        $reviews = $seller->reviews()->with('buyer')->latest()->paginate(20);
+        $reviews = $seller->reviews()->where('is_hidden', false)->with('buyer')->latest()->paginate(20);
 
         return ReviewResource::collection($reviews)->additional([
             'meta' => [
                 'distribution' => $seller->reviews()
+                    ->where('is_hidden', false)
                     ->selectRaw('rating, count(*) as total')
                     ->groupBy('rating')
                     ->pluck('total', 'rating'),

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Schema;
 
 #[Fillable([
@@ -58,6 +59,12 @@ class Product extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class)->whereNull('parent_id')->latest();
+    }
+
+    /** Reports filed against this product — admin panel's "any reports against it" (CLAUDE.md admin rebuild, Section 4). */
+    public function reports(): MorphMany
+    {
+        return $this->morphMany(Report::class, 'reportable');
     }
 
     /** Publicly visible: active, not hidden, and the seller is verified. */

@@ -7,9 +7,15 @@ use App\Models\User;
 
 class OrderPolicy
 {
+    /** Admin panel browsing (CLAUDE.md admin rebuild, Section 4) — both roles, an order is not something to hide from Staff. */
+    public function viewAny(User $user): bool
+    {
+        return $user->is_admin;
+    }
+
     public function view(User $user, Order $order): bool
     {
-        return $user->id === $order->buyer_id || $user->sellerProfileId() === $order->seller_id;
+        return $user->is_admin || $user->id === $order->buyer_id || $user->sellerProfileId() === $order->seller_id;
     }
 
     /** Only the seller advances pending → accepted → ready → completed. */

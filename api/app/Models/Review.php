@@ -15,6 +15,13 @@ class Review extends Model
 {
     use HasFactory;
 
+    protected function casts(): array
+    {
+        return [
+            'is_hidden' => 'boolean',
+        ];
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
