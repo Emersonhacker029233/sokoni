@@ -1,3 +1,30 @@
+# Gzip/deflate compression for text-based responses — the website's
+# rendered HTML, CSS and JS are what actually benefit; binary uploads
+# (images/video) are already compressed and gain nothing.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE application/xml image/svg+xml
+</IfModule>
+
+# Far-future cache headers. Vite build assets are content-hashed
+# (app-<hash>.css/js), so they're safe to mark immutable; uploaded product
+# photos/fonts change rarely but aren't renamed on edit, so a week is a
+# safer ceiling than "forever" for those.
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    <FilesMatch "^app-.*\.(css|js)$">
+        ExpiresDefault "access plus 1 year"
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    <FilesMatch "\.(jpg|jpeg|png|webp|gif|svg|ico|woff|woff2|ttf)$">
+        ExpiresDefault "access plus 1 week"
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
