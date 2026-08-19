@@ -9,36 +9,31 @@ use App\Http\Requests\ProductStoreRequest;
 use App\Http\Requests\ProductUpdateRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
-use App\Services\Geo\DistanceQuery;
+use App\Services\Catalog\ProductSearchFilters;
+use App\Services\Catalog\ProductSearchService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class ProductController extends Controller
 {
     private const PER_PAGE = 20;
 
+    public function __construct(private readonly ProductSearchService $search) {}
+
     public function index(ProductIndexRequest $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
-        $lat = $request->float('lat');
-        $lng = $request->float('lng');
         $hasLocation = $request->filled('lat') && $request->filled('lng');
-        $sort = $request->string('sort')->toString() ?: ($hasLocation ? 'nearby' : 'newest');
-        $page = (int) ($request->integer('page') ?: 1);
 
-        $query = Product::visible()
-            ->with(['category', 'seller', 'media'])
-            ->search($request->string('q')->toString() ?: null)
-            ->inCategory($request->integer('category_id') ?: null)
-            ->forSeller($request->integer('seller_id') ?: null);
+        $filters = new ProductSearchFilters(
+            query: $request->string('q')->toString() ?: null,
+            categoryId: $request->integer('category_id') ?: null,
+            sellerId: $request->integer('seller_id') ?: null,
+            lat: $request->float('lat') ?: null,
+            lng: $request->float('lng') ?: null,
+            radiusKm: $request->float('radius_km') ?: null,
+            sort: $request->string('sort')->toString() ?: ($hasLocation ? 'nearby' : 'newest'),
+        );
 
-        if ($hasLocation) {
-            $paginated = $this->paginateByDistance($query, $lat, $lng, $request->float('radius_km') ?: null, $sort, $page);
-        } else {
-            $paginated = (match ($sort) {
-                'trending' => $query->orderByDesc('views'),
-                default => $query->orderByDesc('created_at'),
-            })->paginate(self::PER_PAGE, page: $page);
-        }
+        $paginated = $this->search->search($filters, page: (int) ($request->integer('page') ?: 1), perPage: self::PER_PAGE);
 
         return ProductResource::collection($paginated);
     }
@@ -122,43 +117,5 @@ class ProductController extends Controller
         $product->load(['category', 'seller', 'media']);
 
         return new ProductResource($product);
-    }
-
-    /**
-     * Nearby search combines a distance computation (SQL on MySQL, PHP
-     * Haversine on SQLite — see DistanceQuery) with the rest of the
-     * filters, then sorts/paginates in memory. Fine at Sokoni's scale
-     * (a single-city seller base); see DistanceQuery's docblock.
-     */
-    private function paginateByDistance(
-        $query,
-        float $lat,
-        float $lng,
-        ?float $radiusKm,
-        string $sort,
-        int $page,
-    ): LengthAwarePaginator {
-        $distances = DistanceQuery::nearbySellerDistances($lat, $lng, $radiusKm);
-
-        if (empty($distances)) {
-            return new LengthAwarePaginator([], 0, self::PER_PAGE, $page);
-        }
-
-        $products = $query->whereIn('seller_id', array_keys($distances))->get();
-
-        $products->each(function (Product $product) use ($distances) {
-            $product->setAttribute('distance_km', $distances[$product->seller_id]);
-        });
-
-        $sorted = (match ($sort) {
-            'trending' => $products->sortByDesc('views'),
-            'newest' => $products->sortByDesc('created_at'),
-            default => $products->sortBy('distance_km'),
-        })->values();
-
-        $offset = ($page - 1) * self::PER_PAGE;
-        $slice = $sorted->slice($offset, self::PER_PAGE)->values();
-
-        return new LengthAwarePaginator($slice, $sorted->count(), self::PER_PAGE, $page);
     }
 }

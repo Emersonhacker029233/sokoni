@@ -13,6 +13,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Otp\PhoneOtpService;
 use App\Services\SocialAuth\SocialAuthVerifier;
+use App\Services\SocialAuth\SocialUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +23,7 @@ class AuthController extends Controller
     public function __construct(
         private readonly PhoneOtpService $otp,
         private readonly SocialAuthVerifier $socialVerifier,
+        private readonly SocialUserResolver $socialUserResolver,
     ) {}
 
     /**
@@ -70,30 +72,7 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['token' => $e->getMessage()]);
         }
 
-        $user = User::query()->where('provider', $identity->provider)
-            ->where('provider_id', $identity->providerId)
-            ->first();
-
-        if (! $user && $identity->email) {
-            $user = User::query()->where('email', $identity->email)->first();
-        }
-
-        $isNewAccount = $user === null;
-
-        if (! $user) {
-            $user = User::query()->create([
-                'name' => $identity->name ?? 'Sokoni User',
-                'email' => $identity->email,
-                'avatar' => $identity->avatar,
-                'provider' => $identity->provider,
-                'provider_id' => $identity->providerId,
-            ]);
-        } elseif (! $user->provider) {
-            $user->forceFill([
-                'provider' => $identity->provider,
-                'provider_id' => $identity->providerId,
-            ])->save();
-        }
+        ['user' => $user, 'isNewAccount' => $isNewAccount] = $this->socialUserResolver->resolve($identity);
 
         return $this->issueToken($user, $isNewAccount);
     }
