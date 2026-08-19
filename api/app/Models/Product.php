@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Schema;
 
@@ -65,6 +66,17 @@ class Product extends Model
     public function reports(): MorphMany
     {
         return $this->morphMany(Report::class, 'reportable');
+    }
+
+    public function offers(): HasMany
+    {
+        return $this->hasMany(Offer::class);
+    }
+
+    /** The website's product page strikethrough price — a Product has at most one Offer running at a time in practice, but nothing enforces that at the schema level, so this deliberately takes the most recently started one if more than one somehow overlaps. */
+    public function activeOffer(): HasOne
+    {
+        return $this->hasOne(Offer::class)->active()->latestOfMany('starts_at');
     }
 
     /** Publicly visible: active, not hidden, and the seller is verified. */

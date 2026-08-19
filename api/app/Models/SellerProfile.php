@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'shop_name', 'logo', 'handle', 'bio', 'category_id', 'whatsapp', 'lat', 'lng',
     'address', 'region', 'district', 'nida_number', 'nida_image',
-    'licence_file', 'show_whatsapp',
+    'licence_file', 'show_whatsapp', 'opening_hours',
 ])]
 class SellerProfile extends Model
 {
@@ -36,6 +36,7 @@ class SellerProfile extends Model
             'verified_at' => 'datetime',
             'rating_avg' => 'decimal:2',
             'show_whatsapp' => 'boolean',
+            'opening_hours' => 'array',
         ];
     }
 
