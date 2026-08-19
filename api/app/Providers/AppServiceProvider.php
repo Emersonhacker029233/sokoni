@@ -11,11 +11,14 @@ use App\Services\Push\PushNotifier;
 use App\Services\Sms\BeemSmsGateway;
 use App\Services\Sms\LogSmsGateway;
 use App\Services\Sms\SmsGateway;
+use App\Services\Catalog\CategoryCatalogService;
 use App\Services\SocialAuth\HttpSocialAuthVerifier;
 use App\Services\SocialAuth\SocialAuthVerifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -65,5 +68,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api-write', function (Request $request) {
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Every web page's header needs the category nav — one composer
+        // rather than every Web controller passing it explicitly.
+        View::composer('partials.header', function ($view) {
+            $view->with('navCategories', app(CategoryCatalogService::class)->withCounts());
+        });
+
+        Paginator::defaultView('vendor.pagination.sokoni');
+        Paginator::defaultSimpleView('vendor.pagination.sokoni');
     }
 }

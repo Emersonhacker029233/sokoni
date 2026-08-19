@@ -37,8 +37,18 @@ return [
 
     // Social sign-in — see BLOCKERS.md. HttpSocialAuthVerifier fails closed
     // (InvalidSocialTokenException) until these are set.
+    //
+    // client_secret/redirect are additional to what the mobile app needed:
+    // the app verifies an ID token from Google's native SDK (client_id
+    // only, no secret required for that). The website's sign-in button
+    // uses a real browser OAuth redirect (Laravel Socialite) instead,
+    // which needs the full three — see Web\Auth\GoogleAuthController,
+    // which hides the button entirely when any is missing rather than
+    // sending a visitor into a broken redirect.
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
     'apple' => [

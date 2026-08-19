@@ -16,6 +16,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
+        $middleware->web(append: [
+            \App\Http\Middleware\SetWebLocale::class,
+        ]);
+        $middleware->alias([
+            'web.onboarded' => \App\Http\Middleware\EnsureWebOnboarded::class,
+        ]);
+        // Laravel's Authenticate middleware redirects an unauthenticated
+        // web request to a route literally named `login` by default — this
+        // app's is named `web.login` (every web route is namespaced
+        // `web.*`), so without this the redirect itself 500s.
+        $middleware->redirectGuestsTo(fn () => route('web.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
