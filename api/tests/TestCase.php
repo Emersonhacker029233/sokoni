@@ -33,4 +33,15 @@ abstract class TestCase extends BaseTestCase
     {
         return parent::actingAs($user, 'web');
     }
+
+    /**
+     * The public website (sokoni.co.tz) also authenticates on the `web`
+     * session guard, same mechanism as the admin panel above — a
+     * clearly-named alias for that context rather than reusing
+     * `actingAsAdmin()` (correct, but a confusing name) in website tests.
+     */
+    public function actingAsWebUser($user): static
+    {
+        return parent::actingAs($user, 'web');
+    }
 }
