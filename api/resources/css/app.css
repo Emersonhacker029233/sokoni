@@ -1,9 +1,103 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+/*
+ * Plus Jakarta Sans, bundled locally (resources/fonts/) — same TTFs the
+ * Flutter app uses, same reason the app dropped google_fonts: this site's
+ * whole premise is working on patchy 3G, so a webfont CDN round-trip is
+ * the wrong tradeoff. woff2 isn't available, only the app's .ttf source —
+ * still far smaller than a blocking external request, and Vite fingerprints
+ * these for far-future caching (Section 9).
+ */
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    src: url("../fonts/PlusJakartaSans-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    src: url("../fonts/PlusJakartaSans-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    src: url("../fonts/PlusJakartaSans-SemiBold.ttf") format("truetype");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    src: url("../fonts/PlusJakartaSans-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
 
+/* Sokoni brand tokens — same palette as CLAUDE.md's Flutter theme, so the
+   web and app read as one brand. Yellow is a highlight, not a background
+   wash: reserved for CTAs, active states, ratings, verified badges — see
+   how sparingly bg-sokoni-yellow is actually used across the templates. */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+    --color-sokoni-yellow: #FAC902;
+    --color-sokoni-black: #0A0A0A;
+    --color-sokoni-surface: #FFFFFF;
+    --color-sokoni-surface-alt: #F7F7F5;
+    --color-sokoni-outline: #E6E6E1;
+    --color-sokoni-success: #12A150;
+    --color-sokoni-danger: #E5484D;
+
+    /* 4pt rhythm as named spacing steps, matching the app's SokoniDimens. */
+    --spacing-4: 0.25rem;
+    --spacing-8: 0.5rem;
+    --spacing-12: 0.75rem;
+    --spacing-16: 1rem;
+    --spacing-20: 1.25rem;
+    --spacing-24: 1.5rem;
+    --spacing-32: 2rem;
+
+    --radius-card: 1rem;
+    --radius-chip: 0.75rem;
+    --radius-button: 1.75rem;
+}
+
+@layer base {
+    body {
+        @apply bg-sokoni-surface text-sokoni-black antialiased;
+    }
+}
+
+@layer components {
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-8 rounded-button bg-sokoni-yellow px-20 py-12 text-sm font-semibold text-sokoni-black transition hover:brightness-95 active:brightness-90;
+    }
+    .btn-secondary {
+        @apply inline-flex items-center justify-center gap-8 rounded-button border border-sokoni-black px-20 py-12 text-sm font-semibold text-sokoni-black transition hover:bg-sokoni-black hover:text-white;
+    }
+    .btn-ghost {
+        @apply inline-flex items-center justify-center gap-8 rounded-button px-16 py-8 text-sm font-medium text-sokoni-black/70 transition hover:bg-sokoni-surface-alt;
+    }
+    .card {
+        @apply rounded-card border border-sokoni-outline bg-white;
+    }
+    .chip {
+        @apply inline-flex items-center gap-4 rounded-chip border border-sokoni-outline bg-white px-12 py-8 text-sm font-medium text-sokoni-black transition;
+    }
+    .chip-active {
+        @apply border-transparent bg-sokoni-yellow text-sokoni-black;
+    }
+    .badge-verified {
+        @apply inline-flex h-16 w-16 items-center justify-center rounded-full bg-sokoni-yellow text-sokoni-black;
+    }
+    .badge-sponsored {
+        @apply inline-flex items-center rounded-chip bg-sokoni-surface-alt px-8 py-4 text-xs font-medium text-sokoni-black/60;
+    }
+    .input-field {
+        @apply w-full rounded-chip border border-sokoni-outline bg-white px-16 py-12 text-sm text-sokoni-black placeholder:text-sokoni-black/40 focus:border-sokoni-black focus:outline-none;
+    }
 }
