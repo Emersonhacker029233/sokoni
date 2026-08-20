@@ -88,9 +88,21 @@ The website reads the exact same `sokoni-api/.env` the API already uses — same
 2. Confirm "Force HTTPS Redirect" is on (same AutoSSL certificate already covers the whole account, per `docs/DEPLOY.md`).
 3. PHP version/extensions: `public_html` is served by the account's default PHP handler — confirm it's the same **PHP 8.3** with the same extension set (`bcmath, fileinfo, gd, intl, mbstring, zip, pdo_mysql, exif`) already configured for `api.sokoni.co.tz` in the original deploy. If cPanel lets PHP versions differ per-domain rather than per-account, set it explicitly here too.
 
-## 8. New migrations to run
+## 8. Deploy the backend code, then run the new migrations
 
-Two new migrations ship with this change — run them the same way `docs/DEPLOY.md` step 6 already documents (`php artisan migrate --force` with SSH, or a schema export/phpMyAdmin import without):
+Everything in this doc so far only covers `public_html` — the small docroot glue (front controller, `.htaccess`, compiled assets, brand images). The actual PHP source behind the website (new `Web\*` controllers, middleware, services, support helpers, views) is a separate deploy into `sokoni-api/` itself, since that's where the shared app already lives: `sokoni-api-update-4.zip` (103 files, built the same way as the prior `sokoni-api-update-N.zip` deploys — diffed against the reconstructed baseline of every zip before it, not just the last one).
+
+```bash
+cd /home/sokoftsn/sokoni-api
+unzip -o /path/to/sokoni-api-update-4.zip
+composer dump-autoload --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache && php artisan route:cache
+```
+
+**`composer dump-autoload`, not `composer install`, and not skipped entirely.** `composer.json`/`composer.lock` are unchanged by this deploy — no new package, so no need to touch Packagist or reinstall `vendor/`. But every new class this deploy adds (`App\Http\Controllers\Web\*`, `App\Services\Catalog\*`, `App\Support\*`, etc.) is missing from whatever `autoload_classmap.php` was generated the last time `--optimize-autoloader` ran on this server — a bare `dump-autoload` rescans `app/` and regenerates that classmap from what's already on disk, with no network calls and no package changes. Skipping it entirely is *usually* harmless (Composer's PSR-4 fallback still finds a class that's missing from a stale classmap, unless this server's install ever used the stricter `--classmap-authoritative` flag, which has never been part of this project's documented command) — but there's no reason to rely on that when the correct fix is one cheap, side-effect-free command. See `docs/DEPLOY.md`'s "Updating a deployed instance" section for the same guidance stated generally.
+
+Two new migrations ship with this change:
 
 1. `2026_08_19_080000_add_opening_hours_to_seller_profiles_table`
 2. `2026_08_19_090000_create_leads_table`
@@ -114,4 +126,4 @@ Both are additive (a new nullable column, a new table) — no data migration ris
 
 ## Updating the website later
 
-Since it's the same app, an update follows `docs/DEPLOY.md`'s existing "Updating a deployed instance" section for any backend/route/controller change (`git pull` or re-upload, `composer install` if `composer.json` changed, `migrate --force` for new migrations, `config:cache`/`route:cache`). The only *website-specific* extra step is: if `resources/css`/`resources/js` changed, rebuild locally (`npm run build`) and re-upload the new `public/build/` contents to **both** `sokoni-api/public/build` and `public_html/build` — they're two independent physical copies of the same compiled output, since the two docroots don't share a filesystem location.
+Since it's the same app, an update follows `docs/DEPLOY.md`'s existing "Updating a deployed instance" section for any backend/route/controller change (`git pull` or re-upload, `composer install` if `composer.json`/`composer.lock` changed, `composer dump-autoload` if only new first-party classes were added, `migrate --force` for new migrations, `config:cache`/`route:cache`). The only *website-specific* extra step is: if `resources/css`/`resources/js` changed, rebuild locally (`npm run build`) and re-upload the new `public/build/` contents to **both** `sokoni-api/public/build` and `public_html/build` — they're two independent physical copies of the same compiled output, since the two docroots don't share a filesystem location.

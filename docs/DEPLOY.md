@@ -114,20 +114,23 @@ Once migrated and seeded (or with a manually-created admin row), the Filament ad
 - Upload a product photo through the app or `POST /products/{id}/media`, then confirm the returned URL (`https://sokoni.co.tz/uploads/products/...`) actually loads.
 - Place a test order end to end; confirm `LogPushNotifier`'s log entries appear in `storage/logs/laravel.log` (until Firebase credentials are supplied, pushes are logged, not sent — see BLOCKERS.md item 1).
 
-## Web fallback for `sokoni.co.tz/@handle`
+## Web fallback for `sokoni.co.tz/@handle` — now a full website, not a stub card
 
-Seller shop links (`sokoni.co.tz/@handle`) are deep links the *app* resolves — CLAUDE.md calls for "a web fallback card" when opened outside the app (a browser, a shared link with no app installed). That fallback page isn't built yet; when it is, point `public_html`'s root at a small static/PHP page that reads the handle from the URL, calls `GET /api/sellers/{handle}`, and renders a simple card with an "Open in Sokoni" / app-store links. Track this as a Phase 10+ follow-up, not a blocker for the API/admin deploy above.
+This section used to note that the `/@handle` fallback wasn't built yet. It now is, as part of the full public website (`sokoni.co.tz`) — a real, server-rendered shop page with schema.org markup, not the small static/PHP redirect card originally sketched here. See `docs/DEPLOY_WEB.md` for that deploy — it runs from the same app this doc sets up, on a second docroot (`public_html`) alongside the API's own (`sokoni-api/public`).
 
 ## Updating a deployed instance
 
 ```bash
-git pull                                        # or re-upload changed files
-composer install --no-dev --optimize-autoloader # if composer.json changed
-php artisan migrate --force                     # if new migrations exist
+git pull                                          # or re-upload changed files
+composer install --no-dev --optimize-autoloader   # if composer.json/composer.lock changed
+composer dump-autoload --no-dev --optimize-autoloader # if only new first-party classes were added
+php artisan migrate --force                       # if new migrations exist
 php artisan config:cache && php artisan route:cache
 ```
 
 Skip `config:cache`/`route:cache` while actively debugging a deploy — they mask `.env` changes until cleared with `php artisan config:clear`.
+
+**New classes with no `composer.json` change still need an autoloader refresh — don't skip both lines above.** `--optimize-autoloader` (`-o`) generates a static classmap for speed, but Composer's `ClassLoader` keeps the PSR-4 fallback registered too, so a class missing from a stale classmap still resolves (just via the slower directory-lookup path) rather than fataling — *unless* this server's install ever used `--classmap-authoritative` (`-a`) instead, which removes that fallback entirely and would turn a stale classmap into a hard "Class not found" on every new file. Since this repo's documented command has only ever specified plain `-o`, the safe assumption is that the fallback is intact — but if `composer.json`/`composer.lock` are unchanged, running the cheap `composer dump-autoload` line costs nothing (no network, no package changes) and removes the question entirely rather than relying on that assumption.
 
 ---
 
