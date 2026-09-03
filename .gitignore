@@ -90,5 +90,11 @@ npm-debug.log
 yarn-error.log
 
 # ==== Deploy artifacts (built locally, uploaded by hand — see docs/DEPLOY.md, docs/DEPLOY_WEB.md) ====
-sokoni-api-update*.zip
-sokoni-web-deploy.zip
+/*.zip
+sokoni-api-update*/
+sokoni-web-*/
+sokoni-demo-content-and-link-cleanup-update/
+DEPLOY_MANIFEST_*.md
+
+# ==== Throwaway diagnostic scripts (not part of either app) ====
+_throwaway_*.dart
