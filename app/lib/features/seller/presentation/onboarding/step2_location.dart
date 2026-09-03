@@ -1,14 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
-import '../../../../core/config/maps_config.dart';
 import '../../../../core/l10n/gen/app_localizations.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/providers.dart';
-import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/seller_profile.dart';
 import '../../providers/seller_onboarding_providers.dart';
@@ -36,8 +37,9 @@ class _OnboardingStep2LocationState extends ConsumerState<OnboardingStep2Locatio
   bool _submitting = false;
   bool _resolving = false;
   String? _error;
-  GoogleMapController? _mapController;
+  final _mapController = MapController();
   final _geocoding = Geocoding();
+  Timer? _settleDebounce;
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _OnboardingStep2LocationState extends ConsumerState<OnboardingStep2Locatio
     _addressController.dispose();
     _regionController.dispose();
     _districtController.dispose();
+    _settleDebounce?.cancel();
     super.dispose();
   }
 
@@ -58,9 +61,20 @@ class _OnboardingStep2LocationState extends ConsumerState<OnboardingStep2Locatio
     if (!mounted) return;
     if (result is LocationAvailable) {
       setState(() => _pin = LatLng(result.lat, result.lng));
-      await _mapController?.animateCamera(CameraUpdate.newLatLng(_pin));
+      _mapController.move(_pin, _mapController.camera.zoom);
       await _reverseGeocode(_pin);
     }
+  }
+
+  /// flutter_map has no distinct "camera idle" event the way GoogleMap
+  /// did — `onPositionChanged` fires on every frame of a drag, so a short
+  /// debounce is what turns that into "the user has actually stopped
+  /// moving the map", the same intent `onCameraIdle` served before.
+  void _onPositionChanged(MapCamera camera, bool hasGesture) {
+    _pin = camera.center;
+    if (!hasGesture) return;
+    _settleDebounce?.cancel();
+    _settleDebounce = Timer(const Duration(milliseconds: 500), () => _reverseGeocode(_pin));
   }
 
   Future<void> _reverseGeocode(LatLng position) async {
@@ -118,67 +132,45 @@ class _OnboardingStep2LocationState extends ConsumerState<OnboardingStep2Locatio
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceAlt = isDark ? SokoniColors.darkSurfaceAlt : SokoniColors.surfaceAlt;
-    final onSurface = isDark ? SokoniColors.darkOnSurface : SokoniColors.sokoniBlack;
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(SokoniDimens.space16),
-          child: Text(
-            SokoniMapsConfig.isConfigured
-                ? l10n.onboardingLocationInstructions
-                : l10n.onboardingLocationMapUnavailableBody,
-          ),
+          child: Text(l10n.onboardingLocationInstructions),
         ),
+        // OpenStreetMap via flutter_map, not Google Maps — no Maps API key
+        // was ever configured on this project (billing was never enabled),
+        // which meant this step had *always* fallen back to the manual-
+        // entry-only unavailable state below instead of a real map
+        // (tester feedback B3). OSM needs no key at all.
         Expanded(
           flex: 3,
-          child: SokoniMapsConfig.isConfigured
-              ? Stack(
-                  children: [
-                    GoogleMap(
-                      initialCameraPosition: CameraPosition(target: _pin, zoom: 15),
-                      onMapCreated: (controller) => _mapController = controller,
-                      onCameraMove: (position) => _pin = position.target,
-                      onCameraIdle: () => _reverseGeocode(_pin),
-                    ),
-                    const Center(
-                      child: Icon(Icons.location_pin, size: 48, color: Colors.red),
-                    ),
-                    if (_resolving)
-                      const Positioned(top: 12, right: 12, child: CircularProgressIndicator()),
-                  ],
-                )
-              : Container(
-                  width: double.infinity,
-                  color: surfaceAlt,
-                  padding: const EdgeInsets.all(SokoniDimens.space16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.map_outlined, size: 40, color: onSurface),
-                      const SizedBox(height: SokoniDimens.space12),
-                      Text(
-                        l10n.onboardingLocationMapUnavailableTitle,
-                        style: Theme.of(context).textTheme.titleMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: SokoniDimens.space12),
-                      OutlinedButton.icon(
-                        onPressed: _resolving ? null : _loadInitialPosition,
-                        icon: _resolving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.my_location_rounded, size: 18),
-                        label: Text(l10n.checkoutUseCurrentLocation),
-                      ),
-                    ],
-                  ),
+          child: Stack(
+            children: [
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _pin,
+                  initialZoom: 15,
+                  maxZoom: 18,
+                  onPositionChanged: _onPositionChanged,
                 ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'tz.co.sokoni.sokoni',
+                    maxNativeZoom: 18,
+                  ),
+                ],
+              ),
+              const Center(
+                child: Icon(Icons.location_pin, size: 48, color: Colors.red),
+              ),
+              if (_resolving)
+                const Positioned(top: 12, right: 12, child: CircularProgressIndicator()),
+            ],
+          ),
         ),
         Expanded(
           flex: 4,

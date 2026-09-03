@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +8,7 @@ import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../data/models/social_update.dart';
 import '../providers/social_providers.dart';
+import '../../../shared/widgets/sokoni_network_image.dart';
 
 const _imageDuration = Duration(seconds: 5);
 
@@ -127,7 +127,7 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen> with Sing
                 ),
               )
             else
-              CachedNetworkImage(imageUrl: update.mediaPath, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+              SokoniNetworkImage(imageUrl: update.mediaPath, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space12),

@@ -123,6 +123,10 @@ class _OrderDetailBodyState extends ConsumerState<_OrderDetailBody> {
               _StatusChip(status: order.status),
             ],
           ),
+          if (order.status != 'cancelled') ...[
+            const SizedBox(height: SokoniDimens.space12),
+            _DeliveryNotice(text: l10n.orderDeliveryNotice),
+          ],
           const SizedBox(height: SokoniDimens.space20),
           Text(l10n.orderTimelineTitle, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: SokoniDimens.space8),
@@ -267,6 +271,42 @@ class _ReviewSheetState extends State<_ReviewSheet> {
             ).pop((rating: _rating, comment: _commentController.text.trim())),
             child: Text(widget.l10n.reviewSubmit),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Post-order clarity on how fulfilment actually works — previously stated
+/// nowhere at all (tester feedback B6): pay-on-delivery/collection with no
+/// card details, delivery arranged directly with the seller, not through
+/// the app. Shown on every non-cancelled order, not just fresh ones, since
+/// it's evergreen information a buyer might want to re-check days later.
+class _DeliveryNotice extends StatelessWidget {
+  const _DeliveryNotice({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Same fixed-contrast approach _StatusChip above already uses: the
+    // yellow tint is a background wash only, never the text/icon colour
+    // itself, which fails WCAG contrast badly either way round — see
+    // DECISIONS.md's earlier contrast-audit entries.
+    final onSurface = isDark ? SokoniColors.darkOnSurface : SokoniColors.sokoniBlack;
+    return Container(
+      padding: const EdgeInsets.all(SokoniDimens.space12),
+      decoration: BoxDecoration(
+        color: SokoniColors.sokoniYellow.withValues(alpha: isDark ? 0.12 : 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.local_shipping_outlined, size: 20, color: onSurface),
+          const SizedBox(width: SokoniDimens.space8),
+          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: onSurface))),
         ],
       ),
     );

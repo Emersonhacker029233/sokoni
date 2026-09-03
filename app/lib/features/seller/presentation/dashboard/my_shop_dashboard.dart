@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +13,7 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../../discovery/providers/discovery_providers.dart';
 import '../../../discovery/providers/feed_providers.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 final myProductsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
   final result = await ref.watch(productRepositoryProvider).myProducts();
@@ -100,7 +100,7 @@ class _ProductRow extends ConsumerWidget {
         borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
         child: cover == null
             ? Container(width: 48, height: 48, color: Theme.of(context).colorScheme.surfaceContainerHighest)
-            : CachedNetworkImage(
+            : SokoniNetworkImage(
                 imageUrl: cover.thumbPath ?? cover.path,
                 width: 48,
                 height: 48,

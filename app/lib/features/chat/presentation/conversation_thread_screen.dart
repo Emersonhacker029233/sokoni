@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +18,7 @@ import '../../../data/models/product.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/report_sheet.dart';
 import '../providers/chat_providers.dart';
+import '../../../shared/widgets/sokoni_network_image.dart';
 
 /// The message thread — pinned product/order context, polling + read
 /// receipts, typing indicator, image attachments (CLAUDE.md feature 5).
@@ -183,7 +183,7 @@ class _PinnedProductContext extends StatelessWidget {
               if (product.coverImageUrl != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                  child: CachedNetworkImage(
+                  child: SokoniNetworkImage(
                     imageUrl: product.coverImageUrl!,
                     width: 40,
                     height: 40,
@@ -243,7 +243,7 @@ class _MessageBubble extends ConsumerWidget {
                   if (message.attachment != null)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                      child: CachedNetworkImage(
+                      child: SokoniNetworkImage(
                         imageUrl: message.attachment!,
                         width: 180,
                         fit: BoxFit.cover,

@@ -17,6 +17,7 @@ import '../../../shared/widgets/connectivity_banner.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/report_sheet.dart';
+import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../discovery/presentation/widgets/sticky_category_header.dart';
 import '../../social/presentation/widgets/showcase_thumb_grid.dart';
@@ -289,13 +290,25 @@ class _ActionButtonsRow extends ConsumerWidget {
         Expanded(
           child: following
               ? OutlinedButton(
-                  onPressed: () =>
-                      toggleSellerFollow(ref, sellerId: seller.id, handle: seller.handle, isFollowing: seller.isFollowing),
+                  onPressed: () => toggleSellerFollow(
+                    ref,
+                    sellerId: seller.id,
+                    handle: seller.handle,
+                    isFollowing: seller.isFollowing,
+                    onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptFollow),
+                    onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+                  ),
                   child: Text(l10n.followingAction),
                 )
               : FilledButton(
-                  onPressed: () =>
-                      toggleSellerFollow(ref, sellerId: seller.id, handle: seller.handle, isFollowing: seller.isFollowing),
+                  onPressed: () => toggleSellerFollow(
+                    ref,
+                    sellerId: seller.id,
+                    handle: seller.handle,
+                    isFollowing: seller.isFollowing,
+                    onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptFollow),
+                    onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+                  ),
                   child: Text(l10n.followAction),
                 ),
         ),
@@ -303,10 +316,21 @@ class _ActionButtonsRow extends ConsumerWidget {
         Expanded(
           child: OutlinedButton(
             onPressed: () async {
-              final conversationId = await ref
-                  .read(sellerRepositoryProvider)
-                  .startConversation(sellerId: seller.id);
-              if (context.mounted) await context.push(SokoniRoutes.conversation(conversationId));
+              final conversationId = await startConversationOrPromptSignIn(
+                ref,
+                sellerId: seller.id,
+                onUnauthenticated: () {
+                  if (context.mounted) showSignInPrompt(context, message: l10n.guestPromptMessage);
+                },
+                onFailed: (message) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                  }
+                },
+              );
+              if (conversationId != null && context.mounted) {
+                await context.push(SokoniRoutes.conversation(conversationId));
+              }
             },
             child: Text(l10n.productMessageSeller),
           ),

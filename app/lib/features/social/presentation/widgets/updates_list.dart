@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,6 +8,7 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../providers/social_providers.dart';
 import '../story_viewer_screen.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// One seller's own active Updates (CLAUDE.md Part 3), the shop profile's
 /// Updates tab — a plain list (this is the shop's own page, not a
@@ -51,7 +51,7 @@ class UpdatesList extends ConsumerWidget {
                 child: SizedBox(
                   width: 48,
                   height: 48,
-                  child: CachedNetworkImage(imageUrl: update.thumbPath ?? update.mediaPath, fit: BoxFit.cover),
+                  child: SokoniNetworkImage(imageUrl: update.thumbPath ?? update.mediaPath, fit: BoxFit.cover),
                 ),
               ),
               title: Text(update.caption ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),

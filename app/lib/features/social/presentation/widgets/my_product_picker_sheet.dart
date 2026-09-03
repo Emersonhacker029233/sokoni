@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +10,7 @@ import '../../../../data/models/product.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../../discovery/providers/discovery_providers.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// Every Update/Offer/Showcase that references a Listing must reference
 /// one of the acting seller's own — this is the picker every composer
@@ -70,7 +70,7 @@ class _MyProductPickerContent extends ConsumerWidget {
                       width: 48,
                       height: 48,
                       child: product.coverImageUrl != null
-                          ? CachedNetworkImage(imageUrl: product.coverImageUrl!, fit: BoxFit.cover)
+                          ? SokoniNetworkImage(imageUrl: product.coverImageUrl!, fit: BoxFit.cover)
                           : Container(color: SokoniColors.surfaceAlt),
                     ),
                   ),

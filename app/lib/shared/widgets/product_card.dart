@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/motion/hero_image_transition.dart';
@@ -6,6 +5,7 @@ import '../../core/theme/colors.dart';
 import '../../core/theme/dimens.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/product.dart';
+import 'sokoni_network_image.dart';
 
 /// The product card used across the discovery feed, search results and
 /// favourites — distance, TZS price, seller rating, verified tick (CLAUDE.md
@@ -55,7 +55,7 @@ class ProductCard extends StatelessWidget {
                 tag: 'product-${product.id}',
                 borderRadius: 0,
                 child: product.coverImageUrl != null
-                    ? CachedNetworkImage(
+                    ? SokoniNetworkImage(
                         imageUrl: product.coverImageUrl!,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(color: surfaceAlt),

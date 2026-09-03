@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +8,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/showcase.dart';
 import '../../providers/social_providers.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// Small entry point into the full-screen Showcase feed (CLAUDE.md Part
 /// 3), a row of thumbnails on the home feed rather than a sixth bottom-nav
@@ -51,7 +51,7 @@ class ShowcasePreviewRow extends ConsumerWidget {
                     children: [
                       SizedBox(
                         width: 80,
-                        child: CachedNetworkImage(imageUrl: showcase.thumbPath, fit: BoxFit.cover),
+                        child: SokoniNetworkImage(imageUrl: showcase.thumbPath, fit: BoxFit.cover),
                       ),
                       const Positioned(
                         right: 6,

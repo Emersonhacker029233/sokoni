@@ -124,7 +124,16 @@ ApiException _mapResponse(Response? response) {
         for (final entry in (rawErrors ?? {}).entries)
           entry.key as String: List<String>.from(entry.value as List),
       };
-      return ValidationException(message ?? 'Please check the form and try again.', errors);
+      // Laravel's top-level "message" on a validation error is always the
+      // same generic "The given data was invalid." regardless of which
+      // field actually failed — the real, specific, actionable reason
+      // (e.g. "All items in one order must be from the same seller",
+      // "Please provide a delivery address") only ever lives in `errors`.
+      // Surfacing the generic wrapper instead of it is exactly what made
+      // checkout (and every other form) "fail with an error" with nothing
+      // useful to act on (tester feedback B5).
+      final firstFieldError = errors.values.firstOrNull?.firstOrNull;
+      return ValidationException(firstFieldError ?? message ?? 'Please check the form and try again.', errors);
     case 429:
       return const RateLimitedException();
     default:

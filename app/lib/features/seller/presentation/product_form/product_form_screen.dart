@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +14,7 @@ import '../../../../data/models/category.dart';
 import '../../../../data/models/product.dart';
 import '../../../../data/models/product_media.dart';
 import '../../../discovery/providers/discovery_providers.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// Create/edit a product, including its media (CLAUDE.md feature 7: up to
 /// 8 photos/video mixed, video max 60s compressed client-side to ~720p).
@@ -375,7 +375,7 @@ class _MediaGrid extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                child: CachedNetworkImage(
+                child: SokoniNetworkImage(
                   imageUrl: item.thumbPath ?? item.path,
                   width: 84,
                   height: 84,

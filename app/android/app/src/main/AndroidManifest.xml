@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Without these, Geolocator.requestPermission() has nothing to actually
+         request — Android never shows the runtime permission dialog for a
+         permission the app didn't declare wanting, so location fetch silently
+         behaved as permanently denied on every device regardless of what the
+         user chose (tester feedback B4: "current location not picking up").
+         COARSE is requested alongside FINE since Android 12+ lets the user
+         grant only approximate location — geolocator handles either grant. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:label="sokoni"
         android:name="${applicationName}"
@@ -30,14 +39,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- google_maps_flutter reads this at startup — BLOCKERS.md item 2.
-             Without a real key the native Maps SDK fails to render tiles;
-             DiscoveryMapView's empty state covers the "no data" case, not
-             this — a missing/invalid key is a native-SDK-level failure the
-             Dart side can't intercept. Replace REPLACE_ME before shipping. -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="REPLACE_ME" />
         <!-- Now that google-services.json exists, Firebase's Android SDK
              auto-initialises FirebaseMessaging via a ContentProvider at
              process start — before Dart even runs, independent of and

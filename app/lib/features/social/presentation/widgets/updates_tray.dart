@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +7,7 @@ import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/social_update.dart';
 import '../../providers/social_providers.dart';
 import '../story_viewer_screen.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// Instagram-stories-style tray across the top of the home feed (CLAUDE.md
 /// Part 3), one ring per shop with an active Update, Sokoni yellow while
@@ -64,7 +64,7 @@ class UpdatesTray extends ConsumerWidget {
                   StoryRing(
                     seen: seen,
                     size: 64,
-                    child: CachedNetworkImage(
+                    child: SokoniNetworkImage(
                       imageUrl: sellerUpdates.first.thumbPath ?? sellerUpdates.first.mediaPath,
                       fit: BoxFit.cover,
                       errorWidget: (context, url, error) => Container(color: SokoniColors.surfaceAlt),

@@ -50,7 +50,22 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.appName),
+        // The docblock above always called for a wordmark here, but this
+        // rendered as plain text with no actual brand mark image at all —
+        // tester feedback B2 ("the app bar logo is missing"). The asset
+        // itself was already bundled correctly (used by the splash screen
+        // and pull-to-refresh indicator) and just never referenced here.
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset('assets/brand/sokoni_logo_icon.png', width: 28, height: 28),
+            ),
+            const SizedBox(width: SokoniDimens.space8),
+            Text(l10n.appName),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: l10n.favoritesTitle,

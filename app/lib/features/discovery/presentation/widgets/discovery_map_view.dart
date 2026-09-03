@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
-import '../../../../core/config/maps_config.dart';
 import '../../../../core/l10n/gen/app_localizations.dart';
+import '../../../../core/theme/colors.dart';
 import '../../../../data/models/product.dart';
 import '../../../../data/models/seller_summary.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -10,9 +11,16 @@ import '../../../../shared/widgets/empty_state.dart';
 /// Map view for the discovery feed — one marker per seller (deduplicated
 /// across that seller's products in the current results) at that seller's
 /// real shop location, tapping a marker opens a seller quick-view sheet
-/// (CLAUDE.md feature 1). Markers aren't pixel-clustered at low zoom yet —
-/// that needs a dedicated clustering package on top of google_maps_flutter;
-/// see DECISIONS.md.
+/// (CLAUDE.md feature 1).
+///
+/// OpenStreetMap via `flutter_map`, not Google Maps — no Maps API key was
+/// ever configured on this project (billing was never enabled, a
+/// documented constraint), which meant this view had *always* shown the
+/// "map unavailable" empty state instead of an actual map (tester feedback
+/// B3). OSM's public tile server needs no key at all, matching what the
+/// website already does for its own shop-location embeds. Markers aren't
+/// pixel-clustered at low zoom yet — that would need a dedicated
+/// clustering package on top of this one; see DECISIONS.md.
 class DiscoveryMapView extends StatelessWidget {
   const DiscoveryMapView({
     required this.products,
@@ -29,17 +37,6 @@ class DiscoveryMapView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!SokoniMapsConfig.isConfigured) {
-      final l10n = AppLocalizations.of(context);
-      return SokoniEmptyState(
-        icon: Icons.map_outlined,
-        title: l10n.mapUnavailableTitle,
-        message: l10n.mapUnavailableBody,
-        actionLabel: onSwitchToList != null ? l10n.mapUnavailableAction : null,
-        onAction: onSwitchToList,
-      );
-    }
-
     final sellers = <int, SellerSummary>{};
     for (final product in products) {
       final seller = product.seller;
@@ -57,20 +54,41 @@ class DiscoveryMapView extends StatelessWidget {
       );
     }
 
-    final markers = <Marker>{
-      for (final seller in sellers.values)
-        Marker(
-          markerId: MarkerId('seller-${seller.id}'),
-          position: LatLng(seller.lat!, seller.lng!),
-          infoWindow: InfoWindow(title: seller.shopName),
-          onTap: () => onSellerTap(seller),
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: LatLng(center.$1, center.$2),
+        initialZoom: 12,
+        // A hard ceiling, not just a sensible default — OSM's usage policy
+        // and this being a 3G-target app both favour never fetching the
+        // most detailed (largest, most numerous) tile set.
+        maxZoom: 17,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          // Required by OSM's tile usage policy to identify the app —
+          // flutter_map only fetches tiles for the visible viewport at the
+          // current zoom (lazy by construction, nothing to opt into).
+          userAgentPackageName: 'tz.co.sokoni.sokoni',
+          maxNativeZoom: 17,
         ),
-    };
-
-    return GoogleMap(
-      initialCameraPosition: CameraPosition(target: LatLng(center.$1, center.$2), zoom: 12),
-      markers: markers,
-      myLocationButtonEnabled: false,
+        MarkerLayer(
+          markers: [
+            for (final seller in sellers.values)
+              Marker(
+                point: LatLng(seller.lat!, seller.lng!),
+                width: 40,
+                height: 40,
+                child: GestureDetector(
+                  onTap: () => onSellerTap(seller),
+                  child: const Icon(Icons.location_on, color: SokoniColors.sokoniYellow, size: 40, shadows: [
+                    Shadow(color: Colors.black45, blurRadius: 4),
+                  ]),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

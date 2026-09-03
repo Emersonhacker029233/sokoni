@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +9,7 @@ import '../../../../core/theme/dimens.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../data/models/offer.dart';
 import '../../providers/social_providers.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// Offers row in discovery (CLAUDE.md Part 3) — countdown on the card,
 /// strikethrough price. Renders nothing when there are no live Offers, same
@@ -81,7 +81,7 @@ class _OfferCard extends StatelessWidget {
                 AspectRatio(
                   aspectRatio: 1,
                   child: product?.coverImageUrl != null
-                      ? CachedNetworkImage(imageUrl: product!.coverImageUrl!, fit: BoxFit.cover)
+                      ? SokoniNetworkImage(imageUrl: product!.coverImageUrl!, fit: BoxFit.cover)
                       : Container(color: surfaceAlt, child: const Icon(Icons.image_outlined)),
                 ),
                 Positioned(

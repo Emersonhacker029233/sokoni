@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +13,7 @@ import '../../../../shared/widgets/bottom_gradient_scrim.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../../discovery/providers/discovery_providers.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// The shop profile's Listings tab (CLAUDE.md Part 4): a 3-column grid,
 /// one tile per Listing (not per media item — that was the old, now
@@ -70,7 +70,7 @@ class _ListingTile extends StatelessWidget {
         children: [
           cover == null
               ? Container(color: SokoniColors.surfaceAlt, child: const Icon(Icons.image_outlined))
-              : CachedNetworkImage(
+              : SokoniNetworkImage(
                   imageUrl: cover.cardPath ?? cover.thumbPath ?? cover.path,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(color: SokoniColors.surfaceAlt),

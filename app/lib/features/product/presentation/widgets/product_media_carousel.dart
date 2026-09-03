@@ -1,22 +1,29 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/motion/double_tap_to_save.dart';
 import '../../../../core/motion/hero_image_transition.dart';
 import '../../../../core/motion/parallax_carousel.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../data/models/product_media.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// Mixed image/video carousel for the product detail screen (CLAUDE.md
 /// feature 7). Video autoplays muted only while it's the active page —
 /// paused otherwise — driven by the carousel's own page-change callback
 /// rather than a separate visibility check, since every page here is
 /// already either fully on- or off-screen (unlike a feed card).
+///
+/// [onDoubleTapSave] wires the Instagram-style double-tap-to-save gesture
+/// (`DoubleTapToSave`) onto every page — image or video — with the video
+/// pages' existing single-tap-to-mute preserved untouched as the isolated
+/// single tap.
 class ProductMediaCarousel extends StatefulWidget {
-  const ProductMediaCarousel({required this.media, required this.heroTag, super.key});
+  const ProductMediaCarousel({required this.media, required this.heroTag, required this.onDoubleTapSave, super.key});
 
   final List<ProductMediaItem> media;
   final Object heroTag;
+  final VoidCallback onDoubleTapSave;
 
   @override
   State<ProductMediaCarousel> createState() => _ProductMediaCarouselState();
@@ -47,14 +54,17 @@ class _ProductMediaCarouselState extends State<ProductMediaCarousel> {
         itemBuilder: (context, index, parallax) {
           final item = widget.media[index];
           if (item.isVideo) {
-            return _VideoPage(item: item, isActive: index == _activeIndex);
+            return _VideoPage(item: item, isActive: index == _activeIndex, onDoubleTapSave: widget.onDoubleTapSave);
           }
-          return ParallaxImage(
-            parallax: parallax,
-            image: CachedNetworkImage(
-              imageUrl: item.path,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: SokoniColors.surfaceAlt),
+          return DoubleTapToSave(
+            onSave: widget.onDoubleTapSave,
+            child: ParallaxImage(
+              parallax: parallax,
+              image: SokoniNetworkImage(
+                imageUrl: item.path,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(color: SokoniColors.surfaceAlt),
+              ),
             ),
           );
         },
@@ -64,10 +74,11 @@ class _ProductMediaCarouselState extends State<ProductMediaCarousel> {
 }
 
 class _VideoPage extends StatefulWidget {
-  const _VideoPage({required this.item, required this.isActive});
+  const _VideoPage({required this.item, required this.isActive, required this.onDoubleTapSave});
 
   final ProductMediaItem item;
   final bool isActive;
+  final VoidCallback onDoubleTapSave;
 
   @override
   State<_VideoPage> createState() => _VideoPageState();
@@ -129,8 +140,9 @@ class _VideoPageState extends State<_VideoPage> {
       );
     }
 
-    return GestureDetector(
-      onTap: _toggleMute,
+    return DoubleTapToSave(
+      onSave: widget.onDoubleTapSave,
+      onSingleTap: _toggleMute,
       child: Stack(
         fit: StackFit.expand,
         children: [

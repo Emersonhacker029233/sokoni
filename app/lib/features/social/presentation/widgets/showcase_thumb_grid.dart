@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +9,7 @@ import '../../../../shared/widgets/bottom_gradient_scrim.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../providers/social_providers.dart';
+import '../../../../shared/widgets/sokoni_network_image.dart';
 
 /// One seller's own Showcases (CLAUDE.md Part 3), the shop profile's
 /// Showcase tab — same 3-column grid shape as `ShopListingsGrid`, plus a
@@ -54,7 +54,7 @@ class ShowcaseThumbGrid extends ConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  CachedNetworkImage(imageUrl: showcase.thumbPath, fit: BoxFit.cover),
+                  SokoniNetworkImage(imageUrl: showcase.thumbPath, fit: BoxFit.cover),
                   const BottomGradientScrim(heightFraction: 0.3),
                   Positioned(
                     left: 4,

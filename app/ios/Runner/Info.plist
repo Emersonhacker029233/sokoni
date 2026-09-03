@@ -26,6 +26,13 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<!-- Required by iOS before any location API call can even be made —
+		     without it the app crashes immediately on the first location
+		     request rather than showing a permission dialog (tester feedback
+		     B4). Android's equivalent runtime-permission declarations were
+		     also missing from AndroidManifest.xml — see that file. -->
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Sokoni uses your location to show nearby shops and products, and to help sellers set their shop's map location.</string>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>
