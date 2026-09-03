@@ -19,7 +19,7 @@
         <section><h2 class="font-semibold text-sokoni-black">9. Kusitisha</h2><p>Unaweza kuacha kutumia Sokoni wakati wowote. Tunaweza kusimamisha au kufuta akaunti zinazokiuka Masharti haya.</p></section>
         <section><h2 class="font-semibold text-sokoni-black">10. Mabadiliko ya Masharti haya</h2><p>Tunaweza kusasisha Masharti haya mara kwa mara. Mabadiliko makubwa yatahitaji ukubali toleo jipya kabla ya kuendelea kutumia Sokoni.</p></section>
         <section><h2 class="font-semibold text-sokoni-black">11. Sheria inayotawala</h2><p>Masharti haya yanatawaliwa na sheria za Jamhuri ya Muungano wa Tanzania.</p></section>
-        <section><h2 class="font-semibold text-sokoni-black">12. Mawasiliano</h2><p>Maswali kuhusu Masharti haya yanaweza kutumwa kwa support@sokoni.co.tz.</p></section>
+        <section><h2 class="font-semibold text-sokoni-black">12. Mawasiliano</h2><p>Maswali kuhusu Masharti haya yanaweza kutumwa kwa {{ config('sokoni.support_email') }}.</p></section>
     </div>
 @else
     <h1 class="text-2xl font-bold">Terms of Service — version {{ \App\Support\Legal::TERMS_VERSION }}</h1>
@@ -36,7 +36,7 @@
         <section><h2 class="font-semibold text-sokoni-black">9. Termination</h2><p>You may stop using Sokoni at any time. We may suspend or terminate accounts that violate these Terms.</p></section>
         <section><h2 class="font-semibold text-sokoni-black">10. Changes to these Terms</h2><p>We may update these Terms from time to time. Material changes will require you to accept the new version before continuing to use Sokoni.</p></section>
         <section><h2 class="font-semibold text-sokoni-black">11. Governing law</h2><p>These Terms are governed by the laws of the United Republic of Tanzania.</p></section>
-        <section><h2 class="font-semibold text-sokoni-black">12. Contact</h2><p>Questions about these Terms can be sent to support@sokoni.co.tz.</p></section>
+        <section><h2 class="font-semibold text-sokoni-black">12. Contact</h2><p>Questions about these Terms can be sent to {{ config('sokoni.support_email') }}.</p></section>
     </div>
 @endif
 </article>
