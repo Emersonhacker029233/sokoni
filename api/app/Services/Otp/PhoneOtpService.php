@@ -13,11 +13,11 @@ class PhoneOtpService
 
     public function __construct(private readonly SmsGateway $sms) {}
 
-    public function requestCode(string $phone): void
+    public function requestCode(string $phone, string $locale = 'en'): void
     {
         $code = (string) random_int(100000, 999999);
         Cache::put($this->cacheKey($phone), $code, self::TTL_SECONDS);
-        $this->sms->sendOtp($phone, $code);
+        $this->sms->sendOtp($phone, $code, $locale);
     }
 
     public function verifyCode(string $phone, string $code): bool

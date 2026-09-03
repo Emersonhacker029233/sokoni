@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class PhoneOtpTest extends TestCase
@@ -84,10 +85,60 @@ class PhoneOtpTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_an_explicit_locale_is_forwarded_to_the_sms_gateway(): void
+    {
+        Log::spy();
+
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE, 'locale' => 'sw'])->assertOk();
+
+        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, '(sw)'))->once();
+    }
+
+    public function test_locale_defaults_to_english_when_not_supplied(): void
+    {
+        Log::spy();
+
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])->assertOk();
+
+        Log::shouldHaveReceived('info')->withArgs(fn ($message) => str_contains($message, '(en)'))->once();
+    }
+
+    public function test_an_unsupported_locale_is_rejected(): void
+    {
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE, 'locale' => 'fr'])
+            ->assertStatus(422);
+    }
+
     public function test_invalid_phone_format_is_rejected(): void
     {
         $this->postJson('/api/auth/otp/request', ['phone' => '0754123456'])
             ->assertStatus(422);
+    }
+
+    /**
+     * Protects the client's SMS credit as much as it protects the phone
+     * from being bombed with codes — the rate limiter is keyed on the
+     * phone number (not the requester), 3 per 15 minutes, per
+     * AppServiceProvider's `otp` RateLimiter definition.
+     */
+    public function test_a_fourth_otp_request_for_the_same_number_within_15_minutes_is_rate_limited(): void
+    {
+        for ($i = 0; $i < 3; $i++) {
+            $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])->assertOk();
+        }
+
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])->assertStatus(429);
+    }
+
+    public function test_the_rate_limit_is_scoped_per_phone_number_not_global(): void
+    {
+        for ($i = 0; $i < 3; $i++) {
+            $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])->assertOk();
+        }
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])->assertStatus(429);
+
+        // A different number is entirely unaffected by the first number's limit.
+        $this->postJson('/api/auth/otp/request', ['phone' => '+255755987654'])->assertOk();
     }
 
     public function test_otp_request_flags_a_never_seen_number_as_a_new_account(): void
