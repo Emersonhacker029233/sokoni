@@ -1,6 +1,6 @@
 @props(['shop'])
 
-<a href="{{ route('web.shop', $shop->handle) }}" class="card flex flex-col items-center gap-8 p-16 text-center transition hover:shadow-md">
+<a href="{{ route('web.shop', $shop->handle) }}" class="product-card flex h-full flex-col items-center gap-8 p-16 text-center">
     <div class="relative">
         @if ($shop->logo)
             <img src="{{ $shop->logo }}" alt="{{ $shop->shop_name }}" loading="lazy" class="h-64 w-64 rounded-full object-cover ring-1 ring-sokoni-outline">
@@ -21,5 +21,11 @@
             <x-star-rating :rating="(float) $shop->rating_avg" size="12" />
             <span>({{ $shop->rating_count }})</span>
         </p>
+        @if ($shop->district || $shop->region)
+            <p class="mt-2 truncate text-xs text-sokoni-black/40">{{ $shop->district ?: $shop->region }}</p>
+        @endif
+        @if (isset($shop->products_count))
+            <p class="mt-2 text-xs text-sokoni-black/40">{{ __('site.stores_listing_count', ['count' => $shop->products_count]) }}</p>
+        @endif
     </div>
 </a>

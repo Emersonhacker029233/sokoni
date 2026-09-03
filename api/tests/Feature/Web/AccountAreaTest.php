@@ -9,7 +9,6 @@ use App\Models\SellerProfile;
 use App\Models\User;
 use App\Support\Legal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class AccountAreaTest extends TestCase
@@ -72,9 +71,9 @@ class AccountAreaTest extends TestCase
         $this->assertSame('New Name', $user->fresh()->name);
     }
 
-    public function test_a_buyer_without_a_shop_visiting_shop_dashboard_is_redirected_to_sell_page(): void
+    public function test_a_buyer_without_a_shop_visiting_shop_dashboard_is_redirected_to_the_registration_form(): void
     {
-        $this->actingAsWebUser($this->onboardedUser())->get(route('web.account.shop'))->assertRedirect(route('web.sell'));
+        $this->actingAsWebUser($this->onboardedUser())->get(route('web.account.shop'))->assertRedirect(route('web.account.shop.register'));
     }
 
     public function test_a_seller_can_view_their_shop_dashboard(): void
@@ -85,7 +84,7 @@ class AccountAreaTest extends TestCase
         $this->actingAsWebUser($user)->get(route('web.account.shop'))->assertOk();
     }
 
-    public function test_a_seller_can_create_a_product_from_the_web(): void
+    public function test_a_seller_can_create_a_product_from_the_web_and_lands_on_the_edit_page_to_add_photos(): void
     {
         $user = $this->onboardedUser();
         $seller = SellerProfile::factory()->verified()->create(['user_id' => $user->id]);
@@ -101,13 +100,16 @@ class AccountAreaTest extends TestCase
             'price' => 15000,
             'stock' => 3,
             'condition' => 'new',
-            'images' => [UploadedFile::fake()->image('photo.jpg')],
         ]);
 
-        $response->assertRedirect(route('web.account.shop.products'));
         $this->assertDatabaseHas('products', ['seller_id' => $seller->id, 'title' => 'A brand new product']);
         $product = Product::where('title', 'A brand new product')->first();
-        $this->assertCount(1, $product->media);
+
+        // Photos are a separate step now (tester feedback item 1) — a
+        // product must exist before its AJAX media manager has anywhere
+        // to upload to, exactly like the Flutter app's own product form.
+        $response->assertRedirect(route('web.account.shop.products.edit', $product));
+        $this->assertCount(0, $product->media);
     }
 
     public function test_a_seller_can_edit_their_own_product_but_not_someone_elses(): void

@@ -52,35 +52,90 @@
     --color-sokoni-success: #12A150;
     --color-sokoni-danger: #E5484D;
 
-    /* 4pt rhythm as named spacing steps, matching the app's SokoniDimens. */
-    --spacing-4: 0.25rem;
-    --spacing-8: 0.5rem;
-    --spacing-12: 0.75rem;
-    --spacing-16: 1rem;
-    --spacing-20: 1.25rem;
-    --spacing-24: 1.5rem;
-    --spacing-32: 2rem;
+    /* Text hierarchy — one accent colour only (yellow), everything else is
+       this near-black/grey ramp. Never yellow text on white (fails contrast
+       and reads as a bug, not a brand choice — Part 3 design pass). */
+    --color-sokoni-body: #4A4A48;
+    --color-sokoni-caption: #8A8A85;
+
+    /*
+     * 4pt rhythm — override Tailwind v4's base spacing multiplier itself
+     * (every numeric spacing/sizing utility is generated as
+     * calc(var(--spacing) * N), default 0.25rem) rather than naming a
+     * handful of specific steps. Naming only {4,8,12,16,20,24,32} here
+     * previously left every OTHER number used across the templates
+     * (py-10, py-14, py-40, py-56, h-24, h-48, ...) silently falling back
+     * to Tailwind's default 4px-per-step multiplier — a 4x inflation on
+     * every one of those values (py-40 compiled to 160px, not 40px) that
+     * was the root cause of the oversized/overflowing production layout.
+     * With --spacing: 1px, every N-suffixed utility means literally Npx,
+     * matching what every view in this codebase already assumes.
+     */
+    --spacing: 1px;
 
     --radius-card: 1rem;
     --radius-chip: 0.75rem;
     --radius-button: 1.75rem;
 }
 
+/* Alpine's `x-cloak` attribute has no built-in styling of its own — every
+ * existing use of it on this site (mobile menu, product gallery lightbox,
+ * phone-reveal link) has been silently inert without this rule, which is
+ * the real cause behind at least one reported flicker: before Alpine
+ * parses and hydrates, an `x-cloak`'d element renders using its own normal
+ * layout (fully visible) until Alpine's first tick hides it a beat later.
+ * Left un-layered (not inside @layer) so it always wins over any Tailwind
+ * utility regardless of layer order or specificity. */
+[x-cloak] {
+    display: none !important;
+}
+
 @layer base {
     body {
-        @apply bg-sokoni-surface text-sokoni-black antialiased;
+        @apply bg-sokoni-surface text-sokoni-body antialiased;
+    }
+    h1, h2, h3, h4 {
+        @apply text-sokoni-black;
     }
 }
 
 @layer components {
+    /* Type scale — Display/H1/H2/H3 get the -0.02em tight tracking Part 3
+       calls for on everything 24px and above; Body/Small/Caption don't. */
+    .text-display  { @apply text-[40px] font-bold leading-[1.1] tracking-[-0.02em]; }
+    .text-h1        { @apply text-[32px] font-bold leading-[1.2] tracking-[-0.02em]; }
+    .text-h2        { @apply text-[24px] font-semibold leading-[1.3] tracking-[-0.02em]; }
+    .text-h3        { @apply text-[20px] font-semibold leading-[1.4] tracking-[-0.02em]; }
+    .text-body      { @apply text-[16px] leading-[1.6] font-normal text-sokoni-body; }
+    .text-small     { @apply text-[14px] leading-[1.5] font-normal text-sokoni-body; }
+    .text-caption   { @apply text-[13px] leading-[1.4] font-medium text-sokoni-caption; }
+
+    /* Content container: 1280px max-width, 24px desktop / 16px mobile
+       gutters — the one wrapper every section should use. */
+    .container-sokoni {
+        @apply mx-auto max-w-7xl px-16 lg:px-24;
+    }
+
+    /* Vertical rhythm between major home-page-style sections. */
+    .section-stack > * + * {
+        @apply mt-40 lg:mt-64;
+    }
+
     .btn-primary {
-        @apply inline-flex items-center justify-center gap-8 rounded-button bg-sokoni-yellow px-20 py-12 text-sm font-semibold text-sokoni-black transition hover:brightness-95 active:brightness-90;
+        @apply inline-flex min-h-44 items-center justify-center gap-8 rounded-button bg-sokoni-yellow px-20 py-12 text-sm font-semibold text-sokoni-black transition hover:brightness-95 active:brightness-90;
     }
     .btn-secondary {
-        @apply inline-flex items-center justify-center gap-8 rounded-button border border-sokoni-black px-20 py-12 text-sm font-semibold text-sokoni-black transition hover:bg-sokoni-black hover:text-white;
+        @apply inline-flex min-h-44 items-center justify-center gap-8 rounded-button border border-sokoni-black px-20 py-12 text-sm font-semibold text-sokoni-black transition hover:bg-sokoni-black hover:text-white;
     }
     .btn-ghost {
-        @apply inline-flex items-center justify-center gap-8 rounded-button px-16 py-8 text-sm font-medium text-sokoni-black/70 transition hover:bg-sokoni-surface-alt;
+        @apply inline-flex min-h-44 items-center justify-center gap-8 rounded-button px-16 py-8 text-sm font-medium text-sokoni-black/70 transition hover:bg-sokoni-surface-alt;
+    }
+    /* WhatsApp is a secondary contact action but gets its own brand green —
+       never confusable with the primary yellow Order button (Part 3: "the
+       Order button is the loudest thing on the page; WhatsApp is
+       secondary, in its own green"). */
+    .btn-whatsapp {
+        @apply inline-flex min-h-44 items-center justify-center gap-8 rounded-button bg-[#12A150] px-20 py-12 text-sm font-semibold text-white transition hover:brightness-95 active:brightness-90;
     }
     .card {
         @apply rounded-card border border-sokoni-outline bg-white;
@@ -98,6 +153,53 @@
         @apply inline-flex items-center rounded-chip bg-sokoni-surface-alt px-8 py-4 text-xs font-medium text-sokoni-black/60;
     }
     .input-field {
-        @apply w-full rounded-chip border border-sokoni-outline bg-white px-16 py-12 text-sm text-sokoni-black placeholder:text-sokoni-black/40 focus:border-sokoni-black focus:outline-none;
+        @apply w-full min-h-48 rounded-chip border border-sokoni-outline bg-white px-16 py-12 text-sm text-sokoni-black placeholder:text-sokoni-black/40 focus:border-sokoni-black focus:outline-none;
+    }
+
+    /* Horizontal-scroll rows (category strip, mobile section scrollers)
+       without a visible scrollbar, per Part 3's header/home-section specs. */
+    .no-scrollbar {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Skeleton shimmer for loading states — the only "spinner" this design
+       system uses (Part 3 motion spec). */
+    .skeleton {
+        @apply animate-pulse rounded-chip bg-sokoni-surface-alt;
+    }
+
+    /* Product card hover: 2px lift, shadow, 1.02 image scale, 200ms
+       ease-out — respects prefers-reduced-motion via the media query below
+       rather than a JS check, since it's pure CSS either way. */
+    .product-card {
+        @apply block overflow-hidden rounded-card border border-sokoni-outline bg-white transition duration-200 ease-out hover:-translate-y-2 hover:shadow-md;
+    }
+    .product-card img {
+        @apply transition duration-200 ease-out;
+    }
+    .product-card:hover img {
+        @apply scale-[1.02];
+    }
+
+    /* Fade-in for section headings on scroll — driven by an IntersectionObserver
+       one-liner in app.js toggling this class; CSS just defines the two states. */
+    .fade-in-section {
+        @apply opacity-0 translate-y-8 transition duration-300 ease-out;
+    }
+    .fade-in-section.is-visible {
+        @apply opacity-100 translate-y-0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

@@ -19,37 +19,84 @@
                     <span class="badge-verified h-18 w-18"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-12 w-12"><path fill-rule="evenodd" d="M10 1l2.39 1.36L15 2l.61 2.61L18 5.99l-1.36 2.39L18 10.77 15.61 12l-.61 2.61L12 14l-2 1.99L8 14l-2.61.61L5 12 2.39 10.77 4 8.38 2.39 5.99 5 5l.39-2.39L8 2z" clip-rule="evenodd" /></svg></span>
                 @endif
             </h1>
-            <p class="text-sm text-sokoni-black/50">@{{ $seller->handle }} &middot; {{ $seller->category?->name(app()->getLocale()) }}</p>
+            {{-- `@{{ }}` is Blade's escape for a *literal* `{{ }}` in the output (for JS
+                 frameworks sharing the same delimiter) — it was never valid here and always
+                 printed the raw template text instead of the handle (tester feedback A1).
+                 The leading @ is a plain character in the expression itself, not the escape. --}}
+            <p class="text-sm text-sokoni-black/50">{{ '@'.$seller->handle }} &middot; {{ $seller->category?->name(app()->getLocale()) }}</p>
+
+            {{-- Full address, prominent in the header — not buried below, per tester feedback. --}}
+            <p class="mt-8 flex items-center justify-center gap-4 text-sm text-sokoni-black/70 sm:justify-start">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-14 w-14 shrink-0 text-sokoni-black/40"><path fill-rule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clip-rule="evenodd" /></svg>
+                {{ $seller->address }}, {{ $seller->district }}, {{ $seller->region }}
+            </p>
         </div>
     </div>
 
-    {{-- Counts --}}
-    <div class="mt-24 flex justify-center gap-32 border-b border-sokoni-outline pb-24 text-center sm:justify-start">
+    {{-- Counts — everything a buyer needs to trust the seller, at a glance. --}}
+    <div class="mt-24 flex flex-wrap justify-center gap-32 border-b border-sokoni-outline pb-24 text-center sm:justify-start">
         <div><p class="text-lg font-bold">{{ $seller->products()->visible()->count() }}</p><p class="text-xs text-sokoni-black/50">{{ __('site.shop_listings') }}</p></div>
         <div><p class="text-lg font-bold">{{ $seller->customer_count }}</p><p class="text-xs text-sokoni-black/50">{{ __('site.shop_customers') }}</p></div>
         <div class="flex flex-col items-center sm:items-start"><x-star-rating :rating="(float) $seller->rating_avg" /><p class="text-xs text-sokoni-black/50">({{ $seller->rating_count }})</p></div>
+        <div><p class="text-lg font-bold">{{ $seller->created_at->format('Y') }}</p><p class="text-xs text-sokoni-black/50">{{ __('site.shop_member_since') }}</p></div>
     </div>
 
     {{-- Bio + contact --}}
     <div class="mt-24 grid gap-24 md:grid-cols-3">
         <div class="md:col-span-2">
-            @if ($seller->bio)
+            @if ($seller->localizedBio(app()->getLocale()))
                 <h2 class="text-sm font-semibold text-sokoni-black/50">{{ __('site.shop_about') }}</h2>
-                <p class="mt-4 text-sm text-sokoni-black/80">{{ $seller->bio }}</p>
+                <p class="mt-4 text-sm text-sokoni-black/80">{{ $seller->localizedBio(app()->getLocale()) }}</p>
             @endif
-            <p class="mt-12 text-sm text-sokoni-black/70">{{ $seller->address }}, {{ $seller->district }}, {{ $seller->region }}</p>
+
             @if ($seller->hasLocation())
-                <a href="https://www.google.com/maps?q={{ $seller->lat }},{{ $seller->lng }}" target="_blank" rel="noopener" class="mt-8 inline-flex items-center gap-4 text-sm font-medium text-sokoni-black/70 hover:underline">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-16 w-16"><path fill-rule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clip-rule="evenodd" /></svg>
-                    {{ __('site.shop_directions') }}
-                </a>
+                {{-- OpenStreetMap embed — no API key, no billing (Google Maps couldn't be set up on this
+                     account). Lazy-loaded so it costs nothing on 3G until actually scrolled into view.
+                     A small, fixed bounding box around the shop's own point, not a wide city view. --}}
+                @php
+                    $boxSize = 0.008;
+                    $bbox = ($seller->lng - $boxSize).','.($seller->lat - $boxSize).','.($seller->lng + $boxSize).','.($seller->lat + $boxSize);
+                @endphp
+                <div class="mt-16 overflow-hidden rounded-card border border-sokoni-outline">
+                    <iframe
+                        src="https://www.openstreetmap.org/export/embed.html?bbox={{ $bbox }}&layer=mapnik&marker={{ $seller->lat }},{{ $seller->lng }}"
+                        loading="lazy"
+                        class="h-[220px] w-full border-0"
+                        title="{{ __('site.shop_map_title', ['shop' => $seller->shop_name]) }}"
+                    ></iframe>
+                </div>
+                <div class="mt-8 flex flex-wrap items-center gap-12 text-sm">
+                    <a href="geo:{{ $seller->lat }},{{ $seller->lng }}?q={{ $seller->lat }},{{ $seller->lng }}({{ urlencode($seller->shop_name) }})" class="inline-flex items-center gap-4 font-medium text-sokoni-black/70 hover:underline">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-16 w-16"><path fill-rule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clip-rule="evenodd" /></svg>
+                        {{ __('site.shop_directions') }}
+                    </a>
+                    {{-- geo: URIs aren't handled everywhere (notably desktop browsers, iOS Safari with no maps app registered) — a plain web link always works as the fallback. --}}
+                    <a href="https://www.openstreetmap.org/directions?to={{ $seller->lat }}%2C{{ $seller->lng }}" target="_blank" rel="noopener" class="text-sokoni-black/40 hover:underline">
+                        {{ __('site.shop_directions_web') }}
+                    </a>
+                </div>
             @endif
 
             <div class="mt-16 flex gap-8">
-                <a href="{{ auth('web')->check() ? route('web.account.messages') : route('web.login') }}" class="btn-secondary text-sm">{{ __('site.product_message') }}</a>
+                {{-- Same fix as the product page (tester feedback A2) — starts/resumes a
+                     real conversation with this seller instead of the dead link to the
+                     conversation list. No product context here (shop-level, not a
+                     specific listing), so product_id is simply omitted. --}}
+                @auth('web')
+                    <form action="{{ route('web.account.messages.start') }}" method="post">
+                        @csrf
+                        <input type="hidden" name="seller_id" value="{{ $seller->id }}">
+                        <button type="submit" class="btn-secondary text-sm">{{ __('site.product_message') }}</button>
+                    </form>
+                @else
+                    <a href="{{ route('web.login') }}" class="btn-secondary text-sm">{{ __('site.product_message') }}</a>
+                @endauth
                 @if ($seller->show_whatsapp && $seller->whatsapp)
                     <a href="https://wa.me/{{ ltrim($seller->whatsapp, '+') }}" target="_blank" rel="noopener" class="btn-secondary text-sm">{{ __('site.product_whatsapp') }}</a>
                 @endif
+            </div>
+            <div class="mt-8">
+                <x-report-button type="shop" :id="$seller->id" />
             </div>
         </div>
 
@@ -59,7 +106,7 @@
             <dl class="mt-8 space-y-4 text-sm">
                 @foreach ($openingHours as $day => $hours)
                     <div class="flex justify-between">
-                        <dt class="capitalize text-sokoni-black/60">{{ $day }}</dt>
+                        <dt class="text-sokoni-black/60">{{ __('site.day_'.$day) }}</dt>
                         <dd>{{ $hours ? "{$hours['open']} - {$hours['close']}" : __('site.shop_hours_closed') }}</dd>
                     </div>
                 @endforeach
@@ -81,7 +128,7 @@
             @if ($products->isEmpty())
                 @include('web.partials.empty-results')
             @else
-                <div class="grid grid-cols-2 gap-16 sm:grid-cols-3 md:grid-cols-4">
+                <div class="grid grid-cols-2 gap-16 sm:grid-cols-3 md:grid-cols-4 lg:gap-24">
                     @foreach ($products as $product)
                         <x-product-card :product="$product" />
                     @endforeach
@@ -149,7 +196,7 @@
     '@type' => 'LocalBusiness',
     'name' => $seller->shop_name,
     'image' => $seller->logo,
-    'description' => $seller->bio,
+    'description' => $seller->localizedBio(app()->getLocale()),
     'address' => [
         '@type' => 'PostalAddress',
         'streetAddress' => $seller->address,

@@ -94,6 +94,7 @@ class AdminPanelProvider extends PanelProvider
                 'Overview',
                 'Catalog',
                 'Commerce',
+                'Marketing',
                 'Community',
                 'Trust & Safety',
                 'System',

@@ -8,42 +8,66 @@ use App\Models\Product;
 use App\Models\SellerProfile;
 use App\Services\Catalog\CategoryCatalogService;
 use App\Support\DarEsSalaam;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
+/**
+ * TEMPORARILY UNCACHED: this used to wrap the home page's data in
+ * Cache::remember(), caching a nested graph of Offer/Product/SellerProfile
+ * models. Production started 500ing with __PHP_Incomplete_Class on
+ * unserialize, surviving a full cache-store clear — see DECISIONS.md for
+ * the incident writeup. Removed the caching layer entirely to get the
+ * site back up; re-add once the actual cache store misconfiguration is
+ * confirmed and fixed.
+ */
 class HomeController extends Controller
 {
-    private const TTL_SECONDS = 300;
-
     public function __invoke(CategoryCatalogService $categories): View
     {
-        $data = Cache::remember('web:home:data', self::TTL_SECONDS, function () {
-            return [
-                'nearYou' => $this->nearYou(),
-                'offers' => Offer::query()
-                    ->visible()
-                    ->with(['product.media', 'seller'])
-                    ->latest('starts_at')
-                    ->limit(8)
-                    ->get(),
-                'featuredShops' => SellerProfile::query()
-                    ->verified()
-                    ->orderByDesc('rating_count')
-                    ->orderByDesc('rating_avg')
-                    ->limit(8)
-                    ->get(),
-                'latest' => Product::query()
-                    ->visible()
-                    ->with(['category', 'seller', 'media'])
-                    ->latest()
-                    ->limit(16)
-                    ->get(),
-            ];
-        });
+        $data = [
+            'nearYou' => $this->nearYou(),
+            'offers' => Offer::query()
+                ->visible()
+                ->with(['product.media', 'seller'])
+                ->latest('starts_at')
+                ->limit(8)
+                ->get(),
+            'featuredShops' => SellerProfile::query()
+                ->verified()
+                ->orderByDesc('rating_count')
+                ->orderByDesc('rating_avg')
+                ->limit(8)
+                ->get(),
+            'latest' => Product::query()
+                ->visible()
+                ->with(['category', 'seller', 'media'])
+                // `latest()` alone orders by created_at DESC only — fine in
+                // theory, but a batch of seeded/imported products routinely
+                // shares the exact same created_at second (timestamps() has
+                // no fractional precision), and MySQL doesn't guarantee any
+                // particular order among ties. In practice that tie-break
+                // came out as ascending id, i.e. oldest-batch-first, the
+                // opposite of "newest first". `id` is monotonically
+                // increasing with insertion order, so ordering by it DESC
+                // as a tiebreaker makes "newest first" deterministic even
+                // when many rows share a timestamp.
+                ->latest()
+                ->orderByDesc('id')
+                ->limit(16)
+                ->get(),
+        ];
 
         return view('web.home', [
             ...$data,
-            'categories' => $categories->withCounts(),
+            // Browse-categories grid only — a category with zero currently-
+            // visible products would show "Agriculture 0", which reads as
+            // "this marketplace is empty" rather than useful information
+            // (tester feedback), so it's dropped from this section entirely
+            // rather than shown with a count. CategoryCatalogService's own
+            // withCounts() is left untouched: the header nav and direct
+            // category-page links (/c/{category}) still need to resolve a
+            // temporarily-empty category correctly, just not advertise it
+            // as a browsing option on the home page.
+            'categories' => $categories->withCounts()->filter(fn ($category) => $category->products_count > 0)->values(),
             'title' => null,
             'description' => __('site.home_hero_subtitle'),
         ]);

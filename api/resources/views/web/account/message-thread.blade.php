@@ -1,7 +1,25 @@
 @extends('layouts.app')
 
 @section('content')
-@php($otherName = auth('web')->id() === $conversation->buyer_id ? $conversation->seller->shop_name : $conversation->buyer->name)
+@php
+    $otherName = auth('web')->id() === $conversation->buyer_id ? $conversation->seller->shop_name : $conversation->buyer->name;
+
+    // @json() splits its argument on every comma to look for an optional
+    // encoding-options/depth argument (Illuminate\View\Compilers\Concerns
+    // \CompilesJson::compileJson — a plain explode(), not paren/bracket
+    // aware), so a multi-key array literal placed directly inside @json()
+    // silently truncates at the first internal comma. Computing the array
+    // here first, and passing @json() a single comma-free variable,
+    // sidesteps the bug entirely.
+    $initialMessages = $conversation->messages->map(fn ($m) => [
+        'id' => $m->id,
+        'body' => $m->body,
+        'attachment' => $m->attachment,
+        'mine' => $m->sender_id === Auth::id(),
+        'sender_name' => $m->sender->name,
+        'created_at' => $m->created_at->toIso8601String(),
+    ]);
+@endphp
 
 <div class="mx-auto max-w-2xl px-16 py-32 lg:px-24">
     @include('web.account.nav')
@@ -45,14 +63,7 @@
 <script>
     function sokoniThread(conversationId, myId, pollUrl) {
         return {
-            messages: @json($conversation->messages->map(fn ($m) => [
-                'id' => $m->id,
-                'body' => $m->body,
-                'attachment' => $m->attachment,
-                'mine' => $m->sender_id === Auth::id(),
-                'sender_name' => $m->sender->name,
-                'created_at' => $m->created_at->toIso8601String(),
-            ])),
+            messages: @json($initialMessages),
             start() {
                 // Same 5s-polling design the app uses (CLAUDE.md feature 5: no WebSocket server on shared hosting).
                 setInterval(() => this.poll(), 5000);
