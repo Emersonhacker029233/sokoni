@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0A0A0A">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ trim(($title ?? null) ? $title.' — Sokoni' : 'Sokoni — Buy and sell anything, near you') }}</title>
     <meta name="description" content="{{ $description ?? 'Sokoni is Tanzania\'s marketplace for verified sellers — browse products, chat with shops, and order safely, near you.' }}">
@@ -39,12 +40,15 @@
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-sokoni-yellow focus:px-16 focus:py-8">Skip to content</a>
 
     @include('partials.header')
+    @include('partials.flash')
 
-    <main id="main" class="flex-1">
+    {{-- pb-56 clears the fixed mobile bottom nav (partials.bottom-nav, h-56); it renders lg:hidden so lg:pb-0 removes the gap where it doesn't exist. --}}
+    <main id="main" class="flex-1 pb-56 lg:pb-0">
         {{ $slot ?? '' }}
         @yield('content')
     </main>
 
     @include('partials.footer')
+    @include('partials.bottom-nav')
 </body>
 </html>

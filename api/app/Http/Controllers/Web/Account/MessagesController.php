@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Web\Account;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StartConversationRequest;
 use App\Http\Requests\StoreMessageRequest;
 use App\Models\Conversation;
 use App\Services\Push\PushNotifier;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -40,6 +42,29 @@ class MessagesController extends Controller
             ->paginate(20);
 
         return view('web.account.messages', ['conversations' => $conversations, 'title' => __('site.account_messages')]);
+    }
+
+    /**
+     * The web equivalent of Api\ConversationController::store() — the
+     * "Message" button on product/shop pages previously just linked to
+     * this same list page with no way to actually start a thread with
+     * that seller (tester feedback A2: the button existed but did
+     * nothing). Reuses the exact same FormRequest and firstOrCreate()
+     * shape the API uses, so a thread started from the website is
+     * indistinguishable from one started in the app.
+     */
+    public function start(StartConversationRequest $request): RedirectResponse
+    {
+        $conversation = Conversation::query()->firstOrCreate(
+            [
+                'buyer_id' => Auth::id(),
+                'seller_id' => $request->integer('seller_id'),
+                'product_id' => $request->integer('product_id') ?: null,
+            ],
+            ['last_message_at' => now()],
+        );
+
+        return redirect()->route('web.account.messages.show', $conversation);
     }
 
     public function show(Conversation $conversation): View

@@ -3,21 +3,46 @@
 @section('content')
 <x-breadcrumb :items="$breadcrumbs" />
 
-<div class="mx-auto max-w-6xl px-16 pb-40 lg:px-24">
+{{-- Extra clearance here is only for this page's own sticky Order/WhatsApp bar — the fixed global bottom nav's own 56px is already accounted for by <main>'s pb-56 in layouts.app. --}}
+<div class="mx-auto max-w-6xl px-16 pb-96 lg:px-24 lg:pb-40">
     <div class="grid gap-32 lg:grid-cols-2">
-        {{-- Gallery --}}
-        <div x-data="{ active: 0, lightbox: false, items: {{ $product->media->count() }} }" @keydown.escape.window="lightbox = false" @keydown.arrow-right.window="if (lightbox) active = (active + 1) % items" @keydown.arrow-left.window="if (lightbox) active = (active - 1 + items) % items">
+        {{-- Gallery — sticky on desktop so it stays in view while the (often
+             longer) details column scrolls past it. --}}
+        <div class="lg:sticky lg:top-96 lg:self-start" x-data="{ active: 0, lightbox: false, items: {{ $product->media->count() }} }" @keydown.escape.window="lightbox = false" @keydown.arrow-right.window="if (lightbox) active = (active + 1) % items" @keydown.arrow-left.window="if (lightbox) active = (active - 1 + items) % items">
             <div class="relative aspect-square overflow-hidden rounded-card bg-sokoni-surface-alt">
+                {{-- Every slide is a permanent, always-decoded element stacked via
+                     inset-0 — only its opacity is toggled, never its `src`, so a
+                     slide switch is a pure GPU crossfade with nothing left to
+                     decode or reflow at that moment. Only the first slide skips
+                     x-cloak: it must be visible immediately (before Alpine even
+                     loads) both so first paint isn't blank and so the photo still
+                     shows if script fails entirely on a bad connection — every
+                     other slide stays x-cloak'd until Alpine assigns it a real
+                     opacity, which is what stops the pre-hydration flash of
+                     stacked slides painting in DOM order. --}}
                 @forelse ($product->media as $index => $media)
-                    <div x-show="active === {{ $index }}" class="absolute inset-0">
+                    <div
+                        x-show="active === {{ $index }}"
+                        x-transition:enter="transition-opacity duration-200 ease-out"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition-opacity duration-200 ease-out"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                        @if ($index > 0) x-cloak @endif
+                        class="absolute inset-0"
+                    >
                         @if ($media->isVideo())
-                            <video src="{{ $media->path }}" poster="{{ $media->thumb_path }}" controls playsinline class="h-full w-full object-cover"></video>
+                            <video src="{{ $media->path }}" poster="{{ $media->thumb_path }}" controls playsinline preload="metadata" class="h-full w-full object-cover"></video>
                         @else
                             <img
                                 src="{{ $media->card_path ?? $media->path }}"
                                 srcset="{{ $media->thumb_path }} 300w, {{ $media->card_path }} 800w, {{ $media->path }} 1600w"
                                 sizes="(min-width: 1024px) 50vw, 100vw"
                                 alt="{{ $product->title }}"
+                                loading="eager"
+                                decoding="async"
+                                fetchpriority="{{ $index === 0 ? 'high' : 'low' }}"
                                 @click="lightbox = true"
                                 class="h-full w-full cursor-zoom-in object-cover"
                             >
@@ -36,8 +61,11 @@
             @if ($product->media->count() > 1)
                 <div class="mt-8 flex gap-8 overflow-x-auto">
                     @foreach ($product->media as $index => $media)
+                        {{-- type="button" plus a plain :class swap (no hover binding at all)
+                             is deliberate — nothing here ever touches the main image's
+                             state, so hovering a thumbnail can't retrigger it. --}}
                         <button type="button" @click="active = {{ $index }}" class="h-56 w-56 shrink-0 overflow-hidden rounded-chip ring-2" :class="active === {{ $index }} ? 'ring-sokoni-yellow' : 'ring-transparent'">
-                            <img src="{{ $media->thumb_path ?? $media->path }}" alt="" class="h-full w-full object-cover">
+                            <img src="{{ $media->thumb_path ?? $media->path }}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
                         </button>
                     @endforeach
                 </div>
@@ -102,12 +130,28 @@
 
             {{-- Contact actions --}}
             <div class="mt-16 grid grid-cols-3 gap-8">
-                <a href="{{ auth('web')->check() ? route('web.account.messages') : route('web.login') }}" class="btn-secondary flex-col gap-4 py-12 text-xs">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-20 w-20"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.24 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" /></svg>
-                    {{ __('site.product_message') }}
-                </a>
+                {{-- Previously always linked to the conversation list with no way to
+                     actually start a thread with this seller (tester feedback A2) —
+                     now creates/resumes the real per-product conversation, matching
+                     the app's own "pinned per-product thread" behaviour. --}}
+                @auth('web')
+                    <form action="{{ route('web.account.messages.start') }}" method="post">
+                        @csrf
+                        <input type="hidden" name="seller_id" value="{{ $seller->id }}">
+                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                        <button type="submit" class="btn-secondary flex w-full flex-col gap-4 py-12 text-xs">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-20 w-20"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.24 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" /></svg>
+                            {{ __('site.product_message') }}
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('web.login') }}" class="btn-secondary flex-col gap-4 py-12 text-xs">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-20 w-20"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.24 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" /></svg>
+                        {{ __('site.product_message') }}
+                    </a>
+                @endauth
                 @if ($seller->show_whatsapp && $seller->whatsapp)
-                    <a href="https://wa.me/{{ ltrim($seller->whatsapp, '+') }}?text={{ urlencode($product->title.' — '.route('web.product', ['product' => $product->id, 'slug' => \Illuminate\Support\Str::slug($product->title)])) }}" target="_blank" rel="noopener" class="btn-secondary flex-col gap-4 py-12 text-xs">
+                    <a href="https://wa.me/{{ ltrim($seller->whatsapp, '+') }}?text={{ urlencode($product->title.' — '.route('web.product', ['product' => $product->id, 'slug' => \Illuminate\Support\Str::slug($product->title)])) }}" target="_blank" rel="noopener" class="btn-whatsapp flex-col gap-4 py-12 text-xs">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-20 w-20"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 004.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2z" /></svg>
                         {{ __('site.product_whatsapp') }}
                     </a>
@@ -132,11 +176,16 @@
                 </div>
             </div>
 
-            <a href="{{ route('web.login') }}?intended=order" class="btn-primary mt-16 flex w-full py-14 text-base">{{ __('site.product_order') }}</a>
+            <div class="mt-8 text-right">
+                <x-report-button type="product" :id="$product->id" />
+            </div>
+
+            {{-- The loudest thing on the page — bigger than every other action here. --}}
+            <a href="{{ route('web.login') }}?intended=order" class="btn-primary mt-16 hidden w-full py-16 text-lg lg:flex">{{ __('site.product_order') }}</a>
 
             <div class="mt-24">
                 <h2 class="font-semibold">{{ __('site.product_description') }}</h2>
-                <p class="mt-8 whitespace-pre-line text-sm text-sokoni-black/70">{{ $product->description ?: '—' }}</p>
+                <p class="mt-8 whitespace-pre-line text-sm text-sokoni-black/70">{{ $product->localizedDescription(app()->getLocale()) ?: '—' }}</p>
             </div>
         </div>
     </div>
@@ -173,7 +222,7 @@
     @if ($similar->isNotEmpty())
         <section class="mt-40">
             <h2 class="text-lg font-bold">{{ __('site.product_similar') }}</h2>
-            <div class="mt-16 grid grid-cols-2 gap-16 sm:grid-cols-4">
+            <div class="mt-16 grid grid-cols-2 gap-16 sm:grid-cols-4 lg:gap-24">
                 @foreach ($similar as $item)
                     <x-product-card :product="$item" />
                 @endforeach
@@ -185,13 +234,24 @@
     @if ($moreFromShop->isNotEmpty())
         <section class="mt-40">
             <h2 class="text-lg font-bold">{{ __('site.product_more_from_shop') }}</h2>
-            <div class="mt-16 grid grid-cols-2 gap-16 sm:grid-cols-4">
+            <div class="mt-16 grid grid-cols-2 gap-16 sm:grid-cols-4 lg:gap-24">
                 @foreach ($moreFromShop as $item)
                     <x-product-card :product="$item" />
                 @endforeach
             </div>
         </section>
     @endif
+</div>
+
+{{-- Mobile bottom sticky bar — Order and WhatsApp always reachable without scrolling back up (Part 3 mobile spec). Desktop has its own full-width Order button and WhatsApp chip in the details column instead. --}}
+{{-- bottom-56 sits this directly above the fixed global bottom nav (partials.bottom-nav, h-56) rather than colliding with it at bottom-0. --}}
+<div class="fixed inset-x-0 bottom-56 z-30 flex gap-8 border-t border-sokoni-outline bg-white p-12 lg:hidden" style="padding-bottom: max(12px, env(safe-area-inset-bottom))">
+    @if ($seller->show_whatsapp && $seller->whatsapp)
+        <a href="https://wa.me/{{ ltrim($seller->whatsapp, '+') }}?text={{ urlencode($product->title.' — '.route('web.product', ['product' => $product->id, 'slug' => \Illuminate\Support\Str::slug($product->title)])) }}" target="_blank" rel="noopener" class="btn-whatsapp shrink-0 px-16">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-20 w-20"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 004.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2z" /></svg>
+        </a>
+    @endif
+    <a href="{{ route('web.login') }}?intended=order" class="btn-primary flex-1">{{ __('site.product_order') }}</a>
 </div>
 @endsection
 
@@ -219,7 +279,7 @@
     '@type' => 'Product',
     'name' => $product->title,
     'image' => $product->media->pluck('path')->values(),
-    'description' => strip_tags((string) $product->description) ?: $product->title,
+    'description' => strip_tags((string) $product->localizedDescription(app()->getLocale())) ?: $product->title,
     'sku' => (string) $product->id,
     'offers' => [
         '@type' => 'Offer',
