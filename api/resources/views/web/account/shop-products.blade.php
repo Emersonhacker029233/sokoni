@@ -9,9 +9,7 @@
         <a href="{{ route('web.account.shop.products.create') }}" class="btn-primary text-sm">+ Add product</a>
     </div>
 
-    @if (session('status'))
-        <p class="mt-16 rounded-chip bg-sokoni-success/10 p-12 text-sm text-sokoni-success">{{ session('status') }}</p>
-    @endif
+    {{-- Status confirmation now renders globally via partials.flash. --}}
 
     <div class="mt-16 space-y-8">
         @forelse ($products as $product)

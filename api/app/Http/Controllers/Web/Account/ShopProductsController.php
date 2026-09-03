@@ -7,19 +7,24 @@ use App\Http\Requests\ProductStoreRequest;
 use App\Http\Requests\ProductUpdateRequest;
 use App\Models\Category;
 use App\Models\Product;
-use App\Services\Media\ImageVariants;
+use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
  * "The ability to post a listing from the web" (CLAUDE.md website Section
  * 6) — reuses the exact same FormRequests (`ProductStoreRequest`/
- * `ProductUpdateRequest`) and `ImageVariants` service the API's
- * `Api\ProductController`/`ProductMediaController` use, so a listing
- * created here follows identical validation and produces identical
- * thumb/card/full media variants.
+ * `ProductUpdateRequest`) the API's `Api\ProductController` uses, so a
+ * listing created here follows identical validation. Photo management is
+ * a separate concern handled entirely by `ShopProductMediaController`'s
+ * AJAX endpoints (tester feedback: the old single inline `images[]` field
+ * gave sellers no way to see, remove, or reorder what they'd picked, which
+ * read as "only one photo works" even though the server always accepted
+ * more) — a product must exist before photos can be attached to it, which
+ * is why `store()` below lands the seller straight on the edit page rather
+ * than the list, exactly like the Flutter app's own product form already
+ * does ("Saved — now add photos").
  */
 class ShopProductsController extends Controller
 {
@@ -38,6 +43,7 @@ class ShopProductsController extends Controller
             'product' => null,
             'categories' => Category::where('is_active', true)->orderBy('sort_order')->get(),
             'title' => 'New product',
+            'maxMediaPerProduct' => Settings::maxMediaPerProduct(),
         ]);
     }
 
@@ -46,9 +52,8 @@ class ShopProductsController extends Controller
         $seller = $request->user()->sellerProfile()->firstOrFail();
         $product = $seller->products()->create($request->validated());
 
-        $this->attachUploadedImages($request, $product);
-
-        return redirect()->route('web.account.shop.products')->with('status', 'Product created.');
+        return redirect()->route('web.account.shop.products.edit', $product)
+            ->with('status', 'Product created — now add your photos below.');
     }
 
     public function edit(Product $product): View
@@ -59,47 +64,14 @@ class ShopProductsController extends Controller
             'product' => $product->load('media'),
             'categories' => Category::where('is_active', true)->orderBy('sort_order')->get(),
             'title' => 'Edit '.$product->title,
+            'maxMediaPerProduct' => Settings::maxMediaPerProduct(),
         ]);
     }
 
     public function update(ProductUpdateRequest $request, Product $product): RedirectResponse
     {
         $product->update($request->validated());
-        $this->attachUploadedImages($request, $product);
 
         return redirect()->route('web.account.shop.products')->with('status', 'Product updated.');
-    }
-
-    private function attachUploadedImages(ProductUpdateRequest|ProductStoreRequest $request, Product $product): void
-    {
-        if (! $request->hasFile('images')) {
-            return;
-        }
-
-        // Not part of ProductStoreRequest/ProductUpdateRequest — those are
-        // shared with the JSON-only API, which never accepts file uploads
-        // on this endpoint (see ProductMediaController for that). Validated
-        // separately here rather than adding a web-only concern to a
-        // request class the API also uses.
-        $request->validate(['images.*' => ['image', 'max:8192']]);
-
-        $directory = "products/{$product->id}";
-        $nextSort = $product->media()->count();
-
-        foreach ($request->file('images') as $index => $file) {
-            if ($product->media()->count() >= \App\Support\Settings::maxMediaPerProduct()) {
-                break;
-            }
-
-            $variants = ImageVariants::generate($file, $directory);
-
-            $product->media()->create([
-                'type' => 'image',
-                'path' => Storage::disk('public')->url($variants['full']),
-                'card_path' => Storage::disk('public')->url($variants['card']),
-                'thumb_path' => Storage::disk('public')->url($variants['thumb']),
-                'sort' => $nextSort + $index,
-            ]);
-        }
     }
 }
