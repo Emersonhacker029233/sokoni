@@ -5,8 +5,13 @@
 
 <div class="mx-auto max-w-7xl px-16 pb-40 lg:px-24">
     <div class="flex flex-col gap-24 lg:flex-row">
-        <aside class="w-full shrink-0 lg:w-64">
+        <aside class="w-full shrink-0 lg:w-[256px] space-y-16">
+            @include('web.partials.search-category-tree')
             @include('web.partials.filters', ['action' => route('web.search')])
+
+            <div class="mt-24">
+                <x-banner-slot position="sidebar" />
+            </div>
         </aside>
 
         <div class="min-w-0 flex-1">
@@ -20,10 +25,20 @@
 
             @include('web.partials.active-filter-chips')
 
-            @if ($products->isEmpty() && $sponsored->isEmpty())
+            {{-- "Shops first when the query looks like a name" (tester feedback C2)
+                 — a real shop match is itself the signal the query names a shop;
+                 no match means it doesn't, and products lead exactly as before. --}}
+            @if ($shopsFirst)
+                @include('web.partials.search-shops-section')
+            @endif
+
+            @if ($products->isEmpty() && $sponsored->isEmpty() && $shops->isEmpty())
                 @include('web.partials.empty-results')
-            @else
-                <div class="grid grid-cols-2 gap-16 sm:grid-cols-3 md:grid-cols-4">
+            @elseif ($products->isNotEmpty() || $sponsored->isNotEmpty())
+                @if ($shops->isNotEmpty())
+                    <h2 class="mb-12 text-sm font-semibold text-sokoni-black/60">{{ __('site.search_products_heading') }}</h2>
+                @endif
+                <div class="grid grid-cols-2 gap-16 sm:grid-cols-3 md:grid-cols-4 lg:gap-24">
                     @foreach ($sponsored as $product)
                         <x-product-card :product="$product" />
                     @endforeach
@@ -34,6 +49,10 @@
 
                 {{ $products->links() }}
             @endif
+
+            @unless ($shopsFirst)
+                @include('web.partials.search-shops-section')
+            @endunless
         </div>
     </div>
 </div>

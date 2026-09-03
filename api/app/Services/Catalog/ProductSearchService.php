@@ -60,6 +60,40 @@ class ProductSearchService
             ->get();
     }
 
+    /**
+     * Count of currently-matching products per category — every OTHER
+     * active filter (query, price, region, ...) still applies, only the
+     * category filter itself is ignored, so a category genuinely has 0
+     * results under the current search rather than being hidden outright
+     * (tester feedback C3's sidebar category tree). A top-level category's
+     * count includes its children's matches; each child also gets its own
+     * exact count for when it's expanded.
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Category>  $topLevelCategories  must have `children` eager-loaded
+     * @return array<int, int> category id => count
+     */
+    public function categoryCounts(ProductSearchFilters $filters, Collection $topLevelCategories): array
+    {
+        $counts = $this->baseQuery($filters->withCategoryId(null))
+            ->toBase()
+            ->selectRaw('category_id, count(*) as aggregate')
+            ->groupBy('category_id')
+            ->pluck('aggregate', 'category_id');
+
+        $result = [];
+        foreach ($topLevelCategories as $category) {
+            $childIds = $category->children->pluck('id');
+            $result[$category->id] = (int) $counts->get($category->id, 0)
+                + $childIds->sum(fn ($id) => (int) $counts->get($id, 0));
+
+            foreach ($category->children as $child) {
+                $result[$child->id] = (int) $counts->get($child->id, 0);
+            }
+        }
+
+        return $result;
+    }
+
     private function baseQuery(ProductSearchFilters $filters): Builder
     {
         $query = Product::visible()

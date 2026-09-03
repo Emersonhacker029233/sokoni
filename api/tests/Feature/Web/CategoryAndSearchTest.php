@@ -52,6 +52,54 @@ class CategoryAndSearchTest extends TestCase
         $response->assertDontSee('Samsung Galaxy');
     }
 
+    /**
+     * Home search only ever matched product titles — a shop's own name
+     * never turned up a result at all unless one of its products happened
+     * to match too (tester feedback C2). The home hero search and this
+     * page share the exact same /search endpoint, so this test covers
+     * both surfaces at once.
+     */
+    public function test_search_matches_a_shop_name_even_with_no_matching_product(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create(['shop_name' => 'Kariakoo Mobile Center']);
+        Product::factory()->create(['seller_id' => $seller->id, 'title' => 'Something unrelated']);
+
+        $response = $this->get('/search?q=Kariakoo');
+
+        $response->assertOk();
+        $response->assertSee('Kariakoo Mobile Center');
+    }
+
+    public function test_search_results_are_grouped_with_shops_before_products_when_a_shop_matches(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create(['shop_name' => 'Mbezi Beach Electronics']);
+        Product::factory()->create(['seller_id' => $seller->id, 'title' => 'Mbezi Special Offer']);
+
+        $response = $this->get('/search?q=Mbezi');
+
+        $response->assertOk();
+        $response->assertSeeInOrder(['Mbezi Beach Electronics', 'Mbezi Special Offer']);
+    }
+
+    public function test_search_with_no_shop_match_shows_only_products_with_no_empty_shops_heading(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create(['shop_name' => 'Totally Unrelated Shop']);
+        Product::factory()->create(['seller_id' => $seller->id, 'title' => 'Genuine Leather Wallet']);
+
+        $response = $this->get('/search?q=Wallet');
+
+        $response->assertOk();
+        $response->assertSee('Genuine Leather Wallet');
+        $response->assertDontSee(__('site.search_shops_heading'));
+    }
+
+    public function test_an_unverified_seller_never_matches_search(): void
+    {
+        SellerProfile::factory()->create(['shop_name' => 'Pending Shop Not Verified Yet']); // pending, not verified
+
+        $this->get('/search?q=Pending')->assertOk()->assertDontSee('Pending Shop Not Verified Yet');
+    }
+
     public function test_search_respects_the_price_filter(): void
     {
         $seller = SellerProfile::factory()->verified()->create();

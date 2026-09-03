@@ -30,4 +30,24 @@ class ProductSearchFilters
     {
         return $this->lat !== null && $this->lng !== null;
     }
+
+    /** Same filters, a different (or no) category — used to count matches per category while ignoring the category filter itself. */
+    public function withCategoryId(?int $categoryId): self
+    {
+        return new self(
+            query: $this->query,
+            categoryId: $categoryId,
+            sellerId: $this->sellerId,
+            region: $this->region,
+            condition: $this->condition,
+            priceMin: $this->priceMin,
+            priceMax: $this->priceMax,
+            hasVideo: $this->hasVideo,
+            sponsoredOnly: $this->sponsoredOnly,
+            lat: $this->lat,
+            lng: $this->lng,
+            radiusKm: $this->radiusKm,
+            sort: $this->sort,
+        );
+    }
 }
