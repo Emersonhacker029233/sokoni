@@ -54,12 +54,13 @@ void main() {
     expect(find.text('Sokoni'), findsWidgets);
 
     // Several startup calls now have their own bounded timeouts (secure
-    // storage read, location fetch — see DECISIONS.md) which, with no
-    // platform-channel mock registered in this test, never resolve on
-    // their own and fall back to their internal `Future.timeout` Timer
-    // instead. Flush past the longest of those (8s) so none are still
-    // pending when the widget tree is torn down at the end of the test —
-    // otherwise flutter_test's `!timersPending` teardown check fails.
-    await tester.pump(const Duration(seconds: 9));
+    // storage read — AuthStateController._safetyNetTimeout, 10s; location
+    // fetch, 8s — see DECISIONS.md) which, with no platform-channel mock
+    // registered in this test, never resolve on their own and fall back to
+    // their internal `Future.timeout` Timer instead. Flush past the longest
+    // of those so none are still pending when the widget tree is torn down
+    // at the end of the test — otherwise flutter_test's `!timersPending`
+    // teardown check fails.
+    await tester.pump(const Duration(seconds: 11));
   });
 }

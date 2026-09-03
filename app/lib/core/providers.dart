@@ -29,55 +29,82 @@ final locationServiceProvider = Provider<LocationService>((ref) {
   return LocationService(cache: ref.watch(appDatabaseProvider));
 });
 
+/// - [loading]: the initial secure-storage read hasn't resolved yet.
+/// - [authenticated] / [unauthenticated]: the read completed and
+///   definitively found (or didn't find) a token.
+/// - [unknown]: the read could not be completed at all (a genuinely hung
+///   native call past the safety-net timeout, or a thrown exception) — NOT
+///   the same as "signed out". A session that exists on disk must never be
+///   discarded just because this one attempt to read it failed; the correct
+///   response is to let the caller retry, never to silently drop to guest.
+///   See DECISIONS.md: an earlier version of this controller collapsed a
+///   slow/failed read straight into "signed out", which is indistinguishable
+///   from a genuine session loss to both the user and the rest of the app.
+enum AuthStatus { loading, authenticated, unauthenticated, unknown }
+
 /// Whether a session token is present. Read at startup and updated on
 /// sign-in/sign-out/401 — the router watches this to decide whether
 /// auth-gated routes (order, chat, favourite; CLAUDE.md feature 4) redirect
 /// to sign-in.
 class AuthState {
-  const AuthState({required this.isAuthenticated, required this.isLoading});
+  const AuthState(this.status);
 
-  final bool isAuthenticated;
-  final bool isLoading;
+  final AuthStatus status;
 
-  AuthState copyWith({bool? isAuthenticated, bool? isLoading}) {
-    return AuthState(
-      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      isLoading: isLoading ?? this.isLoading,
-    );
-  }
+  bool get isAuthenticated => status == AuthStatus.authenticated;
+  bool get isLoading => status == AuthStatus.loading;
+  bool get isUnknown => status == AuthStatus.unknown;
 }
 
 class AuthStateController extends Notifier<AuthState> {
+  /// Generous on purpose: this is a local, offline keystore read with
+  /// nothing downstream waiting on it (the splash screen navigates on its
+  /// own fixed timer regardless of auth state — see splash_screen.dart), so
+  /// there is no reason to cut it short. This exists only as a last-resort
+  /// circuit breaker against a genuinely hung native call, not as a normal
+  /// code path — see the class docs on [AuthStatus.unknown] for why its
+  /// failure must never be treated as "signed out". Matches the order of
+  /// magnitude of this app's other bounded startup calls (PushService's
+  /// per-step timeout and LocationService's position fetch are both 8s).
+  static const _safetyNetTimeout = Duration(seconds: 10);
+
   @override
   AuthState build() {
     _loadInitial();
-    return const AuthState(isAuthenticated: false, isLoading: true);
+    return const AuthState(AuthStatus.loading);
   }
 
   Future<void> _loadInitial() async {
-    // Keystore-backed reads are usually instant but aren't guaranteed to
-    // be — nothing at startup should be able to hang waiting on this, so a
-    // timeout (or any other failure) just falls back to "signed out"
-    // rather than leaving isLoading true forever.
+    state = const AuthState(AuthStatus.loading);
+
     String? token;
     try {
-      token = await ref.read(secureStorageProvider).readToken().timeout(const Duration(seconds: 5));
+      token = await ref.read(secureStorageProvider).readToken().timeout(_safetyNetTimeout);
     } catch (_) {
-      token = null;
+      // Could not determine the real state — leave it undetermined rather
+      // than asserting "signed out" and forcing a real session to look lost.
+      state = const AuthState(AuthStatus.unknown);
+      return;
     }
-    state = AuthState(isAuthenticated: token != null, isLoading: false);
+
+    state = AuthState(token != null ? AuthStatus.authenticated : AuthStatus.unauthenticated);
     if (token != null) unawaited(ref.read(pushServiceProvider).registerDevice());
   }
 
+  /// Re-runs the initial load — the only way out of [AuthStatus.unknown],
+  /// exposed so the UI can offer "try again" rather than silently treating
+  /// an undetermined session as a guest one.
+  Future<void> retry() => _loadInitial();
+
   void markAuthenticated() {
-    state = state.copyWith(isAuthenticated: true, isLoading: false);
+    state = const AuthState(AuthStatus.authenticated);
     unawaited(ref.read(pushServiceProvider).registerDevice());
   }
 
   Future<void> signOut() async {
     await ref.read(secureStorageProvider).clearSession();
     await ref.read(appDatabaseProvider).clearAll();
-    state = state.copyWith(isAuthenticated: false, isLoading: false);
+    state = const AuthState(AuthStatus.unauthenticated);
   }
 }
 
