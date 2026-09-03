@@ -60,15 +60,16 @@ class SellerProfileInfolist
                 // Side by side: the two pieces of identity evidence a
                 // reviewer compares before approving.
                 Section::make('Identity & licence')
+                    ->description('NIDA number and photo are the actual basis of verification. The licence is an optional extra a seller may also provide.')
                     ->schema([
                         Grid::make(2)->schema([
                             ImageEntry::make('nida_image')
-                                ->label('NIDA photo')
+                                ->label('NIDA photo (basis of verification)')
                                 ->disk('public')
                                 ->placeholder('Not submitted')
                                 ->height(320),
                             TextEntry::make('licence_file')
-                                ->label('Business licence')
+                                ->label('Business licence (optional extra)')
                                 ->state(fn (SellerProfile $record) => $record->licence_file ? 'Open file' : null)
                                 ->placeholder('Not submitted')
                                 ->url(

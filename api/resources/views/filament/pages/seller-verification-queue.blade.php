@@ -15,7 +15,10 @@
                         <div>
                             <h3 class="text-base font-semibold text-gray-950 dark:text-white">
                                 {{ $seller->shop_name }}
-                                <span class="text-sm font-normal text-gray-500 dark:text-gray-400">@{{ $seller->handle }}</span>
+                                {{-- Same fix as the public shop page (tester feedback A1) — `@{{ }}` is
+                                     Blade's literal-braces escape, not an "@" prefix; it always printed
+                                     the raw template text instead of the handle. --}}
+                                <span class="text-sm font-normal text-gray-500 dark:text-gray-400">{{ '@'.$seller->handle }}</span>
                             </h3>
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 {{ $seller->user->name }} &middot; {{ $seller->category?->name_en ?? 'No category' }}
@@ -28,7 +31,10 @@
 
                     <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
                         <div>
-                            <p class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">NIDA photo</p>
+                            {{-- NIDA-only verification (client request): the NIDA number + photo
+                                 are the actual basis of verification — the licence alongside it
+                                 is a purely optional extra, never a precondition for review. --}}
+                            <p class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">NIDA photo (basis of verification)</p>
                             @if ($seller->nida_image)
                                 <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($seller->nida_image) }}" class="h-48 w-full rounded-lg object-cover" alt="NIDA photo" />
                             @else
@@ -38,7 +44,7 @@
                         </div>
 
                         <div>
-                            <p class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Business licence</p>
+                            <p class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Business licence (optional extra)</p>
                             @if ($seller->licence_file)
                                 <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($seller->licence_file) }}" target="_blank" rel="noopener" class="fi-link inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400">
                                     <x-filament::icon icon="heroicon-o-document" class="h-4 w-4" />

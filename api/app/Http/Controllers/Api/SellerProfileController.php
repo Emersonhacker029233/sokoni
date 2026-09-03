@@ -13,6 +13,7 @@ use App\Http\Resources\SellerProfileResource;
 use App\Models\SellerProfile;
 use App\Services\Geo\DistanceQuery;
 use App\Services\Nida\NidaVerifier;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
@@ -50,6 +51,24 @@ class SellerProfileController extends Controller
         return new SellerProfileResource($seller);
     }
 
+    /**
+     * Live "is this handle available" check for the account-creation
+     * flow's details step (CLAUDE.md restructure, 2026-08-25: "validate as
+     * you go, not at the end") — reuses the exact format/reserved-word
+     * rules SellerOnboardBusinessRequest already enforces at submit time,
+     * just without requiring an authenticated user or creating anything.
+     */
+    public function handleAvailability(Request $request): JsonResponse
+    {
+        $handle = (string) $request->query('handle', '');
+
+        $available = preg_match(SellerProfile::HANDLE_PATTERN, $handle) === 1
+            && ! in_array($handle, SellerProfile::RESERVED_HANDLES, true)
+            && ! SellerProfile::query()->where('handle', $handle)->exists();
+
+        return response()->json(['available' => $available]);
+    }
+
     /** Step 1: business details. Creates the profile in `pending` status. */
     public function store(SellerOnboardBusinessRequest $request): SellerProfileResource
     {
@@ -79,11 +98,19 @@ class SellerProfileController extends Controller
         return new SellerProfileResource($seller->load('category'));
     }
 
-    /** Step 4: business/trading licence. Submitting this puts the seller in the verification queue. */
+    /**
+     * Step 4: business/trading licence — optional (NIDA-only verification,
+     * client request). Step 3's NIDA submission is what actually queues a
+     * seller for manual review (see updateIdentity() above); this step
+     * just attaches an optional extra document if the seller has one, and
+     * is safe to skip (no file, no-op) without blocking verification.
+     */
     public function updateLicence(SellerOnboardLicenceRequest $request, SellerProfile $seller): SellerProfileResource
     {
-        $path = $request->file('licence_file')->store('sellers/licences', 'public');
-        $seller->update(['licence_file' => $path]);
+        if ($request->hasFile('licence_file')) {
+            $path = $request->file('licence_file')->store('sellers/licences', 'public');
+            $seller->update(['licence_file' => $path]);
+        }
 
         return new SellerProfileResource($seller->load('category'));
     }

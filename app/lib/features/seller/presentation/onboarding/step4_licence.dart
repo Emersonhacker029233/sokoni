@@ -48,10 +48,7 @@ class _OnboardingStep4LicenceState extends ConsumerState<OnboardingStep4Licence>
   }
 
   Future<void> _submit() async {
-    if (widget.sellerId == null || _filePath == null) {
-      setState(() => _error = AppLocalizations.of(context).onboardingLicenceFile);
-      return;
-    }
+    if (widget.sellerId == null) return;
     setState(() {
       _submitting = true;
       _error = null;
@@ -59,7 +56,7 @@ class _OnboardingStep4LicenceState extends ConsumerState<OnboardingStep4Licence>
     try {
       final seller = await ref.read(sellerOnboardingProvider.notifier).submitLicence(
         sellerId: widget.sellerId!,
-        licenceFilePath: _filePath!,
+        licenceFilePath: _filePath,
       );
       widget.onSubmitted(seller);
     } on ApiException catch (e) {
@@ -86,6 +83,11 @@ class _OnboardingStep4LicenceState extends ConsumerState<OnboardingStep4Licence>
           Text(l10n.onboardingLicenceFile, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: SokoniDimens.space4),
           Text(l10n.onboardingLicenceHint, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: SokoniDimens.space4),
+          Text(
+            l10n.onboardingLicenceOptional,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+          ),
           const SizedBox(height: SokoniDimens.space16),
           if (_filePath != null)
             Container(
@@ -123,7 +125,7 @@ class _OnboardingStep4LicenceState extends ConsumerState<OnboardingStep4Licence>
             onPressed: _submitting ? null : _submit,
             child: _submitting
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(l10n.onboardingSubmit),
+                : Text(_filePath == null ? l10n.commonSkip : l10n.onboardingSubmit),
           ),
         ],
       ),

@@ -10,7 +10,7 @@
         <section>
             <h2 class="font-semibold text-sokoni-black">Kwa wanunuzi</h2>
             <ul class="mt-8 list-disc space-y-8 pl-20">
-                <li>Nunua kutoka kwa wauzaji waliothibitishwa pekee (angalia alama ya njano ya uthibitisho) — wamepitia ukaguzi wa NIDA na leseni.</li>
+                <li>Nunua kutoka kwa wauzaji waliothibitishwa pekee (angalia alama ya njano ya uthibitisho) — wamekaguliwa dhidi ya kitambulisho chao cha taifa (NIDA) kabla ya kuanza kuonekana.</li>
                 <li>Kutana mahali pa umma, penye watu, hasa kwa bidhaa za thamani kubwa. Duka la kimwili la muuzaji ni sehemu nzuri.</li>
                 <li>Kagua bidhaa kabla ya kulipa — malipo yote kwa sasa ni baada ya kuletewa au wakati wa kuchukua, hivyo huna sababu ya kulipa mapema.</li>
                 <li>Soma maoni ya wanunuzi wengine kabla ya kuagiza kutoka duka fulani.</li>
@@ -35,7 +35,7 @@
         <section>
             <h2 class="font-semibold text-sokoni-black">For buyers</h2>
             <ul class="mt-8 list-disc space-y-8 pl-20">
-                <li>Buy from verified sellers only (look for the yellow verified badge) — they've been through NIDA and business licence review.</li>
+                <li>Buy from verified sellers only (look for the yellow verified badge) — they've been checked against their national ID (NIDA) before going live.</li>
                 <li>Meet in a public place with people around, especially for higher-value items. A seller's real shop location is a good choice.</li>
                 <li>Inspect the item before paying — all payment today is cash on delivery or pay on pickup, so there's never a reason to pay upfront.</li>
                 <li>Read other buyers' reviews of a shop before ordering.</li>
