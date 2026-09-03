@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Schema;
 
 #[Fillable([
-    'seller_id', 'category_id', 'title', 'description', 'price', 'currency',
+    'seller_id', 'category_id', 'title', 'description', 'description_sw', 'price', 'currency',
     'stock', 'condition', 'is_active', 'is_sponsored', 'sponsored_until', 'sponsor_contact_method',
 ])]
 class Product extends Model
@@ -77,6 +77,22 @@ class Product extends Model
     public function activeOffer(): HasOne
     {
         return $this->hasOne(Offer::class)->active()->latestOfMany('starts_at');
+    }
+
+    /**
+     * Falls back to the English description when no Swahili one is set —
+     * true of every product row that predates description_sw. Deliberately
+     * NOT named description() — that exact name collides with Eloquent's
+     * getRelationshipFromMethod() magic (it calls any method matching an
+     * accessed property name when the attribute isn't yet in $attributes,
+     * expecting a Relation back), which crashed with an ArgumentCountError
+     * the moment anything touched $product->description before the model
+     * was fully hydrated. Category::name() never had this problem because
+     * `name` was never itself a real column — only name_en/name_sw are.
+     */
+    public function localizedDescription(string $locale): ?string
+    {
+        return $locale === 'sw' && $this->description_sw ? $this->description_sw : $this->description;
     }
 
     /** Publicly visible: active, not hidden, and the seller is verified. */

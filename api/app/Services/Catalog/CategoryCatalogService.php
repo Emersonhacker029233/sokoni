@@ -3,30 +3,30 @@
 namespace App\Services\Catalog;
 
 use App\Models\Category;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
 
 /**
- * Category + live listing count, cached — read on nearly every page (the
- * header, the home page's category grid, the search sidebar), so this is
- * exactly the kind of query CLAUDE.md's Section 9 asks to cache with a
- * sensible TTL rather than re-running per request.
+ * Category + live listing count — read on nearly every page (the header,
+ * the home page's category grid, the search sidebar).
+ *
+ * TEMPORARILY UNCACHED: this used to wrap the query in Cache::remember(),
+ * caching a Collection of Category models. Production started 500ing with
+ * __PHP_Incomplete_Class on unserialize, surviving a full cache-store
+ * clear — see DECISIONS.md for the incident writeup. Removed the caching
+ * layer entirely to get the site back up; re-add once the actual cache
+ * store misconfiguration is confirmed and fixed.
  */
 class CategoryCatalogService
 {
-    private const TTL_SECONDS = 600;
-
-    /** Active top-level categories with a real count of currently-visible products, cached. */
+    /** Active top-level categories with a real count of currently-visible products. */
     public function withCounts(): Collection
     {
-        return Cache::remember('web:categories:with-counts', self::TTL_SECONDS, function () {
-            return Category::query()
-                ->whereNull('parent_id')
-                ->where('is_active', true)
-                ->withCount(['products' => fn ($query) => $query->visible()])
-                ->orderBy('sort_order')
-                ->get();
-        });
+        return Category::query()
+            ->whereNull('parent_id')
+            ->where('is_active', true)
+            ->withCount(['products' => fn ($query) => $query->visible()])
+            ->orderBy('sort_order')
+            ->get();
     }
 
     public function topLevelBySlugOrFail(string $slug): Category
@@ -59,10 +59,5 @@ class CategoryCatalogService
     public function slug(Category $category): string
     {
         return str($category->name_en)->slug()->toString();
-    }
-
-    public static function forget(): void
-    {
-        Cache::forget('web:categories:with-counts');
     }
 }
