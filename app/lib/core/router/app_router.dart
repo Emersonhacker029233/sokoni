@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/account_intent_screen.dart';
+import '../../features/auth/presentation/create_account/create_account_screen.dart';
 import '../../features/chat/presentation/conversation_list_screen.dart';
 import '../../features/chat/presentation/conversation_thread_screen.dart';
 import '../../features/debug/motion_gallery_screen.dart';
@@ -20,6 +21,7 @@ import '../../features/product/presentation/favorites_screen.dart';
 import '../../features/product/presentation/product_detail_screen.dart';
 import '../../features/product/presentation/search_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/seller/presentation/onboarding/seller_onboarding_screen.dart';
 import '../../features/seller/presentation/product_form/product_form_screen.dart';
 import '../../features/seller/presentation/sell_screen.dart';
@@ -60,6 +62,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: SokoniRoutes.accountIntent,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AccountIntentScreen(),
+      ),
+      GoRoute(
+        path: SokoniRoutes.createAccount,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisZPage(key: state.pageKey, child: const CreateAccountScreen()),
       ),
 
       // Detail routes — shared-axis Z ("drilling into detail") per motion
@@ -176,6 +183,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: SokoniRoutes.notifications,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const NotificationsScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.settings,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const SettingsScreen()),
       ),
 
       StatefulShellRoute(

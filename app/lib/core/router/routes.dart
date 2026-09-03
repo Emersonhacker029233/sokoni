@@ -6,6 +6,7 @@ abstract final class SokoniRoutes {
   static const motionGallery = '/motion-gallery';
   static const themeAudit = '/theme-audit';
   static const accountIntent = '/account-intent';
+  static const createAccount = '/create-account';
 
   // Bottom nav tabs (StatefulShellRoute branches).
   static const home = '/home';
@@ -50,4 +51,5 @@ abstract final class SokoniRoutes {
   static const termsAcceptance = '/terms-acceptance';
 
   static const notifications = '/notifications';
+  static const settings = '/settings';
 }

@@ -25,6 +25,17 @@ class SellerRepository {
     }
   }
 
+  /// Live "is this handle available" check for the "Create an account"
+  /// flow's details step (CLAUDE.md restructure, 2026-08-25).
+  Future<bool> checkHandleAvailable(String handle) async {
+    try {
+      final json = await _api.handleAvailability(handle);
+      return json['available'] as bool? ?? false;
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
   Future<List<SellerProfile>> browse({double? lat, double? lng, double? radiusKm}) async {
     try {
       final json = await _api.sellers({
@@ -162,17 +173,19 @@ class SellerRepository {
     }
   }
 
-  /// Onboarding step 4: business/trading licence (image or PDF).
+  /// Onboarding step 4: business/trading licence (image or PDF). Optional —
+  /// NIDA (step 3) is the actual basis of verification, so a null
+  /// [licenceFilePath] simply advances the wizard with nothing attached.
   Future<SellerProfile> submitLicence({
     required int sellerId,
-    required String licenceFilePath,
+    String? licenceFilePath,
   }) async {
     try {
       final response = await _dio.post(
         '/sellers/$sellerId/licence',
         data: FormData.fromMap({
           '_method': 'PATCH',
-          'licence_file': await MultipartFile.fromFile(licenceFilePath),
+          if (licenceFilePath != null) 'licence_file': await MultipartFile.fromFile(licenceFilePath),
         }),
       );
       return SellerProfile.fromJson((response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>);

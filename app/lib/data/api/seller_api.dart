@@ -15,6 +15,11 @@ abstract class SellerApi {
   @GET('/sellers/{handle}')
   Future<dynamic> show(@Path('handle') String handle);
 
+  /// Live "is this handle available" check for the "Create an account"
+  /// flow's details step (CLAUDE.md restructure, 2026-08-25).
+  @GET('/sellers/handle-availability')
+  Future<dynamic> handleAvailability(@Query('handle') String handle);
+
   /// Onboarding wizard step 1.
   @POST('/sellers')
   Future<dynamic> submitBusiness(@Body() Map<String, dynamic> body);

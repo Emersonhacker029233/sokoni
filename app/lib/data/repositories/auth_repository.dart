@@ -42,6 +42,65 @@ class AuthRepository {
     }
   }
 
+  /// Check-only — no OTP is sent. Used by the "Create an account" flow's
+  /// details step to catch an already-registered number while the user
+  /// can still do something about it, rather than at the final verify
+  /// step after filling in everything else.
+  Future<bool> checkPhoneExists(String phoneE164) async {
+    try {
+      final json = await _api.checkPhone({'phone': phoneE164});
+      return json['exists'] as bool? ?? false;
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Verifies the OTP and creates the account (and, for a seller, the
+  /// SellerProfile) in one request — the "Create an account" flow's final
+  /// step (CLAUDE.md restructure, 2026-08-25). The seller-only fields are
+  /// all required together server-side when [accountIntent] is `'sell'`
+  /// (see `RegisterAccountRequest`) — pass all of them or none.
+  Future<AuthResponse> register({
+    required String phoneE164,
+    required String code,
+    required String name,
+    required String accountIntent,
+    required String termsVersion,
+    String? email,
+    bool marketingConsent = false,
+    String? shopName,
+    String? handle,
+    int? categoryId,
+    String? region,
+    String? district,
+    String? address,
+    String? whatsappE164,
+  }) async {
+    try {
+      final response = await _api.register({
+        'phone': phoneE164,
+        'code': code,
+        'name': name,
+        'email': ?email,
+        'marketing_consent': marketingConsent,
+        'account_intent': accountIntent,
+        'terms_version': termsVersion,
+        'shop_name': ?shopName,
+        'handle': ?handle,
+        'category_id': ?categoryId,
+        'region': ?region,
+        'district': ?district,
+        'address': ?address,
+        'whatsapp': ?whatsappE164,
+      });
+      await _storage.writeToken(response.token);
+      await _storage.writeUserId(response.user.id);
+      return response;
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
   Future<AuthResponse> socialLogin({required String provider, required String token}) async {
     try {
       final response = await _api.socialLogin({'provider': provider, 'token': token});
@@ -78,6 +137,26 @@ class AuthRepository {
     try {
       final json = await _api.acceptTerms({'version': version});
       return SokoniUser.fromJson(json['data'] as Map<String, dynamic>);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Profile settings (C5) — name/email. A changed email resets
+  /// verification server-side and re-sends the link automatically; passing
+  /// `email: null` clears it (an email is always optional).
+  Future<SokoniUser> updateProfile({required String name, String? email}) async {
+    try {
+      final json = await _api.updateProfile({'name': name, 'email': email});
+      return SokoniUser.fromJson(json['data'] as Map<String, dynamic>);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  Future<void> resendVerificationEmail() async {
+    try {
+      await _api.resendVerificationEmail();
     } catch (e) {
       throw mapDioError(e);
     }

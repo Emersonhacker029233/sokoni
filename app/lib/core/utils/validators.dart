@@ -43,6 +43,16 @@ abstract final class SokoniValidators {
     return null;
   }
 
+  /// Email is always optional (CLAUDE.md C5) — only the format is checked,
+  /// and only when something was actually typed.
+  static String? optionalEmail(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim())) {
+      return 'Enter a valid email address';
+    }
+    return null;
+  }
+
   static String? Function(String?) minLength(int min, {String? message}) {
     return (value) {
       if (value == null || value.trim().length < min) {

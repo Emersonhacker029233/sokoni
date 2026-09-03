@@ -104,13 +104,24 @@ class SellerOnboardingController extends AsyncNotifier<OnboardingDraft> {
 
   Future<SellerProfile> submitLicence({
     required int sellerId,
-    required String licenceFilePath,
+    String? licenceFilePath,
   }) async {
     final seller = await ref
         .read(sellerRepositoryProvider)
         .submitLicence(sellerId: sellerId, licenceFilePath: licenceFilePath);
     await _persist(OnboardingDraft(sellerId: sellerId, step: 4));
     return seller;
+  }
+
+  /// Seeds this wizard straight to its Identity step (index 2) for a
+  /// seller who just registered through the "Create an account" flow
+  /// (CLAUDE.md restructure, 2026-08-25) — that flow already collected
+  /// and submitted the exact business+location fields steps 1-2 here
+  /// would otherwise ask for again, so this resumes exactly where
+  /// [submitLocation] would have left off, without duplicating the
+  /// business/location screens or their submission logic.
+  Future<void> resumeAtIdentity(int sellerId) async {
+    await _persist(OnboardingDraft(sellerId: sellerId, step: 2));
   }
 
   Future<void> advanceToStep(int step) async {

@@ -24,6 +24,18 @@ abstract final class SokoniFormat {
     return '0${digits.substring(0, 3)} ${digits.substring(3, 6)} ${digits.substring(6, 9)}';
   }
 
+  /// `"+255754123456"` → `"0754 *** 456"` — the middle group hidden, for
+  /// the "Sign in" flow's "Welcome back" screen (CLAUDE.md restructure,
+  /// 2026-08-25): the number is already known server-side (it's why the
+  /// screen is showing this message at all), so the masking is a small
+  /// privacy touch, not a security boundary.
+  static String phoneMasked(String e164) {
+    final match = RegExp(r'^\+255(\d{9})$').firstMatch(e164);
+    if (match == null) return e164;
+    final digits = match.group(1)!;
+    return '0${digits.substring(0, 3)} *** ${digits.substring(6, 9)}';
+  }
+
   /// `"0754123456"` or `"754123456"` → `"+255754123456"`. Returns null if
   /// the input isn't a plausible Tanzanian mobile number.
   static String? phoneToE164(String local) {

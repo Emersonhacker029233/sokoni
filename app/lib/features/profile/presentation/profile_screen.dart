@@ -9,7 +9,7 @@ import '../../../core/theme/dimens.dart';
 import '../../../features/auth/providers/auth_providers.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
-import '../../auth/presentation/phone_sign_in_sheet.dart';
+import '../../auth/presentation/auth_entry_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -23,13 +23,18 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l10n.navProfile)),
       body: authState.isAuthenticated
           ? _SignedInProfile()
-          : SokoniEmptyState(
-              icon: Icons.person_outline_rounded,
-              title: l10n.profileSignInTitle,
-              message: l10n.profileSignInBody,
-              actionLabel: l10n.profileSignInAction,
-              onAction: () => showPhoneSignInSheet(context),
-            ),
+          : authState.isUnknown
+              ? SokoniErrorState(
+                  message: l10n.authSessionUnknownBody,
+                  onRetry: () => ref.read(authStateProvider.notifier).retry(),
+                )
+              : SokoniEmptyState(
+                  icon: Icons.person_outline_rounded,
+                  title: l10n.profileSignInTitle,
+                  message: l10n.profileSignInBody,
+                  actionLabel: l10n.profileSignInAction,
+                  onAction: () => showAuthEntrySheet(context),
+                ),
     );
   }
 }
@@ -68,6 +73,13 @@ class _SignedInProfile extends ConsumerWidget {
                 title: Text(l10n.favoritesTitle),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.push(SokoniRoutes.favorites),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.settings_outlined),
+                title: Text(l10n.profileSettings),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(SokoniRoutes.settings),
               ),
               const SizedBox(height: SokoniDimens.space12),
               // Now that the "+" FAB opens the create sheet instead of

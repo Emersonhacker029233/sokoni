@@ -9,7 +9,7 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
-import '../../auth/presentation/phone_sign_in_sheet.dart';
+import '../../auth/presentation/auth_entry_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
 import 'dashboard/my_shop_dashboard.dart';
 
@@ -26,6 +26,16 @@ class SellScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authStateProvider);
 
+    if (authState.isUnknown) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.navSell)),
+        body: SokoniErrorState(
+          message: l10n.authSessionUnknownBody,
+          onRetry: () => ref.read(authStateProvider.notifier).retry(),
+        ),
+      );
+    }
+
     if (!authState.isAuthenticated) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.navSell)),
@@ -34,7 +44,7 @@ class SellScreen extends ConsumerWidget {
           title: l10n.profileSignInTitle,
           message: l10n.sellSignInPrompt,
           actionLabel: l10n.profileSignInAction,
-          onAction: () => showPhoneSignInSheet(context),
+          onAction: () => showAuthEntrySheet(context),
         ),
       );
     }
