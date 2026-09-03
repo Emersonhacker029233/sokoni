@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->web(append: [
             \App\Http\Middleware\SetWebLocale::class,
+            \App\Http\Middleware\NoindexBetaHost::class,
         ]);
         $middleware->alias([
             'web.onboarded' => \App\Http\Middleware\EnsureWebOnboarded::class,

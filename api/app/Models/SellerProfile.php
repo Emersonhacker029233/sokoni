@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'shop_name', 'logo', 'handle', 'bio', 'category_id', 'whatsapp', 'lat', 'lng',
+    'shop_name', 'logo', 'handle', 'bio', 'bio_sw', 'category_id', 'whatsapp', 'lat', 'lng',
     'address', 'region', 'district', 'nida_number', 'nida_image',
     'licence_file', 'show_whatsapp', 'opening_hours',
 ])]
@@ -94,6 +94,12 @@ class SellerProfile extends Model
     public function isVerified(): bool
     {
         return $this->status === 'verified';
+    }
+
+    /** Falls back to the English bio when no Swahili one is set — true of every seller row that predates bio_sw. Named localizedBio(), not bio() — see Product::localizedDescription()'s docblock for why colliding with the raw column name is a real crash risk, not just a style nit. */
+    public function localizedBio(string $locale): ?string
+    {
+        return $locale === 'sw' && $this->bio_sw ? $this->bio_sw : $this->bio;
     }
 
     public function hasLocation(): bool

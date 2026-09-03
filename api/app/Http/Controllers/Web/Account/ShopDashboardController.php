@@ -15,7 +15,7 @@ class ShopDashboardController extends Controller
         $seller = Auth::user()->sellerProfile()->with('category')->first();
 
         if (! $seller) {
-            return redirect()->route('web.sell');
+            return redirect()->route('web.account.shop.register');
         }
 
         return view('web.account.shop-dashboard', [

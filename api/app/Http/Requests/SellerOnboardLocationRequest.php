@@ -15,8 +15,14 @@ class SellerOnboardLocationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lat' => ['required', 'numeric', 'between:-90,90'],
-            'lng' => ['required', 'numeric', 'between:-180,180'],
+            // Nullable, not required: the app's own map picker always sends
+            // both (unaffected by this), but the website has no Google Maps
+            // key configured and falls back to region/district/address with
+            // best-effort server-side geocoding — see
+            // Web\Account\SellerRegistrationController — so a missing pin
+            // must never block submission here.
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
             'address' => ['required', 'string', 'max:255'],
             'region' => ['required', 'string', 'max:100'],
             'district' => ['required', 'string', 'max:100'],
