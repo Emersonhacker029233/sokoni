@@ -1,15 +1,17 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
+import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/product.dart';
 import '../../../shared/widgets/empty_state.dart';
+import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../providers/order_providers.dart';
+import '../../../shared/widgets/sokoni_network_image.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -46,7 +48,7 @@ class CartScreen extends ConsumerWidget {
                                   height: 48,
                                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                 )
-                              : CachedNetworkImage(
+                              : SokoniNetworkImage(
                                   imageUrl: line.product.coverImageUrl!,
                                   width: 48,
                                   height: 48,
@@ -95,7 +97,13 @@ class CartScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: SokoniDimens.space16),
                       FilledButton(
-                        onPressed: () => context.push(SokoniRoutes.checkout),
+                        onPressed: () {
+                          if (ref.read(authStateProvider).isAuthenticated) {
+                            context.push(SokoniRoutes.checkout);
+                          } else {
+                            showSignInPrompt(context, message: l10n.guestPromptOrder);
+                          }
+                        },
                         child: Text(l10n.cartCheckout),
                       ),
                     ],

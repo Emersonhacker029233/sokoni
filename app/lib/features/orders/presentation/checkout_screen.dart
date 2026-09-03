@@ -13,6 +13,7 @@ import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../providers/order_providers.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -83,6 +84,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       } else {
         context.pushReplacement(SokoniRoutes.orderDetail(order.id));
       }
+    } on UnauthenticatedException {
+      // The token could have been revoked between opening checkout and
+      // submitting — rare, since Sanctum tokens here don't expire on a
+      // schedule (`config/sanctum.php`), but still a real, if unlikely,
+      // path. An invitation to sign in, not a red "please sign in again"
+      // error — the cart itself survives untouched either way.
+      if (mounted) await showSignInPrompt(context, message: AppLocalizations.of(context).guestPromptOrder);
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {

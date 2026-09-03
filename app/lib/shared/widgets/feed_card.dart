@@ -9,6 +9,8 @@ import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../core/l10n/gen/app_localizations.dart';
+import '../../core/motion/double_tap_to_save.dart';
+import '../../core/motion/spring_on_true.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/dimens.dart';
@@ -19,10 +21,12 @@ import '../../data/models/product.dart';
 import '../../data/models/product_media.dart';
 import '../../data/models/seller_summary.dart';
 import '../../data/models/showcase.dart';
+import '../../features/auth/presentation/sign_in_prompt_sheet.dart';
 import '../../features/discovery/presentation/widgets/comment_sheet.dart';
 import '../../features/product/providers/favorites_providers.dart';
 import '../../features/seller/providers/seller_providers.dart';
 import 'bottom_gradient_scrim.dart';
+import 'sokoni_network_image.dart';
 
 /// One card in the "For You" feed (CLAUDE.md Part 3) — dispatches on
 /// [FeedItem.type] to the right layout. All three variants share the same
@@ -178,7 +182,14 @@ class _FeedFollowButton extends ConsumerWidget {
         minimumSize: const Size(44, 44),
         padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space8),
       ),
-      onPressed: () => toggleSellerFollow(ref, sellerId: seller.id, handle: seller.handle, isFollowing: seller.isFollowing),
+      onPressed: () => toggleSellerFollow(
+        ref,
+        sellerId: seller.id,
+        handle: seller.handle,
+        isFollowing: seller.isFollowing,
+        onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptFollow),
+        onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+      ),
       child: Text(l10n.followAction, style: const TextStyle(fontWeight: FontWeight.w700)),
     );
   }
@@ -269,7 +280,7 @@ class _FeedVisibilityVideoState extends State<FeedVisibilityVideo> {
         fit: StackFit.expand,
         children: [
           if (widget.thumbnailUrl != null)
-            CachedNetworkImage(imageUrl: widget.thumbnailUrl!, fit: BoxFit.cover),
+            SokoniNetworkImage(imageUrl: widget.thumbnailUrl!, fit: BoxFit.cover),
           if (controller != null && controller.value.isInitialized)
             FittedBox(
               fit: BoxFit.cover,
@@ -291,19 +302,29 @@ class _FeedVisibilityVideoState extends State<FeedVisibilityVideo> {
   }
 }
 
-class _ProductFeedCard extends StatelessWidget {
+class _ProductFeedCard extends ConsumerWidget {
   const _ProductFeedCard({required this.product});
 
   final Product product;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return _FeedCardShell(
       seller: product.seller,
       onSellerTap: product.seller == null ? null : () => context.push(SokoniRoutes.shop(product.seller!.handle)),
       distanceKm: product.distanceKm,
       sponsoredContactMethod: product.isSponsored ? product.sponsorContactMethod : null,
-      media: _ProductMedia(product: product),
+      media: DoubleTapToSave(
+        onSave: () => saveProductViaDoubleTap(
+          ref,
+          productId: product.id,
+          knownFavorited: product.isFavorited,
+          onUnauthenticated: () => showSignInPrompt(context, message: AppLocalizations.of(context).guestPromptSave),
+          onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+        ),
+        onSingleTap: () => context.push(SokoniRoutes.product(product.id)),
+        child: _ProductMedia(product: product),
+      ),
       footer: _ProductFooter(product: product),
     );
   }
@@ -343,7 +364,7 @@ class _ProductMedia extends StatelessWidget {
             thumbnailUrl: item.thumbPath,
           );
         }
-        return CachedNetworkImage(
+        return SokoniNetworkImage(
           imageUrl: item.cardPath ?? item.path,
           fit: BoxFit.cover,
           placeholder: (context, url) => Container(color: SokoniColors.surfaceAlt),
@@ -413,17 +434,26 @@ class _ActionRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final favorited = isProductFavorited(ref, product);
+    final favorited = isProductFavorited(ref, productId: product.id, knownFavorited: product.isFavorited);
 
     return Row(
       children: [
         IconButton(
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          icon: Icon(
-            favorited ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            color: favorited ? SokoniColors.danger : null,
+          icon: SpringOnTrue(
+            trigger: favorited,
+            child: Icon(
+              favorited ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: favorited ? SokoniColors.danger : null,
+            ),
           ),
-          onPressed: () => toggleProductFavorite(ref, product),
+          onPressed: () => toggleProductFavorite(
+            ref,
+            productId: product.id,
+            knownFavorited: product.isFavorited,
+            onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptSave),
+            onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+          ),
         ),
         IconButton(
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -499,10 +529,23 @@ class _ChatButton extends ConsumerWidget {
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           icon: const Icon(Icons.chat_bubble_outline_rounded),
           onPressed: () async {
-            final conversationId = await ref
-                .read(sellerRepositoryProvider)
-                .startConversation(sellerId: seller.id, productId: product.id);
-            if (context.mounted) await context.push(SokoniRoutes.conversation(conversationId));
+            final l10n = AppLocalizations.of(context);
+            final conversationId = await startConversationOrPromptSignIn(
+              ref,
+              sellerId: seller.id,
+              productId: product.id,
+              onUnauthenticated: () {
+                if (context.mounted) showSignInPrompt(context, message: l10n.guestPromptMessage);
+              },
+              onFailed: (message) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                }
+              },
+            );
+            if (conversationId != null && context.mounted) {
+              await context.push(SokoniRoutes.conversation(conversationId));
+            }
           },
         );
     }
@@ -528,7 +571,7 @@ class _OfferFeedCard extends StatelessWidget {
       onSellerTap: offer.seller == null ? null : () => context.push(SokoniRoutes.shop(offer.seller!.handle)),
       distanceKm: null,
       media: product?.coverImageUrl != null
-          ? CachedNetworkImage(imageUrl: product!.coverImageUrl!, fit: BoxFit.cover)
+          ? SokoniNetworkImage(imageUrl: product!.coverImageUrl!, fit: BoxFit.cover)
           : Container(color: SokoniColors.surfaceAlt, child: const Icon(Icons.local_offer_outlined, size: 48)),
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

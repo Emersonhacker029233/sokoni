@@ -1,18 +1,23 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
+import '../../../core/motion/double_tap_to_save.dart';
+import '../../../core/motion/spring_on_true.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../data/models/product_summary.dart';
 import '../../../data/models/showcase.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../auth/presentation/sign_in_prompt_sheet.dart';
+import '../../product/providers/favorites_providers.dart';
 import '../providers/social_providers.dart';
+import '../../../shared/widgets/sokoni_network_image.dart';
 
 /// "Showcase"/"Onyesho" (CLAUDE.md Part 3) — a full-screen vertical
 /// `PageView` of product videos, Reels/TikTok-style. Every page is either
@@ -87,17 +92,17 @@ class _ShowcaseScreenState extends ConsumerState<ShowcaseScreen> {
   }
 }
 
-class _ShowcasePage extends StatefulWidget {
+class _ShowcasePage extends ConsumerStatefulWidget {
   const _ShowcasePage({required this.showcase, required this.isActive});
 
   final Showcase showcase;
   final bool isActive;
 
   @override
-  State<_ShowcasePage> createState() => _ShowcasePageState();
+  ConsumerState<_ShowcasePage> createState() => _ShowcasePageState();
 }
 
-class _ShowcasePageState extends State<_ShowcasePage> {
+class _ShowcasePageState extends ConsumerState<_ShowcasePage> {
   VideoPlayerController? _controller;
   bool _muted = true;
 
@@ -147,8 +152,25 @@ class _ShowcasePageState extends State<_ShowcasePage> {
     final showcase = widget.showcase;
     final controller = _controller;
 
-    return GestureDetector(
-      onTap: _toggleMute,
+    final product = showcase.product;
+
+    return DoubleTapToSave(
+      onSingleTap: _toggleMute,
+      onSave: product == null
+          ? () {}
+          : () => saveProductViaDoubleTap(
+              ref,
+              // ProductSummary (all the Showcase feed embeds) has no
+              // `isFavorited` of its own — see favorites_providers.dart's
+              // docs on why that's a plain bool parameter, not a whole
+              // Product. `false` just means "not yet known saved this
+              // session"; the optimistic override takes over from the
+              // first interaction, same as everywhere else.
+              productId: product.id,
+              knownFavorited: false,
+              onUnauthenticated: () => showSignInPrompt(context, message: AppLocalizations.of(context).guestPromptSave),
+              onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+            ),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -162,7 +184,13 @@ class _ShowcasePageState extends State<_ShowcasePage> {
               ),
             )
           else
-            CachedNetworkImage(imageUrl: showcase.thumbPath, fit: BoxFit.cover),
+            SokoniNetworkImage(imageUrl: showcase.thumbPath, fit: BoxFit.cover),
+          if (product != null)
+            Positioned(
+              right: SokoniDimens.space12,
+              bottom: 140,
+              child: _ShowcaseSaveButton(product: product),
+            ),
           Positioned(
             left: 0,
             right: 0,
@@ -237,6 +265,40 @@ class _ProductOverlay extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// The Save icon in Showcase's own action row (a compact right-edge rail,
+/// Reels-style — this feed had no persistent Save affordance before) —
+/// fills with the same spring as the feed card's and product detail's
+/// heart the moment a double-tap (or a direct tap here) saves it.
+class _ShowcaseSaveButton extends ConsumerWidget {
+  const _ShowcaseSaveButton({required this.product});
+
+  final ProductSummary product;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favorited = isProductFavorited(ref, productId: product.id, knownFavorited: false);
+
+    return IconButton(
+      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+      icon: SpringOnTrue(
+        trigger: favorited,
+        child: Icon(
+          favorited ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          color: favorited ? SokoniColors.sokoniYellow : Colors.white,
+          shadows: const [Shadow(blurRadius: 4)],
+        ),
+      ),
+      onPressed: () => toggleProductFavorite(
+        ref,
+        productId: product.id,
+        knownFavorited: false,
+        onUnauthenticated: () => showSignInPrompt(context, message: AppLocalizations.of(context).guestPromptSave),
+        onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+      ),
     );
   }
 }

@@ -5,6 +5,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
+import '../../../core/motion/spring_on_true.dart';
+import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/colors.dart';
@@ -51,7 +53,7 @@ class _ProductDetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
-    final favorited = isProductFavorited(ref, product);
+    final favorited = isProductFavorited(ref, productId: product.id, knownFavorited: product.isFavorited);
 
     return CustomScrollView(
       slivers: [
@@ -62,13 +64,29 @@ class _ProductDetailBody extends ConsumerWidget {
             background: ProductMediaCarousel(
               media: product.media,
               heroTag: 'product-${product.id}',
+              onDoubleTapSave: () => saveProductViaDoubleTap(
+                ref,
+                productId: product.id,
+                knownFavorited: product.isFavorited,
+                onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptSave),
+                onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+              ),
             ),
           ),
           actions: [
             IconButton(
-              icon: Icon(favorited ? Icons.favorite_rounded : Icons.favorite_border_rounded),
+              icon: SpringOnTrue(
+                trigger: favorited,
+                child: Icon(favorited ? Icons.favorite_rounded : Icons.favorite_border_rounded),
+              ),
               color: favorited ? SokoniColors.danger : null,
-              onPressed: () => toggleProductFavorite(ref, product),
+              onPressed: () => toggleProductFavorite(
+                ref,
+                productId: product.id,
+                knownFavorited: product.isFavorited,
+                onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptSave),
+                onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+              ),
             ),
             IconButton(
               icon: const Icon(Icons.ios_share_rounded),
@@ -184,10 +202,20 @@ class _ActionButtons extends ConsumerWidget {
         const SizedBox(height: SokoniDimens.space8),
         OutlinedButton.icon(
           onPressed: () async {
-            final conversationId = await ref
-                .read(sellerRepositoryProvider)
-                .startConversation(sellerId: product.seller!.id, productId: product.id);
-            if (context.mounted) {
+            final conversationId = await startConversationOrPromptSignIn(
+              ref,
+              sellerId: product.seller!.id,
+              productId: product.id,
+              onUnauthenticated: () {
+                if (context.mounted) showSignInPrompt(context, message: l10n.guestPromptMessage);
+              },
+              onFailed: (message) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                }
+              },
+            );
+            if (conversationId != null && context.mounted) {
               await context.push(SokoniRoutes.conversation(conversationId));
             }
           },

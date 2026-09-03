@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../data/api/review_api.dart';
 import '../../../data/api/seller_api.dart';
@@ -64,12 +65,17 @@ bool isSellerFollowed(WidgetRef ref, {required int sellerId, required bool isFol
 }
 
 /// Haptic on every toggle (CLAUDE.md Part 5) — centralised here rather
-/// than at each call site, same reasoning as `toggleProductFavorite`.
+/// than at each call site, same reasoning as `toggleProductFavorite`. Same
+/// [onUnauthenticated]/[onFailed] split too, and for the same reason: a
+/// guest tapping Follow used to fail completely silently (not even a
+/// toast) rather than being invited to sign in — see DECISIONS.md.
 Future<void> toggleSellerFollow(
   WidgetRef ref, {
   required int sellerId,
   required String handle,
   required bool isFollowing,
+  required VoidCallback onUnauthenticated,
+  required void Function(String message) onFailed,
 }) async {
   unawaited(HapticFeedback.selectionClick());
   final current = ref.read(followOverridesProvider)[sellerId] ?? isFollowing;
@@ -81,7 +87,39 @@ Future<void> toggleSellerFollow(
     } else {
       await ref.read(sellerRepositoryProvider).unfollow(handle);
     }
-  } catch (_) {
+  } catch (e) {
     ref.read(followOverridesProvider.notifier).set(sellerId, current);
+    if (e is UnauthenticatedException) {
+      onUnauthenticated();
+    } else {
+      onFailed(e is ApiException ? e.message : '$e');
+    }
+  }
+}
+
+/// Starts a chat about [productId] with [sellerId] — both `feed_card.dart`'s
+/// chat icon and the product detail page's "Message Seller" button used to
+/// call `startConversation` directly with no error handling at all, so a
+/// guest tapping either got a raw, uncaught exception rather than any kind
+/// of prompt (see DECISIONS.md). Returns the new conversation id to
+/// navigate to on success, or `null` if the attempt didn't go through — a
+/// guest was already shown [onUnauthenticated]'s prompt, or a real failure
+/// was already reported via [onFailed].
+Future<int?> startConversationOrPromptSignIn(
+  WidgetRef ref, {
+  required int sellerId,
+  int? productId,
+  required VoidCallback onUnauthenticated,
+  required void Function(String message) onFailed,
+}) async {
+  try {
+    return await ref.read(sellerRepositoryProvider).startConversation(sellerId: sellerId, productId: productId);
+  } catch (e) {
+    if (e is UnauthenticatedException) {
+      onUnauthenticated();
+    } else {
+      onFailed(e is ApiException ? e.message : '$e');
+    }
+    return null;
   }
 }

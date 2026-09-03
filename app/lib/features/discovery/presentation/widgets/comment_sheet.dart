@@ -7,7 +7,7 @@ import '../../../../core/providers.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/comment.dart';
-import '../../../auth/presentation/phone_sign_in_sheet.dart';
+import '../../../auth/presentation/auth_entry_sheet.dart';
 import '../../providers/feed_providers.dart';
 
 /// Comment sheet (CLAUDE.md Part 3) — opened from a feed card's comment
@@ -63,7 +63,7 @@ class _CommentSheetBodyState extends ConsumerState<_CommentSheetBody> {
     if (body.isEmpty) return;
 
     if (!ref.read(authStateProvider).isAuthenticated) {
-      await showPhoneSignInSheet(context);
+      await showAuthEntrySheet(context);
       if (!ref.read(authStateProvider).isAuthenticated) return;
     }
 
