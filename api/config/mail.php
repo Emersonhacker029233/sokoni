@@ -39,7 +39,19 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            // Laravel's own transport factory infers implicit-TLS ('smtps')
+            // purely from port 465 when 'scheme' is left null — but the
+            // cPanel mailbox setup this app targets is always described to
+            // clients in terms of an explicit MAIL_ENCRYPTION value
+            // ("SSL"/"TLS"), so that value is honoured directly here rather
+            // than silently ignored: 'ssl' forces implicit TLS regardless
+            // of port, 'tls' forces STARTTLS, anything else falls back to
+            // Laravel's own port-based default.
+            'scheme' => env('MAIL_SCHEME') ?: match (env('MAIL_ENCRYPTION')) {
+                'ssl' => 'smtps',
+                'tls' => 'smtp',
+                default => null,
+            },
             'url' => env('MAIL_URL'),
             'host' => env('MAIL_HOST', '127.0.0.1'),
             'port' => env('MAIL_PORT', 2525),

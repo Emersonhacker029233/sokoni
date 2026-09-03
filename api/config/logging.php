@@ -131,6 +131,32 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        // Every SMS request/response (AfricasTalkingSmsGateway) — a
+        // dedicated file so a delivery failure (most commonly insufficient
+        // balance) is diagnosable from cPanel File Manager alone, without
+        // digging through the rest of laravel.log. Daily rotation keeps
+        // any one file small enough to open there too.
+        'sms' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/sms.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'max_files' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        // Every transactional email attempt (verification links, order
+        // and review notifications) — same reasoning as the 'sms' channel
+        // above: a dedicated, cPanel-File-Manager-readable file so a bad
+        // MAIL_* credential or a bounced send is diagnosable without
+        // digging through the rest of laravel.log.
+        'mail' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/mail.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'max_files' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

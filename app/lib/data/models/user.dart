@@ -10,6 +10,7 @@ abstract class SokoniUser with _$SokoniUser {
     required int id,
     required String name,
     String? email,
+    @JsonKey(name: 'email_verified') @Default(false) bool emailVerified,
     String? phone,
     String? avatar,
     String? locale,

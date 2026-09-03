@@ -3,6 +3,8 @@
 namespace App\Observers;
 
 use App\Models\Review;
+use App\Notifications\ReviewReceivedNotification;
+use App\Support\SafeMail;
 
 /** Keeps SellerProfile.rating_avg / rating_count denormalised off the reviews table. */
 class ReviewObserver
@@ -10,6 +12,11 @@ class ReviewObserver
     public function created(Review $review): void
     {
         $this->recalculate($review);
+
+        $seller = $review->seller?->user;
+        if ($seller?->email !== null) {
+            SafeMail::send($seller, new ReviewReceivedNotification($review));
+        }
     }
 
     public function updated(Review $review): void

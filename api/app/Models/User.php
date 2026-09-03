@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Notifications\VerifyEmailNotification;
+use App\Support\SafeMail;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,12 +22,13 @@ use Laravel\Sanctum\HasApiTokens;
 #[Fillable([
     'name', 'email', 'phone', 'password', 'avatar', 'provider', 'provider_id',
     'locale', 'fcm_token', 'terms_accepted_at', 'terms_version', 'account_intent',
+    'marketing_consent',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, MustVerifyEmailContract
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, MustVerifyEmail, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -38,7 +43,22 @@ class User extends Authenticatable implements FilamentUser
             'banned_at' => 'datetime',
             'banned_until' => 'datetime',
             'is_admin' => 'boolean',
+            'email_verified_at' => 'datetime',
+            'marketing_consent' => 'boolean',
         ];
+    }
+
+    /**
+     * Overrides the `MustVerifyEmail` trait's default (which fires the
+     * framework's English-only `Illuminate\Auth\Notifications\VerifyEmail`
+     * directly) so every caller of this standard entrypoint — registration,
+     * a settings-page email change, a resend request — gets the bilingual
+     * version, and a mail failure never bubbles up as an exception (C5:
+     * "a mail failure must never fail the user's action").
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        SafeMail::send($this, new VerifyEmailNotification);
     }
 
     public function sellerProfile(): HasOne

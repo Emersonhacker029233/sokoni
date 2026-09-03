@@ -10,7 +10,10 @@ use App\Models\Conversation;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Notifications\OrderPlacedNotification;
+use App\Notifications\OrderStatusUpdatedNotification;
 use App\Services\Push\PushNotifier;
+use App\Support\SafeMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -120,6 +123,9 @@ class OrderController extends Controller
             'You have a new order worth TSh '.number_format($order->total).'.',
             ['order_id' => $order->id],
         );
+        if ($order->seller->user->email !== null) {
+            SafeMail::send($order->seller->user, new OrderPlacedNotification($order));
+        }
 
         $order->load(['buyer', 'seller', 'items']);
 
@@ -159,6 +165,9 @@ class OrderController extends Controller
             "Status is now: {$status}.",
             ['order_id' => $order->id],
         );
+        if ($notifyUser->email !== null) {
+            SafeMail::send($notifyUser, new OrderStatusUpdatedNotification($order, $status));
+        }
 
         return new OrderResource($order->fresh(['buyer', 'seller', 'items']));
     }
