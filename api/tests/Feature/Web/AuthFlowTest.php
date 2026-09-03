@@ -49,6 +49,27 @@ class AuthFlowTest extends TestCase
         $this->get(route('web.account.dashboard'))->assertOk();
     }
 
+    /** C6: opt-in consent checkbox shown on the same new-account form. */
+    public function test_checking_marketing_consent_at_signup_records_it(): void
+    {
+        $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+        $code = Cache::get('otp:'.self::PHONE);
+
+        $this->post('/auth/otp/verify', ['phone' => self::PHONE, 'code' => $code, 'name' => 'Amina', 'marketing_consent' => '1']);
+
+        $this->assertTrue(User::where('phone', self::PHONE)->firstOrFail()->marketing_consent);
+    }
+
+    public function test_leaving_marketing_consent_unchecked_at_signup_defaults_to_false(): void
+    {
+        $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+        $code = Cache::get('otp:'.self::PHONE);
+
+        $this->post('/auth/otp/verify', ['phone' => self::PHONE, 'code' => $code, 'name' => 'Amina']);
+
+        $this->assertFalse(User::where('phone', self::PHONE)->firstOrFail()->marketing_consent);
+    }
+
     public function test_choosing_sell_intent_redirects_to_the_shop_dashboard(): void
     {
         $user = User::factory()->create(['phone' => self::PHONE, 'terms_accepted_at' => now(), 'terms_version' => \App\Support\Legal::TERMS_VERSION]);

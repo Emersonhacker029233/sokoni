@@ -12,8 +12,13 @@ use Illuminate\Support\Facades\Log;
  */
 class LogSmsGateway implements SmsGateway
 {
-    public function sendOtp(string $phone, string $code): void
+    public function sendOtp(string $phone, string $code, string $locale = 'en'): void
     {
-        Log::info("[MOCK SMS] OTP for {$phone}: {$code}");
+        Log::info("[MOCK SMS] OTP for {$phone} ({$locale}): {$code}");
+    }
+
+    public function sendMessage(string $phone, string $body): void
+    {
+        Log::info("[MOCK SMS] Message for {$phone}: {$body}");
     }
 }

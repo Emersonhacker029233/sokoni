@@ -25,8 +25,26 @@ class OtpAuthController extends Controller
 {
     public function __construct(private readonly PhoneOtpService $otp) {}
 
+    /**
+     * Only two safe, named destinations are ever accepted here — never a
+     * raw URL/path — so a `?redirect=` query param can't be turned into an
+     * open redirect (e.g. `?redirect=https://evil.example`). This is what
+     * lets `redirect()->intended(...)` in verifyOtp() send a visitor who
+     * clicked "Sign in" from the Chats/Profile sign-in prompt back to the
+     * page they actually wanted, instead of always landing on the
+     * dashboard.
+     */
+    private const SAFE_REDIRECT_TARGETS = [
+        'chats' => 'web.account.messages',
+        'profile' => 'web.account.dashboard',
+    ];
+
     public function show(Request $request): View
     {
+        if ($request->filled('redirect') && isset(self::SAFE_REDIRECT_TARGETS[$request->string('redirect')->toString()])) {
+            $request->session()->put('url.intended', route(self::SAFE_REDIRECT_TARGETS[$request->string('redirect')->toString()]));
+        }
+
         return view('web.auth.login', [
             'step' => $request->session()->get('otp_phone') ? 'code' : 'phone',
             'phone' => $request->session()->get('otp_phone'),
@@ -39,7 +57,10 @@ class OtpAuthController extends Controller
     public function requestOtp(RequestOtpRequest $request): RedirectResponse
     {
         $phone = $request->string('phone')->toString();
-        $this->otp->requestCode($phone);
+        // Unlike the API, the website already has a real, reliable locale
+        // for this request (SetWebLocale, the EN/SW toggle) — use it,
+        // rather than the API's own "trust the client to say" fallback.
+        $this->otp->requestCode($phone, app()->getLocale());
 
         $isNewAccount = ! User::query()->where('phone', $phone)->exists();
 
@@ -61,6 +82,7 @@ class OtpAuthController extends Controller
             ['phone' => $phone],
             [
                 'name' => $request->string('name')->toString(),
+                'marketing_consent' => $request->boolean('marketing_consent'),
                 'provider' => 'phone',
                 'provider_id' => $phone,
             ],

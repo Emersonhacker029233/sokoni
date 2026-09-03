@@ -37,6 +37,10 @@
                     <label for="name" class="text-sm font-medium">{{ __('site.auth_name_label') }}</label>
                     <input type="text" id="name" name="name" required class="input-field mt-4">
                 </div>
+                <label class="flex items-start gap-8 text-xs text-sokoni-black/60">
+                    <input type="checkbox" name="marketing_consent" value="1" class="mt-2">
+                    {{ __('site.auth_marketing_consent') }}
+                </label>
             @endif
             <button type="submit" class="btn-primary w-full py-12">{{ __('site.auth_verify') }}</button>
         </form>

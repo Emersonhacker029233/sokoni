@@ -22,7 +22,18 @@ class BeemSmsGateway implements SmsGateway
         private readonly string $senderId,
     ) {}
 
-    public function sendOtp(string $phone, string $code): void
+    public function sendOtp(string $phone, string $code, string $locale = 'en'): void
+    {
+        $this->send($phone, "Your Sokoni verification code is {$code}. It expires in 5 minutes.");
+    }
+
+    /** C6: the bulk-SMS admin tool's generic send path — same transport, same failure handling, arbitrary body. */
+    public function sendMessage(string $phone, string $body): void
+    {
+        $this->send($phone, $body);
+    }
+
+    private function send(string $phone, string $message): void
     {
         // Beem expects a bare MSISDN (no leading +) — E.164 minus the plus.
         $destAddr = ltrim($phone, '+');
@@ -32,7 +43,7 @@ class BeemSmsGateway implements SmsGateway
             ->post(self::ENDPOINT, [
                 'source_addr' => $this->senderId,
                 'encoding' => 0,
-                'message' => "Your Sokoni verification code is {$code}. It expires in 5 minutes.",
+                'message' => $message,
                 'recipients' => [
                     ['recipient_id' => 1, 'dest_addr' => $destAddr],
                 ],

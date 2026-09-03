@@ -37,6 +37,12 @@ class Settings
         return (int) static::get('report_auto_hide_threshold');
     }
 
+    /** C6: hard ceiling on a single admin bulk-SMS blast's recipient count. */
+    public static function maxSmsBlastSize(): int
+    {
+        return (int) static::get('max_sms_blast_size');
+    }
+
     public static function get(string $key): mixed
     {
         $override = Setting::query()->find($key);
@@ -57,6 +63,7 @@ class Settings
             'max_media_per_product' => static::maxMediaPerProduct(),
             'offer_max_duration_days' => static::offerMaxDurationDays(),
             'report_auto_hide_threshold' => static::reportAutoHideThreshold(),
+            'max_sms_blast_size' => static::maxSmsBlastSize(),
         ];
     }
 }

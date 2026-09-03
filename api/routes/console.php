@@ -14,3 +14,8 @@ Artisan::command('inspire', function () {
 // The cPanel cron entry (docs/DEPLOY.md) runs `schedule:run` every minute,
 // which is what actually fires this.
 Schedule::command('updates:delete-expired')->hourly();
+
+// C6: sends one throttled batch of a pending bulk-SMS blast's recipients
+// per tick — see ProcessSmsBlasts's own docblock for why this can't run
+// inline from the Filament action that creates the blast.
+Schedule::command('sms:process-blasts')->everyMinute()->withoutOverlapping();

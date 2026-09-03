@@ -33,6 +33,13 @@ Route::post('/auth/otp/request', [AuthController::class, 'requestOtp'])->middlew
 Route::post('/auth/otp/verify', [AuthController::class, 'verifyOtp']);
 Route::post('/auth/social', [AuthController::class, 'socialLogin']);
 
+// "Create an account" flow (CLAUDE.md restructure, 2026-08-25) — check-only
+// endpoints so Step 2 can validate a phone/handle before the user ever
+// reaches the final verify step, plus the atomic account-creation endpoint
+// itself. See RegisterAccountRequest/AuthController::register().
+Route::post('/auth/check-phone', [AuthController::class, 'checkPhone'])->middleware('throttle:otp');
+Route::post('/auth/register', [AuthController::class, 'register']);
+
 Route::get('/categories', [CategoryController::class, 'index']);
 
 Route::get('/products', [ProductController::class, 'index']);
@@ -42,6 +49,9 @@ Route::get('/products/{product}/comments', [CommentController::class, 'index']);
 Route::get('/feed', [FeedController::class, 'index']);
 
 Route::get('/sellers', [SellerProfileController::class, 'index']);
+// Must come before /sellers/{handle} — otherwise {handle} would greedily
+// match the literal path segment "handle-availability".
+Route::get('/sellers/handle-availability', [SellerProfileController::class, 'handleAvailability']);
 Route::get('/sellers/{handle}', [SellerProfileController::class, 'show']);
 Route::get('/sellers/{handle}/reviews', [ReviewController::class, 'forSeller']);
 
@@ -65,6 +75,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/terms/accept', [AuthController::class, 'acceptTerms']);
     Route::post('/auth/intent', [AuthController::class, 'updateIntent']);
+    Route::patch('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/auth/email/resend', [AuthController::class, 'resendVerificationEmail']);
 
     Route::post('/devices', [DeviceController::class, 'store']);
 
