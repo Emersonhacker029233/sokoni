@@ -127,9 +127,29 @@ class Product extends Model
         });
     }
 
+    /**
+     * Browsing a top-level category must include its subcategories' own
+     * products, not just ones tagged with that exact id — a seller who
+     * picks "TVs" under Electronics still needs to show up when a buyer
+     * browses "Electronics" itself. A child category id stays an exact
+     * match (it has no children of its own — categories are two levels
+     * only). This mirrors ProductSearchService::categoryCounts(), which
+     * already sums a parent's count from itself plus its children.
+     */
     public function scopeInCategory(Builder $query, ?int $categoryId): Builder
     {
-        return $categoryId ? $query->where('category_id', $categoryId) : $query;
+        if (! $categoryId) {
+            return $query;
+        }
+
+        $category = Category::find($categoryId);
+        if (! $category || $category->parent_id !== null) {
+            return $query->where('category_id', $categoryId);
+        }
+
+        $ids = [$category->id, ...$category->children()->pluck('id')];
+
+        return $query->whereIn('category_id', $ids);
     }
 
     /** Restricts to one seller's products — powers the shop profile's product tab. */

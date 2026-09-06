@@ -65,6 +65,19 @@ try {
             echo "\nDone. Next: &step=admin&email=you@example.com&password=YourPassword&name=Emerson\n";
             break;
 
+        case 'seed-categories':
+            // Backfills the subcategory taxonomy (mega menu / search
+            // sidebar feature) onto an already-live database without
+            // re-running the full `db:seed` — CategorySeeder itself
+            // handles both the 13 top-level categories and their ~76
+            // children, keyed by name so it's safe to run any number of
+            // times (updateOrCreate, never duplicates or touches
+            // unrelated tables).
+            Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\CategorySeeder', '--force' => true]);
+            echo Artisan::output();
+            echo "\nDone.\n";
+            break;
+
         case 'demo-seed':
             // Realistic Tanzanian demo content (12 shops, 60 products, orders,
             // reviews, offers) for client demos — see database/seeders/DemoSeeder.php.
@@ -299,7 +312,7 @@ try {
             break;
 
         default:
-            echo "Unknown step. Use: check, fresh, migrate, seed, demo-seed, cleanup-original-seed, rewrite-media-host, admin, tables, cache, clear\n";
+            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, admin, tables, cache, clear\n";
             echo "demo-seed accepts &fresh=1 to clear previously seeded demo shops/buyers first.\n";
             echo "cleanup-original-seed is a dry run by default; add &confirm=1 to actually delete.\n";
             echo "rewrite-media-host needs &from=&to= (URL-encoded); dry run by default, add &confirm=1 to rewrite.\n";

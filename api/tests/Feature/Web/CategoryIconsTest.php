@@ -24,7 +24,11 @@ class CategoryIconsTest extends TestCase
 
         $response->assertOk();
 
-        foreach (Category::pluck('icon') as $iconName) {
+        // Only top-level categories carry an icon and render on the home
+        // page's category grid — subcategories (mega menu/search sidebar
+        // feature) are text-only in the mega menu columns and have no icon
+        // column value at all, so they're correctly excluded here.
+        foreach (Category::whereNotNull('icon')->pluck('icon') as $iconName) {
             // The raw Material Symbols name must never appear as visible
             // text — it's only ever a lookup key into the SVG map now.
             $response->assertDontSee('>'.$iconName.'<', false);

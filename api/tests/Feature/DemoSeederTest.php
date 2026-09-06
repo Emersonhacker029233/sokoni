@@ -115,10 +115,13 @@ class DemoSeederTest extends TestCase
 
         $this->artisan('demo:seed')->assertExitCode(0);
 
-        // The 13 categories in CategorySeeder::CATEGORIES — "Hardware" is a
-        // permanent part of that list now (2026-09-03 client rename), not
-        // created ad hoc by this seeder as "Construction & Hardware" used to be.
-        $this->assertSame(13, Category::count());
+        // 13 top-level categories in CategorySeeder::CATEGORIES ("Hardware" is
+        // a permanent part of that list now, 2026-09-03 client rename, not
+        // created ad hoc by this seeder as "Construction & Hardware" used to
+        // be) plus their subcategory tree (~76 children, every parent but
+        // "Other") added for the mega menu/search sidebar feature.
+        $this->assertSame(13, Category::whereNull('parent_id')->count());
+        $this->assertGreaterThan(70, Category::whereNotNull('parent_id')->count());
         $this->assertDatabaseHas('categories', ['name_en' => 'Hardware']);
     }
 
