@@ -223,6 +223,8 @@ return [
     'nav_explore' => 'Gundua',
     'nav_chats' => 'Ujumbe',
     'nav_profile' => 'Wasifu',
+    'nav_categories' => 'Kategoria',
+    'category_view_all_in' => 'Angalia zote katika :category',
 
     // Sign-in prompts (Chats/Profile when signed out)
     'signin_prompt_chats_title' => 'Ingia kuona ujumbe wako',

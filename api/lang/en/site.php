@@ -223,6 +223,8 @@ return [
     'nav_explore' => 'Explore',
     'nav_chats' => 'Chats',
     'nav_profile' => 'Profile',
+    'nav_categories' => 'Categories',
+    'category_view_all_in' => 'View all in :category',
 
     // Sign-in prompts (Chats/Profile when signed out)
     'signin_prompt_chats_title' => 'Sign in to see your chats',

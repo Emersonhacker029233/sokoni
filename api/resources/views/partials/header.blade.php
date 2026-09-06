@@ -7,6 +7,7 @@
     // search is for every OTHER page, where there's no hero to carry it.
     $isHomePage = request()->routeIs('web.home');
     $locales = ['en' => 'English', 'sw' => 'Kiswahili'];
+    $megaMenuNameKey = $currentLocale === 'sw' ? 'name_sw' : 'name_en';
 @endphp
 <header
     class="sticky top-0 z-40 bg-white transition-shadow duration-200"
@@ -138,6 +139,45 @@
                 @endforeach
             </div>
         </nav>
+
+        {{-- Mega menu, mobile pattern: a slide-in-drawer accordion instead
+             of hover — each category expands in place to reveal its
+             subcategories, no separate screen/overlay needed since it's
+             already inside this drawer. --}}
+        <div class="mt-16 border-t border-sokoni-outline pt-16" x-data="{ openMobileCategoryId: null }">
+            <p class="mb-4 text-caption text-sokoni-black/40">{{ __('site.nav_categories') }}</p>
+            @foreach ($megaMenuTree as $megaCategory)
+                <div class="border-b border-sokoni-outline last:border-b-0">
+                    <div class="flex items-center">
+                        <a href="{{ route('web.category', $megaCategory['slug']) }}" class="flex-1 rounded-chip px-12 py-10 text-sm font-medium hover:bg-sokoni-surface-alt">
+                            {{ $megaCategory[$megaMenuNameKey] }}
+                        </a>
+                        @if (count($megaCategory['children']))
+                            <button
+                                type="button"
+                                class="flex h-44 w-44 shrink-0 items-center justify-center"
+                                @click="openMobileCategoryId = openMobileCategoryId === {{ $megaCategory['id'] }} ? null : {{ $megaCategory['id'] }}"
+                                :aria-expanded="openMobileCategoryId === {{ $megaCategory['id'] }}"
+                                aria-label="{{ __('site.nav_categories') }}: {{ $megaCategory[$megaMenuNameKey] }}"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-16 w-16 text-sokoni-black/50 transition-transform" :class="{ 'rotate-180': openMobileCategoryId === {{ $megaCategory['id'] }} }">
+                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        @endif
+                    </div>
+                    @if (count($megaCategory['children']))
+                        <div x-show="openMobileCategoryId === {{ $megaCategory['id'] }}" x-cloak class="pb-8 pl-12">
+                            @foreach ($megaCategory['children'] as $megaChild)
+                                <a href="{{ route('web.category', [$megaCategory['slug'], $megaChild['slug']]) }}" class="block rounded-chip px-12 py-8 text-sm text-sokoni-black/70 hover:bg-sokoni-surface-alt">
+                                    {{ $megaChild[$megaMenuNameKey] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
     </div>
 
     {{-- Tier 2: dark secondary bar carrying the category strip — Amazon's two-tier structure, so category
@@ -150,22 +190,81 @@
          nav stays a plain solid rectangle, and the two ::-equivalent overlay
          divs below fade FROM the same black TO transparent, layered on top
          of the content — same visual cue, no hole in the background. --}}
-    <nav aria-label="Categories" class="relative hidden bg-sokoni-black lg:block">
+    {{-- Mega menu (noon.com pattern): hovering or focusing a category opens
+         a full-width panel of its subcategories in columns; a 150ms open
+         delay stops it firing on a passing cursor, a short close delay lets
+         the pointer travel from the trigger down into the panel without it
+         vanishing first. Every category+subcategory link is plain
+         server-rendered HTML below (not injected on hover), so it's fully
+         indexable and works with JS disabled — Alpine only toggles
+         visibility. See Alpine.data('megaMenu', ...) in app.js. --}}
+    <nav
+        aria-label="Categories"
+        class="relative hidden bg-sokoni-black lg:block"
+        x-data="megaMenu()"
+        @focusout="if (! $el.contains($event.relatedTarget)) close()"
+        @keydown.escape.window="close()"
+        @click.outside="close()"
+    >
         <div class="no-scrollbar mx-auto flex max-w-7xl gap-4 overflow-x-auto px-16 py-8 lg:px-24">
-            @foreach (($navCategories ?? []) as $navCategory)
-                @php($isActiveCategory = request()->routeIs('web.category') && request()->route('category') === app(\App\Services\Catalog\CategoryCatalogService::class)->slug($navCategory))
+            @foreach ($megaMenuTree as $megaCategory)
+                @php($isActiveCategory = request()->routeIs('web.category') && request()->route('category') === $megaCategory['slug'])
                 {{-- Name only, deliberately no product count — a low count here read as
                      "this marketplace is empty" rather than as useful information (tester
                      feedback item 3). Counts stay on the category landing page itself,
                      where a visitor has already committed to that category and the number
                      is genuine context, not a first impression. --}}
-                <a href="{{ route('web.category', app(\App\Services\Catalog\CategoryCatalogService::class)->slug($navCategory)) }}"
-                   class="shrink-0 rounded-chip px-12 py-6 text-sm {{ $isActiveCategory ? 'bg-sokoni-yellow font-semibold text-sokoni-black' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
-                    {{ $navCategory->name($currentLocale) }}
+                <a href="{{ route('web.category', $megaCategory['slug']) }}"
+                   class="flex shrink-0 items-center gap-4 rounded-chip px-12 py-6 text-sm {{ $isActiveCategory ? 'bg-sokoni-yellow font-semibold text-sokoni-black' : 'text-white/70 hover:bg-white/10 hover:text-white' }}"
+                   @mouseenter="open({{ $megaCategory['id'] }})"
+                   @mouseleave="scheduleClose()"
+                   @focus="open({{ $megaCategory['id'] }})"
+                   @click="if (activeId !== {{ $megaCategory['id'] }}) { $event.preventDefault(); toggle({{ $megaCategory['id'] }}); }"
+                   @if (count($megaCategory['children']))
+                       aria-haspopup="true"
+                       :aria-expanded="(activeId === {{ $megaCategory['id'] }}).toString()"
+                   @endif
+                >
+                    {{ $megaCategory[$megaMenuNameKey] }}
+                    @if (count($megaCategory['children']))
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-12 w-12 opacity-60"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                    @endif
                 </a>
             @endforeach
         </div>
         <div class="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-sokoni-black to-transparent" aria-hidden="true"></div>
         <div class="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-sokoni-black to-transparent" aria-hidden="true"></div>
+
+        {{-- One shared full-width panel; every category's columns are
+             already in the DOM (x-cloak'd) and switched by activeId, so
+             nothing needs to be fetched or built on open. --}}
+        <div
+            x-show="activeId !== null"
+            x-cloak
+            @mouseenter="cancelClose()"
+            @mouseleave="scheduleClose()"
+            x-transition.opacity.duration.150ms
+            class="absolute inset-x-0 top-full z-50 border-t border-sokoni-outline bg-white shadow-lg"
+        >
+            @foreach ($megaMenuTree as $megaCategory)
+                @continue(empty($megaCategory['children']))
+                <div x-show="activeId === {{ $megaCategory['id'] }}" class="mx-auto max-w-7xl px-24 py-24 lg:px-32">
+                    <div class="grid grid-cols-2 gap-x-24 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+                        @foreach ($megaCategory['children'] as $megaChild)
+                            <a
+                                href="{{ route('web.category', [$megaCategory['slug'], $megaChild['slug']]) }}"
+                                class="rounded-chip px-8 py-6 text-sm text-sokoni-black/80 hover:bg-sokoni-surface-alt hover:text-sokoni-black"
+                                @click="close()"
+                            >
+                                {{ $megaChild[$megaMenuNameKey] }}
+                            </a>
+                        @endforeach
+                    </div>
+                    <a href="{{ route('web.category', $megaCategory['slug']) }}" class="mt-20 inline-block text-sm font-semibold text-sokoni-black underline underline-offset-4" @click="close()">
+                        {{ __('site.category_view_all_in', ['category' => $megaCategory[$megaMenuNameKey]]) }}
+                    </a>
+                </div>
+            @endforeach
+        </div>
     </nav>
 </header>

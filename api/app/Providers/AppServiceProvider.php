@@ -92,6 +92,12 @@ class AppServiceProvider extends ServiceProvider
             $view->with('navCategories', app(CategoryCatalogService::class)->withCounts());
         });
 
+        // The mega menu's full tree (with subcategories) — the header only,
+        // since it's the only surface that renders it.
+        View::composer('partials.header', function ($view) {
+            $view->with('megaMenuTree', app(CategoryCatalogService::class)->megaMenuTree());
+        });
+
         // The mobile bottom nav's unread badge on Chats — only worth
         // querying for a signed-in visitor, never for the vastly more
         // common signed-out page view.

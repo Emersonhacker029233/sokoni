@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\Catalog\CategoryCatalogService;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 
 #[Fillable(['parent_id', 'name_en', 'name_sw', 'icon', 'sort_order', 'is_active'])]
 class Category extends Model
@@ -18,6 +20,13 @@ class Category extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /** Mega menu tree cache must never outlive a rename/reorder/deactivate — see CategoryCatalogService::megaMenuTree(). */
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget(CategoryCatalogService::MEGA_MENU_CACHE_KEY));
+        static::deleted(fn () => Cache::forget(CategoryCatalogService::MEGA_MENU_CACHE_KEY));
     }
 
     public function parent(): BelongsTo

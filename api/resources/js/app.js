@@ -7,6 +7,54 @@ import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
 /**
+ * The header's mega menu (noon.com pattern) — a 150ms delay before opening
+ * on hover so a cursor merely passing over the category bar never fires
+ * it, and a matching close delay so moving from the trigger link down into
+ * the panel doesn't close it in transit. `toggle`/`close` back the tap and
+ * keyboard paths — see partials/header.blade.php for exactly how each
+ * event wires in (mouseenter/mouseleave for hover, focus/focusout for
+ * keyboard nav, click for touch, Escape globally).
+ */
+Alpine.data('megaMenu', () => ({
+    activeId: null,
+    openTimer: null,
+    closeTimer: null,
+    OPEN_DELAY_MS: 150,
+    CLOSE_DELAY_MS: 150,
+
+    open(id) {
+        clearTimeout(this.closeTimer);
+        clearTimeout(this.openTimer);
+        this.openTimer = setTimeout(() => {
+            this.activeId = id;
+        }, this.OPEN_DELAY_MS);
+    },
+
+    scheduleClose() {
+        clearTimeout(this.openTimer);
+        this.closeTimer = setTimeout(() => {
+            this.activeId = null;
+        }, this.CLOSE_DELAY_MS);
+    },
+
+    cancelClose() {
+        clearTimeout(this.closeTimer);
+    },
+
+    toggle(id) {
+        clearTimeout(this.openTimer);
+        clearTimeout(this.closeTimer);
+        this.activeId = this.activeId === id ? null : id;
+    },
+
+    close() {
+        clearTimeout(this.openTimer);
+        clearTimeout(this.closeTimer);
+        this.activeId = null;
+    },
+}));
+
+/**
  * The seller product form's photo manager (tester feedback item 1 — the
  * old plain `images[]` input gave no way to see, remove, or reorder a
  * selection, which read as "only one photo works" even though the server
