@@ -92,6 +92,7 @@ yarn-error.log
 # ==== Deploy artifacts (built locally, uploaded by hand — see docs/DEPLOY.md, docs/DEPLOY_WEB.md) ====
 /*.zip
 sokoni-api-update*/
+sokoni-api-2026*/
 sokoni-web-*/
 sokoni-demo-content-and-link-cleanup-update/
 DEPLOY_MANIFEST_*.md
