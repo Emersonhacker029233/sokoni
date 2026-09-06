@@ -67,7 +67,7 @@ class _OnboardingStep1BusinessState extends ConsumerState<OnboardingStep1Busines
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final categoriesAsync = ref.watch(categoriesProvider);
+    final categoriesAsync = ref.watch(topLevelCategoriesProvider);
     final locale = Localizations.localeOf(context).languageCode;
 
     return SingleChildScrollView(
@@ -99,7 +99,7 @@ class _OnboardingStep1BusinessState extends ConsumerState<OnboardingStep1Busines
                 children: [
                   Expanded(child: Text('$e', style: const TextStyle(color: Colors.red))),
                   TextButton(
-                    onPressed: () => ref.invalidate(categoriesProvider),
+                    onPressed: () => ref.invalidate(topLevelCategoriesProvider),
                     child: Text(l10n.commonRetry),
                   ),
                 ],

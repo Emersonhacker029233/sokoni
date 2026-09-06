@@ -301,6 +301,8 @@
   "productFormPrice": "Bei",
   "productFormStock": "Kiasi kilichopo",
   "productFormCategory": "Kategoria",
+  "productFormSubcategory": "Kategoria ndogo (si lazima)",
+  "productFormSubcategoryNone": "Tumia kategoria kuu",
   "productFormSave": "Hifadhi",
   "productFormSavedAddMedia": "Imehifadhiwa — sasa ongeza picha au video.",
   "productFormMediaTitle": "Picha na video",

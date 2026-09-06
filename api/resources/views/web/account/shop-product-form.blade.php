@@ -23,13 +23,44 @@
             @error('title') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
         </div>
 
-        <div>
-            <label for="category_id" class="text-sm font-medium">Category</label>
-            <select id="category_id" name="category_id" required class="input-field mt-4">
-                @foreach ($categories as $category)
-                    <option value="{{ $category->id }}" @selected(old('category_id', $product?->category_id) == $category->id)>{{ $category->name_en }}</option>
-                @endforeach
-            </select>
+        @php
+            // A product's category_id may itself point at a subcategory
+            // (parent_id set) or a top-level category (parent_id null) —
+            // splitting that back into "which parent" + "which child, if
+            // any" is what seeds the two selects below correctly on edit.
+            $selectedCategory = $product?->category;
+            $selectedParentId = $selectedCategory?->parent_id ?? $selectedCategory?->id;
+            $selectedChildId = $selectedCategory?->parent_id ? $selectedCategory->id : null;
+        @endphp
+        <div
+            x-data="{
+                parentId: {{ Illuminate\Support\Js::from(old('category_id_parent', $selectedParentId)) }},
+                childId: {{ Illuminate\Support\Js::from(old('category_id_child', $selectedChildId) ?: '') }},
+                subcategories: {{ Illuminate\Support\Js::from($subcategoriesByParent) }},
+            }"
+            class="space-y-16"
+        >
+            <div>
+                <label for="category_id_parent" class="text-sm font-medium">Category</label>
+                <select id="category_id_parent" x-model.number="parentId" @change="childId = ''" required class="input-field mt-4">
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->id }}">{{ $category->name_en }}</option>
+                    @endforeach
+                </select>
+                @error('category_id') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
+            </div>
+
+            <div x-show="(subcategories[parentId] || []).length > 0">
+                <label for="category_id_child" class="text-sm font-medium">Subcategory <span class="text-sokoni-black/40">(optional)</span></label>
+                <select id="category_id_child" x-model="childId" class="input-field mt-4">
+                    <option value="">Use parent category</option>
+                    <template x-for="sub in (subcategories[parentId] || [])" :key="sub.id">
+                        <option :value="String(sub.id)" x-text="sub.name_en"></option>
+                    </template>
+                </select>
+            </div>
+
+            <input type="hidden" name="category_id" :value="childId || parentId">
         </div>
 
         <div class="grid grid-cols-2 gap-16">

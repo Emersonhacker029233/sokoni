@@ -37,7 +37,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController(text: '1');
-  int? _categoryId;
+  /// The top-level category — always set once a category is picked at all.
+  int? _parentCategoryId;
+
+  /// The optional subcategory within [_parentCategoryId]; null means "use
+  /// the parent category itself" (CLAUDE.md restructure: subcategories are
+  /// optional, defaulting to the parent). The actual value sent to the API
+  /// is whichever of the two is more specific — see [_effectiveCategoryId].
+  int? _subcategoryId;
+
   String _condition = 'new';
 
   Product? _product;
@@ -47,6 +55,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   String? _error;
 
   bool get _isEditing => widget.productId != null;
+
+  int? get _effectiveCategoryId => _subcategoryId ?? _parentCategoryId;
 
   @override
   void initState() {
@@ -74,7 +84,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         _priceController.text = product.price.toString();
         _stockController.text = product.stock.toString();
         _condition = product.condition;
-        _categoryId = product.category?.id;
+        // A saved product's category may itself be a subcategory (its
+        // parentId set) or a top-level one — split back into "which
+        // parent" + "which subcategory, if any" for the two pickers below.
+        final category = product.category;
+        _parentCategoryId = category?.parentId ?? category?.id;
+        _subcategoryId = category?.parentId != null ? category?.id : null;
       });
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -84,7 +99,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   }
 
   Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false) || _categoryId == null) return;
+    if (!(_formKey.currentState?.validate() ?? false) || _effectiveCategoryId == null) return;
     setState(() {
       _submitting = true;
       _error = null;
@@ -96,7 +111,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       final Product saved;
       if (_product == null) {
         saved = await repo.createProduct(
-          categoryId: _categoryId!,
+          categoryId: _effectiveCategoryId!,
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
           price: price,
@@ -106,7 +121,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       } else {
         saved = await repo.updateProduct(
           productId: _product!.id,
-          categoryId: _categoryId,
+          categoryId: _effectiveCategoryId,
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           price: price,
@@ -281,7 +296,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     const SizedBox(height: SokoniDimens.space16),
                     Consumer(
                       builder: (context, ref, _) {
-                        final categoriesAsync = ref.watch(categoriesProvider);
+                        final categoriesAsync = ref.watch(topLevelCategoriesProvider);
                         final locale = Localizations.localeOf(context).languageCode;
                         return categoriesAsync.when(
                           loading: () => const LinearProgressIndicator(),
@@ -289,24 +304,56 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                             children: [
                               Expanded(child: Text('$e', style: const TextStyle(color: Colors.red))),
                               TextButton(
-                                onPressed: () => ref.invalidate(categoriesProvider),
+                                onPressed: () => ref.invalidate(topLevelCategoriesProvider),
                                 child: Text(l10n.commonRetry),
                               ),
                             ],
                           ),
                           data: (categories) => DropdownButtonFormField<int>(
-                            initialValue: _categoryId,
+                            initialValue: _parentCategoryId,
                             decoration: InputDecoration(labelText: l10n.productFormCategory),
                             items: [
                               for (final c in categories)
                                 DropdownMenuItem(value: c.id, child: Text(c.name(locale))),
                             ],
-                            onChanged: (value) => setState(() => _categoryId = value),
+                            onChanged: (value) => setState(() {
+                              _parentCategoryId = value;
+                              // A subcategory picked under the old parent
+                              // never carries over silently to a new one.
+                              _subcategoryId = null;
+                            }),
                           ),
                         );
                       },
                     ),
                     const SizedBox(height: SokoniDimens.space16),
+                    if (_parentCategoryId != null)
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final subcategoriesAsync = ref.watch(subcategoriesProvider(_parentCategoryId!));
+                          final locale = Localizations.localeOf(context).languageCode;
+                          return subcategoriesAsync.when(
+                            loading: () => const LinearProgressIndicator(),
+                            error: (e, _) => const SizedBox.shrink(),
+                            data: (subcategories) {
+                              if (subcategories.isEmpty) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: SokoniDimens.space16),
+                                child: DropdownButtonFormField<int?>(
+                                  initialValue: _subcategoryId,
+                                  decoration: InputDecoration(labelText: l10n.productFormSubcategory),
+                                  items: [
+                                    DropdownMenuItem(value: null, child: Text(l10n.productFormSubcategoryNone)),
+                                    for (final c in subcategories)
+                                      DropdownMenuItem(value: c.id, child: Text(c.name(locale))),
+                                  ],
+                                  onChanged: (value) => setState(() => _subcategoryId = value),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
                     SegmentedButton<String>(
                       segments: [
                         ButtonSegment(value: 'new', label: Text(l10n.productConditionNew)),

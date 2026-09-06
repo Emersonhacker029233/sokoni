@@ -245,7 +245,7 @@ class _CreateAccountStep2DetailsState extends ConsumerState<CreateAccountStep2De
               const SizedBox(height: SokoniDimens.space16),
               Consumer(
                 builder: (context, ref, _) {
-                  final categoriesAsync = ref.watch(categoriesProvider);
+                  final categoriesAsync = ref.watch(topLevelCategoriesProvider);
                   return categoriesAsync.when(
                     loading: () => const LinearProgressIndicator(),
                     error: (e, _) => Text('$e', style: const TextStyle(color: SokoniColors.danger)),

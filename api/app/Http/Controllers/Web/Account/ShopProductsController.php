@@ -41,7 +41,7 @@ class ShopProductsController extends Controller
     {
         return view('web.account.shop-product-form', [
             'product' => null,
-            'categories' => Category::where('is_active', true)->orderBy('sort_order')->get(),
+            ...$this->categoryFormData(),
             'title' => 'New product',
             'maxMediaPerProduct' => Settings::maxMediaPerProduct(),
         ]);
@@ -61,8 +61,8 @@ class ShopProductsController extends Controller
         abort_unless(Auth::user()->can('update', $product), 403);
 
         return view('web.account.shop-product-form', [
-            'product' => $product->load('media'),
-            'categories' => Category::where('is_active', true)->orderBy('sort_order')->get(),
+            'product' => $product->load(['media', 'category']),
+            ...$this->categoryFormData(),
             'title' => 'Edit '.$product->title,
             'maxMediaPerProduct' => Settings::maxMediaPerProduct(),
         ]);
@@ -73,5 +73,26 @@ class ShopProductsController extends Controller
         $product->update($request->validated());
 
         return redirect()->route('web.account.shop.products')->with('status', 'Product updated.');
+    }
+
+    /**
+     * Top-level categories for the primary select, plus every active
+     * subcategory grouped by parent id (as a plain array, JSON-embedded
+     * client-side) so the "Subcategory" select can filter instantly
+     * without a round trip as the seller changes the top-level pick.
+     */
+    private function categoryFormData(): array
+    {
+        $categories = Category::whereNull('parent_id')->where('is_active', true)->orderBy('sort_order')->get();
+
+        $subcategoriesByParent = Category::whereNotNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->groupBy('parent_id')
+            ->map(fn ($group) => $group->map(fn (Category $c) => ['id' => $c->id, 'name_en' => $c->name_en])->values())
+            ->toArray();
+
+        return compact('categories', 'subcategoriesByParent');
     }
 }

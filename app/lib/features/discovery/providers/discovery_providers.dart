@@ -20,8 +20,30 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
   );
 });
 
+/// The raw flat list the API returns — both top-level categories and every
+/// subcategory (mega menu / product-form subcategory picker), undifferentiated.
+/// Most call sites want only the top-level ones; use
+/// [topLevelCategoriesProvider] for those, and [subcategoriesProvider] for
+/// a given parent's children.
 final categoriesProvider = FutureProvider<List<SokoniCategory>>((ref) async {
   return ref.watch(productRepositoryProvider).categories();
+});
+
+/// Top-level categories only — the home chip row, seller onboarding's shop
+/// category, and the "Create an account" seller details step all pick from
+/// this, never a subcategory.
+final topLevelCategoriesProvider = FutureProvider<List<SokoniCategory>>((ref) async {
+  final all = await ref.watch(categoriesProvider.future);
+
+  return all.where((c) => c.parentId == null).toList();
+});
+
+/// A given parent's own subcategories, in sort order — the product form's
+/// optional "Subcategory" picker.
+final subcategoriesProvider = FutureProvider.family<List<SokoniCategory>, int>((ref, parentId) async {
+  final all = await ref.watch(categoriesProvider.future);
+
+  return all.where((c) => c.parentId == parentId).toList();
 });
 
 /// The signed-in seller's own Listings, unpaginated to a single page — used

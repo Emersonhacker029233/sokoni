@@ -504,7 +504,7 @@ class _CategoryChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final categoriesAsync = ref.watch(categoriesProvider);
+    final categoriesAsync = ref.watch(topLevelCategoriesProvider);
     final selected = ref.watch(selectedCategoryIdProvider);
     final locale = Localizations.localeOf(context).languageCode;
 
