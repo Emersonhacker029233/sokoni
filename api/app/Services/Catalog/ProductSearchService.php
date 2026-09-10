@@ -126,6 +126,14 @@ class ProductSearchService
             $query->sponsoredActive();
         }
 
+        if ($filters->make) {
+            $query->whereHas('productAttributes', fn (Builder $q) => $q->where('key', 'make')->where('value', $filters->make));
+        }
+
+        if ($filters->model) {
+            $query->whereHas('productAttributes', fn (Builder $q) => $q->where('key', 'model')->where('value', $filters->model));
+        }
+
         return $query;
     }
 

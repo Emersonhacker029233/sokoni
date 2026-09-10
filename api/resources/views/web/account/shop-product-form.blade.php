@@ -37,6 +37,11 @@
                 parentId: {{ Illuminate\Support\Js::from(old('category_id_parent', $selectedParentId)) }},
                 childId: {{ Illuminate\Support\Js::from(old('category_id_child', $selectedChildId) ?: '') }},
                 subcategories: {{ Illuminate\Support\Js::from($subcategoriesByParent) }},
+                carsCategoryId: {{ Illuminate\Support\Js::from($carsCategoryId) }},
+                vehicleMakeModels: {{ Illuminate\Support\Js::from($vehicleMakeModels) }},
+                make: {{ Illuminate\Support\Js::from(old('make', $product?->attributeValue('make')) ?: '') }},
+                model: {{ Illuminate\Support\Js::from(old('model', $product?->attributeValue('model')) ?: '') }},
+                get isCars() { return String(this.childId) === String(this.carsCategoryId); },
             }"
             class="space-y-16"
         >
@@ -61,6 +66,32 @@
             </div>
 
             <input type="hidden" name="category_id" :value="childId || parentId">
+
+            {{-- C3 (tester feedback): Make/Model are attributes of a Cars
+                 listing, not a third category level — two dependent
+                 dropdowns, shown and required only when Cars is selected. --}}
+            <div x-show="isCars" x-cloak class="space-y-16">
+                <div>
+                    <label for="make" class="text-sm font-medium">Make</label>
+                    <select id="make" name="make" x-model="make" @change="model = ''" :required="isCars" class="input-field mt-4">
+                        <option value="">Select a make</option>
+                        <template x-for="makeName in Object.keys(vehicleMakeModels)" :key="makeName">
+                            <option :value="makeName" x-text="makeName"></option>
+                        </template>
+                    </select>
+                    @error('make') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
+                </div>
+                <div x-show="make">
+                    <label for="model" class="text-sm font-medium">Model</label>
+                    <select id="model" name="model" x-model="model" :required="isCars" class="input-field mt-4">
+                        <option value="">Select a model</option>
+                        <template x-for="modelName in (vehicleMakeModels[make] || [])" :key="modelName">
+                            <option :value="modelName" x-text="modelName"></option>
+                        </template>
+                    </select>
+                    @error('model') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
+                </div>
+            </div>
         </div>
 
         <div class="grid grid-cols-2 gap-16">

@@ -30,6 +30,10 @@ abstract class Product with _$Product {
     @Default(<ProductMediaItem>[]) List<ProductMediaItem> media,
     @JsonKey(name: 'is_favorited') @Default(false) bool isFavorited,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    // C3 (tester feedback): Cars' make/model, exposed generically as a
+    // flat key=>value map — present on the single-product response,
+    // absent (null) on list responses, which never eager-load it.
+    Map<String, String>? attributes,
   }) = _Product;
 
   factory Product.fromJson(Map<String, dynamic> json) => _$ProductFromJson(json);

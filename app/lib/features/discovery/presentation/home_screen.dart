@@ -30,6 +30,7 @@ import '../providers/discovery_providers.dart';
 import '../providers/feed_providers.dart';
 import 'widgets/discovery_map_view.dart';
 import 'widgets/district_picker_sheet.dart';
+import 'widgets/cars_filter_sheet.dart';
 import 'widgets/radius_filter_sheet.dart';
 import 'widgets/sticky_category_header.dart';
 
@@ -469,6 +470,14 @@ class _ShopsToolbar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // C3 (tester feedback): "filters on Cars category page" — this app
+    // browses categories via a flat top-level chip row rather than the
+    // website's dedicated per-subcategory pages, so the Cars filter icon
+    // is this app's equivalent entry point, shown once "Vehicles & Parts"
+    // (Cars' parent) or Cars itself is the selected chip.
+    final selectedCategory = ref.watch(selectedCategoryProvider);
+    final showCarsFilter = selectedCategory != null && (selectedCategory.isCars || selectedCategory.nameEn == 'Vehicles & Parts');
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space8),
       child: Row(
@@ -485,6 +494,14 @@ class _ShopsToolbar extends ConsumerWidget {
             icon: Icon(isMapView ? Icons.list_rounded : Icons.map_outlined),
             onPressed: () => ref.read(feedIsMapViewProvider.notifier).state = !isMapView,
           ),
+          if (showCarsFilter)
+            IconButton(
+              icon: const Icon(Icons.directions_car_outlined),
+              onPressed: () {
+                final vehiclesPartsId = selectedCategory.isCars ? selectedCategory.parentId! : selectedCategory.id;
+                showCarsFilterSheet(context, ref, vehiclesPartsId);
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.tune_rounded),
             onPressed: () async {
@@ -520,6 +537,12 @@ class _CategoryChips extends ConsumerWidget {
           selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
           onSelected: (index) {
             ref.read(selectedCategoryIdProvider.notifier).state = index == 0 ? null : categories[index - 1].id;
+            // Switching top-level categories leaves any Cars-specific
+            // filter meaningless (and, worse, silently zeroing out an
+            // unrelated category's results) — clear it here rather than
+            // only when the Cars sheet itself is dismissed.
+            ref.read(makeFilterProvider.notifier).state = null;
+            ref.read(modelFilterProvider.notifier).state = null;
           },
         );
       },

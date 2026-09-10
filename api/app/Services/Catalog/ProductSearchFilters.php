@@ -24,6 +24,12 @@ class ProductSearchFilters
         public readonly ?float $lng = null,
         public readonly ?float $radiusKm = null,
         public readonly string $sort = 'newest',
+        // C3 (tester feedback): Cars category-page filters — generic
+        // product_attributes keys, not Cars-specific columns, so the same
+        // two fields work unchanged if Real Estate ever filters on its
+        // own attribute keys later.
+        public readonly ?string $make = null,
+        public readonly ?string $model = null,
     ) {}
 
     public function hasLocation(): bool
@@ -48,6 +54,8 @@ class ProductSearchFilters
             lng: $this->lng,
             radiusKm: $this->radiusKm,
             sort: $this->sort,
+            make: $this->make,
+            model: $this->model,
         );
     }
 }

@@ -31,6 +31,10 @@ class ProductController extends Controller
             lng: $request->float('lng') ?: null,
             radiusKm: $request->float('radius_km') ?: null,
             sort: $request->string('sort')->toString() ?: ($hasLocation ? 'nearby' : 'newest'),
+            // C3 (tester feedback): the app's own Cars category filter —
+            // same product_attributes match the website's category page uses.
+            make: $request->string('make')->toString() ?: null,
+            model: $request->string('model')->toString() ?: null,
         );
 
         $paginated = $this->search->search($filters, page: (int) ($request->integer('page') ?: 1), perPage: self::PER_PAGE);
@@ -62,7 +66,7 @@ class ProductController extends Controller
         $isVisible = $product->is_active && ! $product->is_hidden && $product->seller->isVerified();
         abort_unless($isOwner || $isVisible, 404);
 
-        $product->load(['category', 'seller', 'media']);
+        $product->load(['category', 'seller', 'media', 'productAttributes']);
         $product->increment('views');
 
         return new ProductResource($product);
@@ -75,18 +79,38 @@ class ProductController extends Controller
         // earlier access (e.g. UserResource) before a seller profile
         // existed — see User::isSeller().
         $seller = $request->user()->sellerProfile()->firstOrFail();
-        $product = $seller->products()->create($request->validated());
-        $product->load(['category', 'seller', 'media']);
+        $data = $request->validated();
+        $product = $seller->products()->create(collect($data)->except(['make', 'model'])->all());
+        $this->syncVehicleAttributes($product, $data);
+        $product->load(['category', 'seller', 'media', 'productAttributes']);
 
         return new ProductResource($product);
     }
 
     public function update(ProductUpdateRequest $request, Product $product): ProductResource
     {
-        $product->update($request->validated());
-        $product->load(['category', 'seller', 'media']);
+        $data = $request->validated();
+        $product->update(collect($data)->except(['make', 'model'])->all());
+        $this->syncVehicleAttributes($product, $data);
+        $product->load(['category', 'seller', 'media', 'productAttributes']);
 
         return new ProductResource($product);
+    }
+
+    /**
+     * C3 (tester feedback): Make/Model live in the generic
+     * `product_attributes` table, not their own columns — only touched
+     * when the request actually included them (an update that never
+     * mentions make/model, e.g. changing price only, leaves whatever
+     * attributes already exist untouched rather than clearing them).
+     */
+    private function syncVehicleAttributes(Product $product, array $data): void
+    {
+        foreach (['make', 'model'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $product->productAttributes()->updateOrCreate(['key' => $key], ['value' => $data[$key]]);
+            }
+        }
     }
 
     public function destroy(Request $request, Product $product): \Illuminate\Http\JsonResponse

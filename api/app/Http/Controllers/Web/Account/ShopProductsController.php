@@ -8,6 +8,7 @@ use App\Http\Requests\ProductUpdateRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Support\Settings;
+use App\Support\VehicleMakes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -50,7 +51,9 @@ class ShopProductsController extends Controller
     public function store(ProductStoreRequest $request): RedirectResponse
     {
         $seller = $request->user()->sellerProfile()->firstOrFail();
-        $product = $seller->products()->create($request->validated());
+        $data = $request->validated();
+        $product = $seller->products()->create(collect($data)->except(['make', 'model'])->all());
+        $this->syncVehicleAttributes($product, $data);
 
         return redirect()->route('web.account.shop.products.edit', $product)
             ->with('status', 'Product created — now add your photos below.');
@@ -61,7 +64,7 @@ class ShopProductsController extends Controller
         abort_unless(Auth::user()->can('update', $product), 403);
 
         return view('web.account.shop-product-form', [
-            'product' => $product->load(['media', 'category']),
+            'product' => $product->load(['media', 'category', 'productAttributes']),
             ...$this->categoryFormData(),
             'title' => 'Edit '.$product->title,
             'maxMediaPerProduct' => Settings::maxMediaPerProduct(),
@@ -70,9 +73,26 @@ class ShopProductsController extends Controller
 
     public function update(ProductUpdateRequest $request, Product $product): RedirectResponse
     {
-        $product->update($request->validated());
+        $data = $request->validated();
+        $product->update(collect($data)->except(['make', 'model'])->all());
+        $this->syncVehicleAttributes($product, $data);
 
         return redirect()->route('web.account.shop.products')->with('status', 'Product updated.');
+    }
+
+    /**
+     * C3 (tester feedback): identical to Api\ProductController's own
+     * helper of the same name — Make/Model live in the generic
+     * `product_attributes` table, only touched when the request actually
+     * included them.
+     */
+    private function syncVehicleAttributes(Product $product, array $data): void
+    {
+        foreach (['make', 'model'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $product->productAttributes()->updateOrCreate(['key' => $key], ['value' => $data[$key]]);
+            }
+        }
     }
 
     /**
@@ -93,6 +113,14 @@ class ShopProductsController extends Controller
             ->map(fn ($group) => $group->map(fn (Category $c) => ['id' => $c->id, 'name_en' => $c->name_en])->values())
             ->toArray();
 
-        return compact('categories', 'subcategoriesByParent');
+        // C3 (tester feedback): "Cars" is always a subcategory (never
+        // top-level), so the form's Make/Model block needs to know its id
+        // to show itself when that's the selected child — matched by
+        // name_en, same as Category::isCars().
+        $carsCategoryId = Category::where('name_en', 'Cars')->value('id');
+
+        return compact('categories', 'subcategoriesByParent', 'carsCategoryId') + [
+            'vehicleMakeModels' => VehicleMakes::ALL,
+        ];
     }
 }

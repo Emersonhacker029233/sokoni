@@ -36,6 +36,14 @@ class ProductResource extends JsonResource
             'category' => new CategoryResource($this->whenLoaded('category')),
             'seller' => new SellerSummaryResource($this->whenLoaded('seller')),
             'media' => ProductMediaResource::collection($this->whenLoaded('media')),
+            // C3 (tester feedback): Cars' make/model, exposed generically
+            // as a flat key=>value map so Real Estate's own attributes
+            // (bedrooms, size, ...) need no resource change to reuse this
+            // later — just more rows in the same table.
+            'attributes' => $this->when(
+                $this->relationLoaded('productAttributes'),
+                fn () => $this->productAttributes->pluck('value', 'key')
+            ),
             'is_favorited' => $this->when(
                 $request->user() !== null,
                 fn () => $request->user()->favorites()->where('product_id', $this->id)->exists()

@@ -71,6 +71,24 @@ final radiusPresetProvider = StateProvider<RadiusPreset>((ref) => RadiusPreset.k
 /// null = "All" category chip selected.
 final selectedCategoryIdProvider = StateProvider<int?>((ref) => null);
 
+/// The currently selected category's own model, resolved from the flat
+/// list — null while nothing is selected. Lets any UI (the subcategory
+/// chip row, the Cars Make/Model filter) react to *which* category is
+/// active without re-deriving it from the id each time.
+final selectedCategoryProvider = Provider<SokoniCategory?>((ref) {
+  final categories = ref.watch(categoriesProvider).asData?.value;
+  final selectedId = ref.watch(selectedCategoryIdProvider);
+  if (categories == null || selectedId == null) return null;
+
+  return categories.where((c) => c.id == selectedId).firstOrNull;
+});
+
+/// C3 (tester feedback): Cars category filters — only meaningful once
+/// [selectedCategoryProvider] resolves to Cars; reset whenever the
+/// category selection changes away from it (see _CategoryChips).
+final makeFilterProvider = StateProvider<String?>((ref) => null);
+final modelFilterProvider = StateProvider<String?>((ref) => null);
+
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
 enum FeedSort { nearby, trending, newest }
@@ -109,6 +127,8 @@ class DiscoveryFeedController extends AsyncNotifier<DiscoveryFeedState> {
             FeedSort.newest => 'newest',
           },
           page: 1,
+          make: ref.watch(makeFilterProvider),
+          model: ref.watch(modelFilterProvider),
         );
     return DiscoveryFeedState(items: result.items, hasMore: result.hasMore, page: result.currentPage);
   }
@@ -137,6 +157,8 @@ class DiscoveryFeedController extends AsyncNotifier<DiscoveryFeedState> {
             FeedSort.newest => 'newest',
           },
           page: current.page + 1,
+          make: ref.read(makeFilterProvider),
+          model: ref.read(modelFilterProvider),
         );
 
     state = AsyncData(

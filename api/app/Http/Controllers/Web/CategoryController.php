@@ -8,6 +8,7 @@ use App\Services\Catalog\CategoryCatalogService;
 use App\Services\Catalog\ProductSearchService;
 use App\Services\Catalog\SearchFilterInput;
 use App\Support\TanzaniaRegions;
+use App\Support\VehicleMakes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -81,6 +82,12 @@ class CategoryController extends Controller
                 'sponsored' => $search->sponsoredSlot($filters),
                 'filters' => $filters,
                 'regions' => TanzaniaRegions::options(),
+                // C3 (tester feedback): Cars category-page filters — the
+                // parent (browsing "Vehicles & Parts" -> "Cars") and the
+                // child itself both count, same as any other subcategory page.
+                'showVehicleFilters' => $active->isCars(),
+                'vehicleMakes' => VehicleMakes::makes(),
+                'vehicleMakeModels' => VehicleMakes::ALL,
                 'breadcrumbs' => $breadcrumbs,
                 'title' => $active->name(app()->getLocale()),
                 'description' => "Browse {$active->name('en')} listings on Sokoni — verified sellers, real photos, near you.",

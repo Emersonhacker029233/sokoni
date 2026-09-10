@@ -54,4 +54,18 @@ class Category extends Model
     {
         return $locale === 'sw' ? $this->name_sw : $this->name_en;
     }
+
+    /**
+     * The one category that gets Make/Model attributes (C3, tester
+     * feedback) — matched by name_en, the same stable identifier every
+     * other category-specific special-case in this codebase already
+     * keys on (the 2026-09-03 rename migration, CategorySeeder itself).
+     * Deliberately not a new "is_vehicle"-style column: exactly one
+     * category needs this today, so a column would be pure ceremony for
+     * a single true row.
+     */
+    public function isCars(): bool
+    {
+        return $this->name_en === 'Cars';
+    }
 }

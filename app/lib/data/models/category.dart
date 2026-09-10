@@ -21,4 +21,10 @@ abstract class SokoniCategory with _$SokoniCategory {
 extension SokoniCategoryLocalization on SokoniCategory {
   /// Localized name for the given locale code ('en' or 'sw').
   String name(String localeCode) => localeCode == 'sw' ? nameSw : nameEn;
+
+  /// The one category that gets Make/Model attributes (C3, tester
+  /// feedback) — mirrors `Category::isCars()` on the backend exactly:
+  /// matched by `name_en`, the same stable identifier every other
+  /// category-specific special-case already keys on.
+  bool get isCars => nameEn == 'Cars';
 }

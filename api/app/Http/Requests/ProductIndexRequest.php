@@ -25,6 +25,9 @@ class ProductIndexRequest extends FormRequest
             'q' => ['nullable', 'string', 'max:255'],
             'sort' => ['nullable', 'string', Rule::in(['nearby', 'trending', 'newest'])],
             'page' => ['nullable', 'integer', 'min:1'],
+            // C3 (tester feedback): the app's own Cars category filter.
+            'make' => ['nullable', 'string'],
+            'model' => ['nullable', 'string'],
         ];
     }
 }

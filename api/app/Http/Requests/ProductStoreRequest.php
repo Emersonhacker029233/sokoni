@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Category;
+use App\Support\VehicleMakes;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,6 +16,11 @@ class ProductStoreRequest extends FormRequest
         return $this->user()?->isSeller() ?? false;
     }
 
+    private function isCarsCategory(): bool
+    {
+        return Category::find($this->input('category_id'))?->isCars() ?? false;
+    }
+
     public function rules(): array
     {
         return [
@@ -23,6 +30,23 @@ class ProductStoreRequest extends FormRequest
             'price' => ['required', 'integer', 'min:0'],
             'stock' => ['required', 'integer', 'min:0'],
             'condition' => ['required', Rule::in(['new', 'used'])],
+            // C3 (tester feedback): Make/Model are attributes of a Cars
+            // listing, not a third category level — required exactly
+            // when posting into the Cars category, ignored otherwise.
+            'make' => [
+                Rule::requiredIf(fn () => $this->isCarsCategory()),
+                'nullable', 'string', Rule::in(VehicleMakes::makes()),
+            ],
+            'model' => [
+                Rule::requiredIf(fn () => $this->isCarsCategory()),
+                'nullable', 'string',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $make = $this->input('make');
+                    if ($value && $make && ! VehicleMakes::isValidModel($make, $value)) {
+                        $fail('The selected model does not belong to the selected make.');
+                    }
+                },
+            ],
         ];
     }
 }

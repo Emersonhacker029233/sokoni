@@ -10,6 +10,7 @@ import '../../../../core/l10n/gen/app_localizations.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../core/utils/vehicle_makes.dart';
 import '../../../../data/models/category.dart';
 import '../../../../data/models/product.dart';
 import '../../../../data/models/product_media.dart';
@@ -47,6 +48,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   int? _subcategoryId;
 
   String _condition = 'new';
+
+  /// C3 (tester feedback): Cars' Make/Model attributes — not a third
+  /// category level, so these live alongside the other plain fields
+  /// rather than as a third dependent-dropdown tier.
+  String? _make;
+  String? _model;
+  bool _isCarsSelected = false;
 
   Product? _product;
   bool _loading = false;
@@ -90,6 +98,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         final category = product.category;
         _parentCategoryId = category?.parentId ?? category?.id;
         _subcategoryId = category?.parentId != null ? category?.id : null;
+        _isCarsSelected = category?.isCars ?? false;
+        _make = product.attributes?['make'];
+        _model = product.attributes?['model'];
       });
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -100,6 +111,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false) || _effectiveCategoryId == null) return;
+    if (_isCarsSelected && (_make == null || _model == null)) {
+      setState(() => _error = AppLocalizations.of(context).productFormMakeModelRequired);
+      return;
+    }
     setState(() {
       _submitting = true;
       _error = null;
@@ -117,6 +132,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           price: price,
           stock: stock,
           condition: _condition,
+          make: _isCarsSelected ? _make : null,
+          model: _isCarsSelected ? _model : null,
         );
       } else {
         saved = await repo.updateProduct(
@@ -127,6 +144,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           price: price,
           stock: stock,
           condition: _condition,
+          make: _isCarsSelected ? _make : null,
+          model: _isCarsSelected ? _model : null,
         );
       }
       setState(() => _product = saved);
@@ -321,6 +340,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                               // A subcategory picked under the old parent
                               // never carries over silently to a new one.
                               _subcategoryId = null;
+                              // Cars is always a subcategory, never a
+                              // top-level pick — changing the parent can
+                              // only ever leave Cars.
+                              _isCarsSelected = false;
+                              _make = null;
+                              _model = null;
                             }),
                           ),
                         );
@@ -347,13 +372,55 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                     for (final c in subcategories)
                                       DropdownMenuItem(value: c.id, child: Text(c.name(locale))),
                                   ],
-                                  onChanged: (value) => setState(() => _subcategoryId = value),
+                                  onChanged: (value) => setState(() {
+                                    _subcategoryId = value;
+                                    final selected = subcategories.where((c) => c.id == value).firstOrNull;
+                                    _isCarsSelected = selected?.isCars ?? false;
+                                    if (!_isCarsSelected) {
+                                      _make = null;
+                                      _model = null;
+                                    }
+                                  }),
                                 ),
                               );
                             },
                           );
                         },
                       ),
+                    // C3 (tester feedback): Make/Model are attributes of a
+                    // Cars listing, not a third category level — two
+                    // dependent dropdowns, shown and required only when
+                    // Cars is the selected (sub)category.
+                    if (_isCarsSelected) ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: _make,
+                        decoration: InputDecoration(labelText: l10n.productFormMake),
+                        items: [
+                          for (final make in VehicleMakes.makes)
+                            DropdownMenuItem(value: make, child: Text(make)),
+                        ],
+                        onChanged: (value) => setState(() {
+                          _make = value;
+                          _model = null;
+                        }),
+                        validator: (value) => value == null ? l10n.productFormMakeModelRequired : null,
+                      ),
+                      const SizedBox(height: SokoniDimens.space16),
+                      if (_make != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: SokoniDimens.space16),
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _model,
+                            decoration: InputDecoration(labelText: l10n.productFormModel),
+                            items: [
+                              for (final model in VehicleMakes.modelsFor(_make))
+                                DropdownMenuItem(value: model, child: Text(model)),
+                            ],
+                            onChanged: (value) => setState(() => _model = value),
+                            validator: (value) => value == null ? l10n.productFormMakeModelRequired : null,
+                          ),
+                        ),
+                    ],
                     SegmentedButton<String>(
                       segments: [
                         ButtonSegment(value: 'new', label: Text(l10n.productConditionNew)),

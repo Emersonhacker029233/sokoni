@@ -57,6 +57,9 @@ class ProductRepository {
     String? query,
     String sort = 'nearby',
     int page = 1,
+    // C3 (tester feedback): Cars category-page filters.
+    String? make,
+    String? model,
   }) async {
     try {
       final json = await _api.products({
@@ -68,6 +71,8 @@ class ProductRepository {
         if (query != null && query.isNotEmpty) 'q': query,
         'sort': sort,
         'page': page,
+        'make': ?make,
+        'model': ?model,
       });
       final result = PaginatedResult<Product>.fromJson(
         json as Map<String, dynamic>,
@@ -129,6 +134,11 @@ class ProductRepository {
     required int price,
     required int stock,
     required String condition,
+    // C3 (tester feedback): required together only when categoryId
+    // resolves to Cars — enforced server-side; the form only sends them
+    // when its own Cars dropdowns are shown.
+    String? make,
+    String? model,
   }) async {
     try {
       final json = await _api.createProduct({
@@ -138,6 +148,8 @@ class ProductRepository {
         'price': price,
         'stock': stock,
         'condition': condition,
+        'make': ?make,
+        'model': ?model,
       });
       return Product.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {
@@ -154,6 +166,8 @@ class ProductRepository {
     int? stock,
     String? condition,
     bool? isActive,
+    String? make,
+    String? model,
   }) async {
     try {
       final json = await _api.updateProduct(productId, {
@@ -164,6 +178,8 @@ class ProductRepository {
         'stock': ?stock,
         'condition': ?condition,
         'is_active': ?isActive,
+        'make': ?make,
+        'model': ?model,
       });
       return Product.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {
@@ -279,5 +295,6 @@ class ProductRepository {
         .toList(),
     'is_favorited': p.isFavorited,
     'created_at': p.createdAt?.toIso8601String(),
+    'attributes': p.attributes,
   };
 }

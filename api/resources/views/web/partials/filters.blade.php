@@ -1,10 +1,39 @@
 {{-- Shared by category.blade.php and search.blade.php — all current query params are preserved as hidden inputs so a filter change doesn't drop q/region/etc. --}}
-<form action="{{ $action }}" method="get" class="space-y-20 rounded-card border border-sokoni-outline p-16" x-data>
-    @foreach (request()->except(['price_min', 'price_max', 'condition', 'region', 'has_video', 'sponsored', 'page']) as $key => $value)
+<form
+    action="{{ $action }}"
+    method="get"
+    class="space-y-20 rounded-card border border-sokoni-outline p-16"
+    x-data="{ make: {{ Illuminate\Support\Js::from(request('make', '')) }}, vehicleMakeModels: {{ Illuminate\Support\Js::from($vehicleMakeModels ?? []) }} }"
+>
+    @foreach (request()->except(['price_min', 'price_max', 'condition', 'region', 'has_video', 'sponsored', 'make', 'model', 'page']) as $key => $value)
         @if (is_scalar($value))
             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
         @endif
     @endforeach
+
+    {{-- C3 (tester feedback): Cars category-page filters — only rendered
+         when browsing the Cars category itself, never on other category
+         or search pages. --}}
+    @if ($showVehicleFilters ?? false)
+        <div>
+            <h3 class="text-sm font-semibold">Make</h3>
+            <select name="make" x-model="make" @change="$el.form.model.value = ''" class="input-field mt-8 text-sm">
+                <option value="">Any make</option>
+                @foreach ($vehicleMakes ?? [] as $makeName)
+                    <option value="{{ $makeName }}" @selected(request('make') === $makeName)>{{ $makeName }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div x-show="make">
+            <h3 class="text-sm font-semibold">Model</h3>
+            <select name="model" class="input-field mt-8 text-sm">
+                <option value="">Any model</option>
+                <template x-for="modelName in (vehicleMakeModels[make] || [])" :key="modelName">
+                    <option :value="modelName" :selected="modelName === {{ Illuminate\Support\Js::from(request('model', '')) }}" x-text="modelName"></option>
+                </template>
+            </select>
+        </div>
+    @endif
 
     <div>
         <h3 class="text-sm font-semibold">{{ __('site.filter_price') }}</h3>

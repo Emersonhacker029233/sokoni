@@ -36,6 +36,9 @@ _Product _$ProductFromJson(Map<String, dynamic> json) => _Product(
   createdAt: json['created_at'] == null
       ? null
       : DateTime.parse(json['created_at'] as String),
+  attributes: (json['attributes'] as Map<String, dynamic>?)?.map(
+    (k, e) => MapEntry(k, e as String),
+  ),
 );
 
 Map<String, dynamic> _$ProductToJson(_Product instance) => <String, dynamic>{
@@ -58,4 +61,5 @@ Map<String, dynamic> _$ProductToJson(_Product instance) => <String, dynamic>{
   'media': instance.media.map((e) => e.toJson()).toList(),
   'is_favorited': instance.isFavorited,
   'created_at': instance.createdAt?.toIso8601String(),
+  'attributes': instance.attributes,
 };
