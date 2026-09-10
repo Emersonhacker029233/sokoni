@@ -15,6 +15,12 @@ Artisan::command('inspire', function () {
 // which is what actually fires this.
 Schedule::command('updates:delete-expired')->hourly();
 
+// C2 (tester feedback): purges a soft-deleted product's media files/rows
+// once its 30-day recovery window has passed — see the command's own
+// docblock. Daily is plenty; this is a storage-cost cleanup, not
+// something anyone is ever waiting on in real time.
+Schedule::command('products:purge-deleted-media')->daily();
+
 // C6: sends one throttled batch of a pending bulk-SMS blast's recipients
 // per tick — see ProcessSmsBlasts's own docblock for why this can't run
 // inline from the Filament action that creates the blast.

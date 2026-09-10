@@ -9,14 +9,17 @@ use App\Support\ActivityLogger;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -99,6 +102,7 @@ class ProductsTable
                     }),
                 TernaryFilter::make('is_sponsored')
                     ->label('Sponsored'),
+                TrashedFilter::make(),
                 Filter::make('price')
                     ->schema([
                         \Filament\Forms\Components\TextInput::make('min')->numeric()->label('Min price (TZS)'),
@@ -146,6 +150,30 @@ class ProductsTable
                         ActivityLogger::record(Auth::user(), $nowSponsored ? 'product.unfeatured' : 'product.featured', $record);
                         Notification::make()->title($nowSponsored ? 'Product unfeatured' : 'Product featured for 7 days')->success()->send();
                     }),
+                // C2 (tester feedback): "delete, not just hide" — soft
+                // delete (recoverable, see Product::class's own SoftDeletes
+                // note), naming exactly what's removed and requiring a
+                // reason before it fires, logged like every other
+                // moderation action on this table.
+                Action::make('delete')
+                    ->label('Delete')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (Product $record) => "Delete \"{$record->title}\"?")
+                    ->modalDescription(fn (Product $record) => "This removes \"{$record->title}\" from {$record->seller->shop_name}'s shop and the public feed immediately. It stays recoverable (Trashed filter) until its photos/videos are permanently purged after 30 days.")
+                    ->schema([Textarea::make('reason')->label('Reason')->required()])
+                    ->action(function (Product $record, array $data) {
+                        $record->delete();
+                        ActivityLogger::record(Auth::user(), 'product.deleted', $record, $data['reason']);
+                        Notification::make()->title('Product deleted')->success()->send();
+                    }),
+                RestoreAction::make()
+                    ->action(function (Product $record) {
+                        $record->restore();
+                        ActivityLogger::record(Auth::user(), 'product.restored', $record);
+                        Notification::make()->title('Product restored')->success()->send();
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -160,6 +188,20 @@ class ProductsTable
                                 ActivityLogger::record(Auth::user(), 'product.hidden', $record, 'Bulk action');
                             }
                             Notification::make()->title($records->count().' products hidden')->success()->send();
+                        }),
+                    BulkAction::make('bulk_delete')
+                        ->label('Delete selected')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalDescription(fn (Collection $records) => 'This removes '.$records->count().' product(s) from their shops and the public feed immediately. They stay recoverable (Trashed filter) until permanently purged after 30 days.')
+                        ->schema([Textarea::make('reason')->label('Reason')->required()])
+                        ->action(function (Collection $records, array $data) {
+                            foreach ($records as $record) {
+                                $record->delete();
+                                ActivityLogger::record(Auth::user(), 'product.deleted', $record, $data['reason'], ['bulk' => true]);
+                            }
+                            Notification::make()->title($records->count().' products deleted')->success()->send();
                         }),
                     BulkAction::make('bulk_reassign_category')
                         ->label('Reassign category')

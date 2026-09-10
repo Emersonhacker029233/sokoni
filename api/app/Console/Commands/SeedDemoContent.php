@@ -40,15 +40,23 @@ class SeedDemoContent extends Command
      * Every relevant foreign key cascades on delete (products, media,
      * offers, showcases, updates, reviews, comments, orders, order items),
      * so deleting the seller_profiles/users rows themselves is sufficient.
+     *
+     * `forceDelete()`, not `delete()` — SellerProfile/User/Product all
+     * gained SoftDeletes for C2 (tester feedback, admin delete), and a
+     * plain `delete()` would only set `deleted_at`, leaving the row (and
+     * its unique `handle`/`phone`) in place to collide with the very next
+     * `demo:seed` insert. This command is a deliberate reset to a clean
+     * slate, never something anyone would want to recover — a real hard
+     * delete, and the DB-level cascades above, are exactly right here.
      */
     private function clearPriorDemoData(): void
     {
         $sellerUserIds = SellerProfile::whereIn('handle', DemoSeeder::demoHandles())->pluck('user_id');
-        $removedShops = SellerProfile::whereIn('handle', DemoSeeder::demoHandles())->delete();
-        User::whereIn('id', $sellerUserIds)->delete();
+        $removedShops = SellerProfile::whereIn('handle', DemoSeeder::demoHandles())->forceDelete();
+        User::whereIn('id', $sellerUserIds)->forceDelete();
 
         $removedBuyers = User::whereIn('phone', DemoSeeder::demoBuyerPhones())->count();
-        User::whereIn('phone', DemoSeeder::demoBuyerPhones())->delete();
+        User::whereIn('phone', DemoSeeder::demoBuyerPhones())->forceDelete();
 
         $this->info("Cleared {$removedShops} prior demo shop(s) and {$removedBuyers} prior demo buyer(s).");
     }

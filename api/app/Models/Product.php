@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Schema;
 
 #[Fillable([
@@ -19,7 +20,11 @@ use Illuminate\Support\Facades\Schema;
 ])]
 class Product extends Model
 {
-    use HasFactory;
+    // C2 (tester feedback): admin deletion is soft — recoverable — rather
+    // than the permanent DELETE this model previously had no protection
+    // against at all (every query, including `visible()`, automatically
+    // excludes a soft-deleted row without needing its own change).
+    use HasFactory, SoftDeletes;
 
     protected function casts(): array
     {
@@ -44,6 +49,25 @@ class Product extends Model
     public function media(): HasMany
     {
         return $this->hasMany(ProductMedia::class)->orderBy('sort');
+    }
+
+    /**
+     * Generic key/value product attributes (C3, tester feedback) — Cars'
+     * make/model today, built generally enough for Real Estate's own
+     * attributes (bedrooms, size, etc.) to reuse the same mechanism
+     * later without a new table. Deliberately NOT named attributes() —
+     * that exact name collides with Eloquent's own internal
+     * `$attributes` property/array, the same class of crash
+     * localizedDescription()'s docblock describes for description().
+     */
+    public function productAttributes(): HasMany
+    {
+        return $this->hasMany(ProductAttribute::class);
+    }
+
+    public function attributeValue(string $key): ?string
+    {
+        return $this->productAttributes->firstWhere('key', $key)?->value;
     }
 
     public function favoritedBy(): BelongsToMany
