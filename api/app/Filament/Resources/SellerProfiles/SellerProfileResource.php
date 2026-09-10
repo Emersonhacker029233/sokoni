@@ -7,7 +7,10 @@ use App\Filament\Resources\SellerProfiles\Pages\ViewSellerProfile;
 use App\Filament\Resources\SellerProfiles\Schemas\SellerProfileInfolist;
 use App\Filament\Resources\SellerProfiles\Tables\SellerProfilesTable;
 use App\Models\SellerProfile;
+use App\Notifications\SellerVerificationNotification;
+use App\Services\Push\PushNotifier;
 use App\Support\ActivityLogger;
+use App\Support\SafeMail;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -21,8 +24,9 @@ use Filament\Tables\Table;
  * The seller verification queue (CLAUDE.md feature 9). No create/edit
  * pages: sellers create and edit their own profile through the app's
  * onboarding wizard — this resource is purely the admin's review-and-
- * decide surface (list + a NIDA/licence/map view, verify/reject actions
- * on the table itself).
+ * decide surface (list + a NIDA number/map view, verify/reject actions
+ * on the table itself). B1/B2 (tester feedback): no NIDA photo or
+ * licence — the typed NIDA number alone is the basis of verification.
  */
 class SellerProfileResource extends Resource
 {
@@ -55,6 +59,19 @@ class SellerProfileResource extends Resource
                     'rejection_reason' => null,
                 ])->save();
                 ActivityLogger::record(auth()->user(), 'seller.verified', $record);
+                // B4 (tester feedback): the seller previously learned
+                // nothing at all when approved — same push+email pairing
+                // every other seller-facing event in this codebase already
+                // uses (orders, reviews).
+                app(PushNotifier::class)->notify(
+                    $record->user,
+                    'Shop verified',
+                    "Your shop \"{$record->shop_name}\" is verified and now visible on Sokoni.",
+                    ['seller_id' => $record->id],
+                );
+                if ($record->user->email !== null) {
+                    SafeMail::send($record->user, new SellerVerificationNotification($record));
+                }
                 Notification::make()->title('Seller verified')->success()->send();
             });
     }
@@ -76,6 +93,15 @@ class SellerProfileResource extends Resource
                     'verified_at' => null,
                 ])->save();
                 ActivityLogger::record(auth()->user(), 'seller.rejected', $record, $data['reason']);
+                app(PushNotifier::class)->notify(
+                    $record->user,
+                    'Shop registration update',
+                    "Your shop \"{$record->shop_name}\" registration wasn't approved: {$data['reason']}",
+                    ['seller_id' => $record->id],
+                );
+                if ($record->user->email !== null) {
+                    SafeMail::send($record->user, new SellerVerificationNotification($record));
+                }
                 Notification::make()->title('Seller rejected')->warning()->send();
             });
     }

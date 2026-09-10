@@ -8,7 +8,9 @@ use App\Models\Product;
 use App\Models\Report;
 use App\Models\SellerProfile;
 use App\Models\User;
+use App\Notifications\SellerVerificationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -41,7 +43,7 @@ class FilamentPanelTest extends TestCase
     public function test_an_admin_can_view_a_seller_profile_with_identity_evidence(): void
     {
         $admin = User::factory()->admin()->create();
-        $seller = SellerProfile::factory()->create(['nida_image' => 'sellers/nida/x.jpg', 'licence_file' => 'sellers/licences/x.pdf']);
+        $seller = SellerProfile::factory()->create(['nida_number' => str_repeat('1', 20)]);
 
         $this->actingAsAdmin($admin)->get("/admin/seller-profiles/{$seller->id}")->assertOk();
     }
@@ -126,6 +128,60 @@ class FilamentPanelTest extends TestCase
             ->assertHasActionErrors(['reason']);
 
         $this->assertEquals('pending', $seller->fresh()->status);
+    }
+
+    /**
+     * B4 (tester feedback): "When an admin approves a shop, the seller
+     * learns nothing." Verifies both halves the report calls for — an
+     * in-app notification (a real `app_notifications` row, not just the
+     * admin's own Filament toast) and an email when the seller has an
+     * address.
+     */
+    public function test_verifying_a_seller_notifies_them_in_app_and_by_email(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->admin()->create();
+        $sellerUser = User::factory()->create(['email' => 'seller@example.com']);
+        $seller = SellerProfile::factory()->create(['user_id' => $sellerUser->id, 'shop_name' => 'Amina Electronics']);
+
+        $this->actingAsAdmin($admin);
+        Livewire::test(ViewSellerProfile::class, ['record' => $seller->id])->callAction('verify');
+
+        $this->assertDatabaseHas('app_notifications', ['user_id' => $sellerUser->id]);
+        Notification::assertSentTo($sellerUser, SellerVerificationNotification::class);
+    }
+
+    public function test_verifying_a_seller_with_no_email_still_notifies_in_app_only(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->admin()->create();
+        $sellerUser = User::factory()->create(['email' => null]);
+        $seller = SellerProfile::factory()->create(['user_id' => $sellerUser->id]);
+
+        $this->actingAsAdmin($admin);
+        Livewire::test(ViewSellerProfile::class, ['record' => $seller->id])->callAction('verify');
+
+        $this->assertDatabaseHas('app_notifications', ['user_id' => $sellerUser->id]);
+        Notification::assertNotSentTo($sellerUser, SellerVerificationNotification::class);
+    }
+
+    public function test_rejecting_a_seller_notifies_them_in_app_and_by_email_with_the_reason(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->admin()->create();
+        $sellerUser = User::factory()->create(['email' => 'seller@example.com']);
+        $seller = SellerProfile::factory()->create(['user_id' => $sellerUser->id]);
+
+        $this->actingAsAdmin($admin);
+        Livewire::test(ViewSellerProfile::class, ['record' => $seller->id])
+            ->callAction('reject', data: ['reason' => 'NIDA number could not be verified']);
+
+        $this->assertDatabaseHas('app_notifications', ['user_id' => $sellerUser->id]);
+        Notification::assertSentTo(
+            $sellerUser,
+            SellerVerificationNotification::class,
+            fn ($notification) => str_contains($notification->toMail($sellerUser)->introLines[1], 'NIDA number could not be verified'),
+        );
     }
 
     public function test_an_admin_can_load_the_moderation_queue(): void
