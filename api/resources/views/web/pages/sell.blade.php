@@ -18,11 +18,11 @@
     <div class="grid gap-24 sm:grid-cols-3">
         @if (app()->getLocale() === 'sw')
             <div><h2 class="font-semibold">1. Sajili duka lako</h2><p class="mt-8 text-sm text-sokoni-black/70">Jina la duka, kundi, na maelezo — dakika chache tu.</p></div>
-            <div><h2 class="font-semibold">2. Thibitishwa</h2><p class="mt-8 text-sm text-sokoni-black/70">Tuma namba yako ya NIDA na picha ya kitambulisho — ndicho msingi cha uthibitisho. Leseni ya biashara si lazima. Timu yetu inakagua kwa mikono.</p></div>
+            <div><h2 class="font-semibold">2. Thibitishwa</h2><p class="mt-8 text-sm text-sokoni-black/70">Tuma namba yako ya NIDA — ndicho msingi cha uthibitisho. Timu yetu inakagua kwa mikono.</p></div>
             <div><h2 class="font-semibold">3. Anza kuuza</h2><p class="mt-8 text-sm text-sokoni-black/70">Ongeza bidhaa na picha, pokea ujumbe na oda moja kwa moja.</p></div>
         @else
             <div><h2 class="font-semibold">1. Register your shop</h2><p class="mt-8 text-sm text-sokoni-black/70">Shop name, category, and a description — takes a few minutes.</p></div>
-            <div><h2 class="font-semibold">2. Get verified</h2><p class="mt-8 text-sm text-sokoni-black/70">Submit your NIDA number and ID photo — the basis of verification. A business licence is optional. Our team reviews it by hand.</p></div>
+            <div><h2 class="font-semibold">2. Get verified</h2><p class="mt-8 text-sm text-sokoni-black/70">Submit your NIDA number — the basis of verification. Our team reviews it by hand.</p></div>
             <div><h2 class="font-semibold">3. Start selling</h2><p class="mt-8 text-sm text-sokoni-black/70">Add products and photos, receive messages and orders directly.</p></div>
         @endif
     </div>

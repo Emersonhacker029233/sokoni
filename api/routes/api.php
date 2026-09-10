@@ -84,11 +84,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
 
-    // Seller onboarding wizard (CLAUDE.md feature 4).
+    // Seller onboarding wizard (CLAUDE.md feature 4) — now 3 steps
+    // (business, location, identity): B1/B2 (tester feedback) removed the
+    // ID photo and business licence entirely, so there's no fourth step
+    // and no /licence endpoint left to route to.
     Route::post('/sellers', [SellerProfileController::class, 'store']);
     Route::patch('/sellers/{seller}/location', [SellerProfileController::class, 'updateLocation']);
     Route::patch('/sellers/{seller}/identity', [SellerProfileController::class, 'updateIdentity']);
-    Route::patch('/sellers/{seller}/licence', [SellerProfileController::class, 'updateLicence']);
     Route::patch('/sellers/{seller}/logo', [SellerProfileController::class, 'updateLogo']);
     Route::patch('/sellers/{seller}', [SellerProfileController::class, 'update']);
     Route::get('/sellers/{seller}/dashboard', [SellerDashboardController::class, 'show']);

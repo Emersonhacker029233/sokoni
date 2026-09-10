@@ -16,9 +16,11 @@ use Illuminate\Support\Facades\Auth;
  * Section 4) — the previous implementation was `SellerProfileResource`'s
  * table (a generic filtered DataTable an admin had to click into a
  * separate view page for the evidence, see Section 1's fix). This page
- * shows every pending applicant's NIDA photo, licence, map link and
- * business details inline, oldest submission first, with the decision
- * one click away for each — nothing to navigate into.
+ * shows every pending applicant's NIDA number, map link and business
+ * details inline, oldest submission first, with the decision one click
+ * away for each — nothing to navigate into. B1/B2 (tester feedback): no
+ * NIDA photo or licence — the typed NIDA number alone is now the basis
+ * of verification.
  *
  * `SellerProfileResource` still exists (kept off the main nav — see its
  * own `shouldRegisterNavigation()`) purely so other resources

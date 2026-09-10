@@ -115,7 +115,9 @@
             </div>
         </section>
 
-        {{-- Section 3: identity --}}
+        {{-- Section 3: identity — B1 (tester feedback): the ID photo upload
+             is removed entirely. The typed NIDA number alone is the whole
+             submission, and stays required (see SellerOnboardIdentityRequest). --}}
         <section>
             <h2 class="text-h3 border-b border-sokoni-outline pb-8">{{ __('site.seller_section_identity') }}</h2>
             <div class="mt-16 space-y-16">
@@ -125,33 +127,10 @@
                     <p class="mt-4 text-xs text-sokoni-black/40">{{ __('site.seller_nida_hint') }}</p>
                     @error('nida_number') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
                 </div>
-
-                <div x-data="{ fileName: '' }">
-                    <label for="nida_image" class="text-sm font-medium">{{ __('site.seller_nida_image') }}</label>
-                    <input type="file" id="nida_image" name="nida_image" accept="image/*" required class="input-field mt-4" @change="fileName = $event.target.files[0]?.name ?? ''">
-                    <p x-show="fileName" x-cloak class="mt-4 flex items-center gap-4 text-xs text-sokoni-success">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-14 w-14"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" /></svg>
-                        <span x-text="fileName"></span>
-                    </p>
-                    @error('nida_image') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
-                </div>
             </div>
         </section>
 
-        {{-- Section 4: licence --}}
-        <section>
-            <h2 class="text-h3 border-b border-sokoni-outline pb-8">{{ __('site.seller_section_licence') }}</h2>
-            <div class="mt-16" x-data="{ fileName: '' }">
-                <label for="licence_file" class="text-sm font-medium">{{ __('site.seller_licence_file') }} <span class="font-normal text-sokoni-black/40">({{ __('site.seller_optional') }})</span></label>
-                <input type="file" id="licence_file" name="licence_file" accept="image/*,.pdf" class="input-field mt-4" @change="fileName = $event.target.files[0]?.name ?? ''">
-                <p x-show="fileName" x-cloak class="mt-4 flex items-center gap-4 text-xs text-sokoni-success">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-14 w-14"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" /></svg>
-                    <span x-text="fileName"></span>
-                </p>
-                <p class="mt-4 text-xs text-sokoni-black/40">{{ __('site.seller_licence_hint') }}</p>
-                @error('licence_file') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
-            </div>
-        </section>
+        {{-- Section 4 (business licence) removed entirely — B2, tester feedback. --}}
 
         <button type="submit" class="btn-primary w-full py-14 text-base" :disabled="submitting" :class="submitting ? 'opacity-60' : ''">
             <span x-show="!submitting">{{ __('site.seller_submit') }}</span>

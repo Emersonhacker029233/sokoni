@@ -9,15 +9,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
+// B1/B2 (tester feedback): nida_image and licence_file are deliberately
+// no longer fillable — the columns themselves stay (already-verified
+// sellers keep whatever evidence they'd uploaded; dropping the columns
+// would destroy real production data for no reason), but nothing writes
+// to them anymore. Verification is now a typed NIDA number alone.
 #[Fillable([
     'shop_name', 'logo', 'handle', 'bio', 'bio_sw', 'category_id', 'whatsapp', 'lat', 'lng',
-    'address', 'region', 'district', 'nida_number', 'nida_image',
-    'licence_file', 'show_whatsapp', 'opening_hours',
+    'address', 'region', 'district', 'nida_number', 'show_whatsapp', 'opening_hours',
 ])]
 class SellerProfile extends Model
 {
-    use HasFactory;
+    // C2 (tester feedback): a deleted user's shop must be recoverable
+    // right alongside them — see UsersTable's cascading delete action.
+    use HasFactory, SoftDeletes;
 
     /** 3-20 chars, lowercase letters/digits/underscore. */
     public const HANDLE_PATTERN = '/^[a-z0-9_]{3,20}$/';

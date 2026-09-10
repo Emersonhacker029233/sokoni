@@ -11,8 +11,8 @@ class ViewSellerProfile extends ViewRecord
 
     /**
      * Verify/reject must live here, not just on the list table — this is
-     * the page that actually shows the NIDA photo, licence and map a
-     * reviewer needs to decide (see SellerProfileInfolist). Without this,
+     * the page that actually shows the NIDA number and map a reviewer
+     * needs to decide (see SellerProfileInfolist). Without this,
      * the only page with the evidence had no way to act on it — see
      * SellerProfileResource::verifyAction()'s docblock for how this was
      * diagnosed.

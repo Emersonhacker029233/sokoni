@@ -10,16 +10,17 @@ use App\Services\Nida\NidaVerifier;
 use App\Support\TanzaniaRegions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
- * The website's equivalent of the app's 4-step seller onboarding wizard —
- * one scrollable form with the same sections instead of a step-by-step
- * flow, since a web page doesn't need the wizard pattern a small phone
- * screen does. Writes the exact same `SellerProfile` fields the app's own
- * `Api\SellerProfileController` writes, in the same order, so a profile
- * created here is indistinguishable from one created through the app.
+ * The website's equivalent of the app's 3-step seller onboarding wizard
+ * (B1/B2, tester feedback: the licence step is gone entirely, identity is
+ * now just the NIDA number) — one scrollable form with the same sections
+ * instead of a step-by-step flow, since a web page doesn't need the
+ * wizard pattern a small phone screen does. Writes the exact same
+ * `SellerProfile` fields the app's own `Api\SellerProfileController`
+ * writes, in the same order, so a profile created here is
+ * indistinguishable from one created through the app.
  */
 class SellerRegistrationController extends Controller
 {
@@ -32,7 +33,16 @@ class SellerRegistrationController extends Controller
         }
 
         return view('web.account.seller-register', [
-            'categories' => Category::where('is_active', true)->orderBy('sort_order')->get(),
+            // A6 (tester feedback): missing whereNull('parent_id') here —
+            // this form pre-dates the subcategory taxonomy and was never
+            // updated, so it showed all ~89 categories (13 top-level plus
+            // every subcategory) flat and mixed, while the product form
+            // (ShopProductsController::categoryFormData()) correctly shows
+            // only the 13 top-level ones. A shop's own category has never
+            // been meant to be a subcategory pick on any surface — matching
+            // the same fix already applied to the app's three equivalent
+            // pickers (home chips, seller onboarding, "Create an account").
+            'categories' => Category::whereNull('parent_id')->where('is_active', true)->orderBy('sort_order')->get(),
             'regions' => TanzaniaRegions::options(),
             'title' => __('site.seller_register_title'),
         ]);
@@ -62,14 +72,6 @@ class SellerRegistrationController extends Controller
             }
         }
 
-        $nidaImagePath = $request->file('nida_image')->store('sellers/nida', 'public');
-        // Optional (NIDA-only verification, client request) — NIDA is the
-        // actual basis of verification; the licence is an optional extra,
-        // never required to submit for review.
-        $licenceFilePath = $request->hasFile('licence_file')
-            ? $request->file('licence_file')->store('sellers/licences', 'public')
-            : null;
-
         $seller = Auth::user()->sellerProfile()->create([
             'shop_name' => $data['shop_name'],
             'handle' => $data['handle'],
@@ -82,14 +84,12 @@ class SellerRegistrationController extends Controller
             'region' => $data['region'],
             'district' => $data['district'],
             'nida_number' => $data['nida_number'],
-            'nida_image' => $nidaImagePath,
-            'licence_file' => $licenceFilePath,
         ]);
 
         // MOCK: see ManualReviewNidaVerifier — real verification is manual,
         // via the Filament seller queue. This just confirms receipt,
-        // exactly as the app's own onboarding step 3 does.
-        $this->nidaVerifier->submit($data['nida_number'], $nidaImagePath);
+        // exactly as the app's own onboarding identity step does.
+        $this->nidaVerifier->submit($data['nida_number']);
 
         return redirect()->route('web.account.shop')->with('status', __('site.seller_register_submitted'));
     }

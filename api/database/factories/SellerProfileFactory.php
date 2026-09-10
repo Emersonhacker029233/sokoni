@@ -39,9 +39,9 @@ class SellerProfileFactory extends Factory
             'address' => fake()->streetAddress(),
             'region' => 'Dar es Salaam',
             'district' => $district,
+            // B1/B2 (tester feedback): no nida_image/licence_file — the
+            // typed NIDA number alone is the whole basis of verification.
             'nida_number' => fake()->numerify('####################'),
-            'nida_image' => 'seed/nida/'.fake()->uuid().'.jpg',
-            'licence_file' => 'seed/licences/'.fake()->uuid().'.pdf',
             'status' => 'pending',
             'show_whatsapp' => true,
         ];
@@ -60,7 +60,7 @@ class SellerProfileFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'status' => 'rejected',
             'rejection_reason' => fake()->randomElement([
-                'ID photo unreadable', 'NIDA number does not match name', 'Licence document expired',
+                'NIDA number does not match name', 'NIDA number could not be verified', 'Shop details incomplete',
             ]),
         ]);
     }

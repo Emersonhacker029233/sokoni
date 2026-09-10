@@ -195,7 +195,7 @@ class DemoSeeder extends Seeder
             'bio_en' => 'Mattresses and bedroom comfort items for every budget.',
             'bio_sw' => 'Magodoro na vifaa vya starehe vya chumba cha kulala kwa bajeti yoyote.',
             'status' => 'rejected',
-            'rejection_reason' => 'Business licence photo was unreadable — please resubmit a clearer copy.',
+            'rejection_reason' => 'NIDA number could not be verified — please double check and resubmit.',
             'hours' => ['open' => '08:00', 'close' => '19:00', 'sunday' => null],
         ],
     ];
@@ -436,9 +436,9 @@ class DemoSeeder extends Seeder
                 'address' => $shop['address'],
                 'region' => 'Dar es Salaam',
                 'district' => $shop['district'],
+                // B1/B2 (tester feedback): no nida_image/licence_file — the
+                // typed NIDA number alone is the whole basis of verification.
                 'nida_number' => str_pad((string) crc32($shop['handle']), 20, '0', STR_PAD_LEFT),
-                'nida_image' => 'demo/nida/'.$shop['handle'].'.jpg',
-                'licence_file' => 'demo/licences/'.$shop['handle'].'.pdf',
                 'status' => $shop['status'],
                 'rejection_reason' => $shop['rejection_reason'] ?? null,
                 'verified_at' => $shop['status'] === 'verified' ? now() : null,

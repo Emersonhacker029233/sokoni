@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SellerOnboardBusinessRequest;
 use App\Http\Requests\SellerOnboardIdentityRequest;
-use App\Http\Requests\SellerOnboardLicenceRequest;
 use App\Http\Requests\SellerOnboardLocationRequest;
 use App\Http\Requests\SellerProfileUpdateRequest;
 use App\Http\Requests\UpdateSellerLogoRequest;
@@ -85,32 +84,19 @@ class SellerProfileController extends Controller
         return new SellerProfileResource($seller->load('category'));
     }
 
-    /** Step 3: NIDA number + ID photo. */
+    /**
+     * Onboarding's final step: the NIDA number alone (B1, tester feedback —
+     * the ID photo upload is removed entirely; the typed number is the
+     * whole submission and stays required, the actual basis a human
+     * reviewer checks against in the Filament seller queue).
+     */
     public function updateIdentity(SellerOnboardIdentityRequest $request, SellerProfile $seller): SellerProfileResource
     {
-        $path = $request->file('nida_image')->store('sellers/nida', 'public');
-        $seller->update(['nida_number' => $request->string('nida_number'), 'nida_image' => $path]);
+        $seller->update(['nida_number' => $request->string('nida_number')]);
 
         // MOCK: see ManualReviewNidaVerifier — real verification is manual,
         // via the Filament seller queue. This just confirms receipt.
-        $this->nidaVerifier->submit($request->string('nida_number'), $path);
-
-        return new SellerProfileResource($seller->load('category'));
-    }
-
-    /**
-     * Step 4: business/trading licence — optional (NIDA-only verification,
-     * client request). Step 3's NIDA submission is what actually queues a
-     * seller for manual review (see updateIdentity() above); this step
-     * just attaches an optional extra document if the seller has one, and
-     * is safe to skip (no file, no-op) without blocking verification.
-     */
-    public function updateLicence(SellerOnboardLicenceRequest $request, SellerProfile $seller): SellerProfileResource
-    {
-        if ($request->hasFile('licence_file')) {
-            $path = $request->file('licence_file')->store('sellers/licences', 'public');
-            $seller->update(['licence_file' => $path]);
-        }
+        $this->nidaVerifier->submit($request->string('nida_number'));
 
         return new SellerProfileResource($seller->load('category'));
     }

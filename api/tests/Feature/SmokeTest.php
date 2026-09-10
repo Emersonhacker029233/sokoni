@@ -10,7 +10,6 @@ use App\Models\Review;
 use App\Models\SellerProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -94,10 +93,6 @@ class SmokeTest extends TestCase
         $this->patchJson("/api/sellers/{$mySeller->id}", ['bio' => 'Updated bio'])->assertOk();
         $this->patchJson("/api/sellers/{$mySeller->id}/identity", [
             'nida_number' => str_repeat('1', 20),
-            'nida_image' => UploadedFile::fake()->image('nida.jpg'),
-        ])->assertOk();
-        $this->patchJson("/api/sellers/{$mySeller->id}/licence", [
-            'licence_file' => UploadedFile::fake()->create('licence.pdf', 100, 'application/pdf'),
         ])->assertOk();
 
         $this->postJson('/api/products', [
