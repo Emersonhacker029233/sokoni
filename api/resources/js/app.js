@@ -7,6 +7,107 @@ import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
 /**
+ * A4 (tester feedback): a single site-wide unread-message poll, shared
+ * between the desktop header's Chats badge and the mobile bottom nav's
+ * own badge (both bind to $store.messages.count) plus a toast — none of
+ * this existed before at all; the badge was a static per-page-load number
+ * that only ever rendered in the mobile bottom nav's own markup, so it
+ * simply never appeared on desktop, and neither surface ever updated
+ * without a full navigation. Deliberately a slower cadence than an open
+ * thread's own 5s poll (MessagesController::poll()) — that runs only
+ * while one specific thread is open; this runs on every signed-in page
+ * load site-wide, so 5s here would be needless load on shared hosting for
+ * comparatively little benefit.
+ */
+Alpine.store('messages', { count: 0 });
+
+Alpine.data('messageNotifier', (initialCount, pollUrl, chatsUrl, isSignedIn) => ({
+    toast: null,
+    toastHref: chatsUrl,
+    toastTimer: null,
+
+    init() {
+        Alpine.store('messages').count = initialCount;
+        if (!isSignedIn) return;
+        setInterval(() => this.poll(), 20000);
+    },
+
+    poll() {
+        fetch(pollUrl, { headers: { Accept: 'application/json' } })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => {
+                if (!data) return;
+                if (data.count > Alpine.store('messages').count) this.showToast();
+                Alpine.store('messages').count = data.count;
+            })
+            .catch(() => { /* a missed poll just waits for the next tick — never worth surfacing as an error */ });
+    },
+
+    showToast() {
+        clearTimeout(this.toastTimer);
+        this.toast = 'You have a new message';
+        this.toastTimer = setTimeout(() => { this.toast = null; }, 5000);
+    },
+}));
+
+/**
+ * B3 (tester feedback): the header's notification bell — new orders,
+ * order status changes, and new messages were already being written to
+ * `app_notifications` (PushNotifier/LogPushNotifier::notify() has always
+ * persisted every one of those, on both the API and the website's own
+ * MessagesController), the website just had nowhere to show any of it.
+ * Same 20s poll cadence as messageNotifier, but the list itself is only
+ * fetched lazily when the dropdown actually opens — no point paying for
+ * a full notifications fetch on every page load just to show a count.
+ */
+Alpine.data('notificationBell', (initialCount, unreadCountUrl, recentUrl, markAllReadUrl, isSignedIn) => ({
+    count: initialCount,
+    open: false,
+    loading: false,
+    notifications: [],
+    loadedOnce: false,
+
+    init() {
+        if (!isSignedIn) return;
+        setInterval(() => this.pollCount(), 20000);
+    },
+
+    pollCount() {
+        fetch(unreadCountUrl, { headers: { Accept: 'application/json' } })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => { if (data) this.count = data.count; })
+            .catch(() => { /* a missed poll just waits for the next tick */ });
+    },
+
+    toggle() {
+        this.open = !this.open;
+        if (this.open && !this.loadedOnce) this.loadRecent();
+    },
+
+    loadRecent() {
+        this.loading = true;
+        fetch(recentUrl, { headers: { Accept: 'application/json' } })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => {
+                if (data) {
+                    this.notifications = data.notifications;
+                    this.loadedOnce = true;
+                }
+            })
+            .finally(() => { this.loading = false; });
+    },
+
+    markAllRead() {
+        this.count = 0;
+        this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
+        fetch(markAllReadUrl, {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+        }).catch(() => { /* the next full page load will reconcile the true count regardless */ });
+    },
+}));
+
+/**
  * The header's mega menu (noon.com pattern) — a 150ms delay before opening
  * on hover so a cursor merely passing over the category bar never fires
  * it, and a matching close delay so moving from the trigger link down into
@@ -150,6 +251,7 @@ Alpine.data('sellerLocationPicker', (regions) => ({
 Alpine.data('shopLogoUploader', (sellerId, currentLogoUrl) => ({
     logoUrl: currentLogoUrl,
     uploading: false,
+    progress: 0,
     error: null,
     csrf: document.querySelector('meta[name="csrf-token"]')?.content ?? '',
 
@@ -164,6 +266,7 @@ Alpine.data('shopLogoUploader', (sellerId, currentLogoUrl) => ({
 
         this.error = null;
         this.uploading = true;
+        this.progress = 0;
         const previousUrl = this.logoUrl;
         this.logoUrl = URL.createObjectURL(file);
 
@@ -218,10 +321,14 @@ Alpine.data('shopLogoUploader', (sellerId, currentLogoUrl) => ({
             xhr.open('POST', `/account/shop/${sellerId}/logo`);
             xhr.setRequestHeader('X-CSRF-TOKEN', this.csrf);
             xhr.setRequestHeader('Accept', 'application/json');
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) this.progress = Math.round((e.loaded / e.total) * 100);
+            };
             xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     const data = JSON.parse(xhr.responseText);
                     this.logoUrl = data.logo;
+                    this.progress = 100;
                     resolve();
                 } else {
                     let message = 'Upload failed.';

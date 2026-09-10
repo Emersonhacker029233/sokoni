@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\Account\MessagesController;
+use App\Http\Controllers\Web\Account\NotificationsController;
 use App\Http\Controllers\Web\Account\OrdersController;
 use App\Http\Controllers\Web\Account\ReportController;
 use App\Http\Controllers\Web\Account\SavedController;
@@ -117,9 +118,18 @@ Route::middleware(['auth:web', 'web.onboarded'])->group(function () {
     // "start" is captured by {conversation}'s route-model binding as a
     // literal id lookup and 404s before this action is ever reached.
     Route::post('/account/messages/start', [MessagesController::class, 'start'])->name('web.account.messages.start');
+    Route::get('/account/messages/unread-count', [MessagesController::class, 'unreadCount'])->name('web.account.messages.unread-count');
     Route::get('/account/messages/{conversation}', [MessagesController::class, 'show'])->name('web.account.messages.show');
     Route::post('/account/messages/{conversation}', [MessagesController::class, 'store'])->name('web.account.messages.store');
     Route::get('/account/messages/{conversation}/poll', [MessagesController::class, 'poll'])->name('web.account.messages.poll');
+
+    // B3 (tester feedback): the website's own notifications bell — see
+    // NotificationsController's docblock.
+    Route::get('/account/notifications', [NotificationsController::class, 'index'])->name('web.account.notifications');
+    Route::get('/account/notifications/unread-count', [NotificationsController::class, 'unreadCount'])->name('web.account.notifications.unread-count');
+    Route::get('/account/notifications/recent', [NotificationsController::class, 'recent'])->name('web.account.notifications.recent');
+    Route::post('/account/notifications/read-all', [NotificationsController::class, 'markAllRead'])->name('web.account.notifications.read-all');
+    Route::post('/account/notifications/{notification}/read', [NotificationsController::class, 'markRead'])->name('web.account.notifications.read');
 
     Route::get('/account/settings', [SettingsController::class, 'edit'])->name('web.account.settings');
     Route::post('/account/settings', [SettingsController::class, 'update'])->name('web.account.settings.update');

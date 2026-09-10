@@ -101,9 +101,18 @@ class AppServiceProvider extends ServiceProvider
         // The mobile bottom nav's unread badge on Chats — only worth
         // querying for a signed-in visitor, never for the vastly more
         // common signed-out page view.
-        View::composer(['partials.header', 'partials.bottom-nav'], function ($view) {
+        View::composer(['partials.header', 'partials.bottom-nav', 'layouts.app'], function ($view) {
             $user = auth('web')->user();
             $view->with('unreadMessagesCount', $user ? \App\Support\UnreadMessages::countFor($user) : 0);
+        });
+
+        // B3 (tester feedback): the header notification bell's initial
+        // count — same signed-in-only reasoning as unreadMessagesCount
+        // above, and the same "server-rendered initial value, then live
+        // polling takes over" pattern (see Alpine.data('notificationBell')).
+        View::composer(['partials.header', 'layouts.app'], function ($view) {
+            $user = auth('web')->user();
+            $view->with('unreadNotificationsCount', $user ? $user->appNotifications()->unread()->count() : 0);
         });
 
         Paginator::defaultView('vendor.pagination.sokoni');

@@ -5,6 +5,7 @@
     <a href="{{ route('web.account.orders') }}" class="chip {{ request()->routeIs('web.account.orders*') ? 'chip-active' : '' }}">{{ __('site.account_orders') }}</a>
     <a href="{{ route('web.account.saved') }}" class="chip {{ request()->routeIs('web.account.saved') ? 'chip-active' : '' }}">{{ __('site.account_saved') }}</a>
     <a href="{{ route('web.account.messages') }}" class="chip {{ request()->routeIs('web.account.messages*') ? 'chip-active' : '' }}">{{ __('site.account_messages') }}</a>
+    <a href="{{ route('web.account.notifications') }}" class="chip {{ request()->routeIs('web.account.notifications') ? 'chip-active' : '' }}">{{ __('site.account_notifications') }}</a>
     @if ($user->isSeller())
         <a href="{{ route('web.account.shop') }}" class="chip {{ request()->routeIs('web.account.shop*') ? 'chip-active' : '' }}">{{ __('site.account_shop') }}</a>
     @else

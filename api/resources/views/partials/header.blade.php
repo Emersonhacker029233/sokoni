@@ -37,8 +37,20 @@
                     ['route' => 'web.chats', 'pattern' => 'web.chats*|web.account.messages*', 'label' => __('site.nav_chats')],
                     ['route' => 'web.profile', 'pattern' => 'web.profile*|web.account.dashboard|web.account.orders*|web.account.saved|web.account.settings|web.account.shop*', 'label' => __('site.nav_profile')],
                 ] as $item)
-                    <a href="{{ route($item['route']) }}" class="rounded-chip px-12 py-8 text-sm font-medium {{ request()->routeIs(...explode('|', $item['pattern'])) ? 'text-sokoni-black font-semibold' : 'text-sokoni-black/60 hover:text-sokoni-black' }}">
+                    <a href="{{ route($item['route']) }}" class="relative rounded-chip px-12 py-8 text-sm font-medium {{ request()->routeIs(...explode('|', $item['pattern'])) ? 'text-sokoni-black font-semibold' : 'text-sokoni-black/60 hover:text-sokoni-black' }}">
                         {{ $item['label'] }}
+                        {{-- A4 (tester feedback): the unread badge only ever
+                             existed on the mobile bottom nav — this desktop
+                             Chats link never had one at all. Same shared
+                             live $store.messages count as the mobile badge. --}}
+                        @if ($item['route'] === 'web.chats')
+                            <span
+                                x-show="$store.messages.count > 0"
+                                x-text="$store.messages.count > 9 ? '9+' : $store.messages.count"
+                                style="display: {{ ($unreadMessagesCount ?? 0) > 0 ? 'inline-flex' : 'none' }}"
+                                class="ml-4 inline-flex h-16 min-w-16 items-center justify-center rounded-full bg-sokoni-danger px-4 align-middle text-[10px] font-semibold text-white"
+                            >{{ ($unreadMessagesCount ?? 0) > 9 ? '9+' : $unreadMessagesCount }}</span>
+                        @endif
                     </a>
                 @endforeach
             </nav>
@@ -68,6 +80,71 @@
             </form>
 
             <div class="ml-auto flex items-center gap-8">
+                {{-- B3 (tester feedback): the notifications bell — new order/
+                     order-status/message notifications were already being
+                     written to app_notifications, this is just the first
+                     place on the website that shows any of it. Signed-in
+                     only, same reasoning as the Chats badge above. --}}
+                @auth('web')
+                    <div
+                        class="relative"
+                        x-data="notificationBell(
+                            {{ (int) ($unreadNotificationsCount ?? 0) }},
+                            '{{ route('web.account.notifications.unread-count') }}',
+                            '{{ route('web.account.notifications.recent') }}',
+                            '{{ route('web.account.notifications.read-all') }}',
+                            true
+                        )"
+                    >
+                        <button
+                            type="button"
+                            @click="toggle()"
+                            @click.outside="open = false"
+                            class="relative flex min-h-44 min-w-44 items-center justify-center rounded-chip hover:bg-sokoni-surface-alt"
+                            :aria-expanded="open"
+                            aria-haspopup="true"
+                            aria-label="{{ __('site.notifications_title') }}"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="h-22 w-22">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                            </svg>
+                            <span
+                                x-show="count > 0"
+                                x-text="count > 9 ? '9+' : count"
+                                style="display: {{ ($unreadNotificationsCount ?? 0) > 0 ? 'inline-flex' : 'none' }}"
+                                class="absolute right-4 top-4 inline-flex h-16 min-w-16 items-center justify-center rounded-full bg-sokoni-danger px-4 text-[10px] font-semibold text-white"
+                            >{{ ($unreadNotificationsCount ?? 0) > 9 ? '9+' : ($unreadNotificationsCount ?? 0) }}</span>
+                        </button>
+                        <div
+                            x-show="open"
+                            x-cloak
+                            x-transition
+                            class="absolute right-0 top-full z-50 mt-4 w-320 overflow-hidden rounded-chip border border-sokoni-outline bg-white shadow-md"
+                        >
+                            <div class="flex items-center justify-between border-b border-sokoni-outline px-16 py-10">
+                                <span class="text-sm font-semibold">{{ __('site.notifications_title') }}</span>
+                                <button type="button" @click="markAllRead()" x-show="count > 0" class="text-xs font-medium text-sokoni-black/60 hover:text-sokoni-black">{{ __('site.notifications_mark_all_read') }}</button>
+                            </div>
+                            <div class="max-h-320 overflow-y-auto">
+                                <template x-if="loading">
+                                    <p class="px-16 py-24 text-center text-sm text-sokoni-black/40">{{ __('site.notifications_loading') }}</p>
+                                </template>
+                                <template x-if="!loading && loadedOnce && notifications.length === 0">
+                                    <p class="px-16 py-24 text-center text-sm text-sokoni-black/40">{{ __('site.notifications_empty') }}</p>
+                                </template>
+                                <template x-for="notification in notifications" :key="notification.id">
+                                    <div class="border-b border-sokoni-outline px-16 py-10 last:border-b-0" :class="!notification.read ? 'bg-sokoni-yellow/5' : ''">
+                                        <p class="text-sm font-medium" x-text="notification.title"></p>
+                                        <p class="mt-2 text-xs text-sokoni-black/60" x-text="notification.body"></p>
+                                        <p class="mt-4 text-[11px] text-sokoni-black/40" x-text="notification.created_at"></p>
+                                    </div>
+                                </template>
+                            </div>
+                            <a href="{{ route('web.account.notifications') }}" class="block border-t border-sokoni-outline px-16 py-10 text-center text-xs font-medium text-sokoni-black/60 hover:bg-sokoni-surface-alt">{{ __('site.notifications_view_all') }}</a>
+                        </div>
+                    </div>
+                @endauth
+
                 {{-- Language dropdown — globe icon, current language, a panel on click. Language only; see DECISIONS.md for why there's deliberately no currency switcher next to it. --}}
                 <div class="relative hidden sm:block" x-data="{ langOpen: false }">
                     <button
