@@ -124,14 +124,16 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  # Icon-only crop of the lockup (bag+S mark, no "Sokoni" wordmark) — the
-  # full lockup's wordmark becomes illegible at launcher-icon sizes and gets
-  # clipped by the adaptive-icon mask's safe zone. See DECISIONS.md for how
-  # this was cropped from sokoni_logo.png.
-  image_path: "assets/brand/sokoni_logo_icon.png"
+  # D6 (tester feedback): new app icon art, composited onto a solid
+  # 1080x1080 white canvas (matching the previous sokoni_logo_icon.png
+  # source exactly — the glyph's black fill is the S-cutout's own outline
+  # stroke, not just background, so it only reads correctly against a
+  # light backdrop) from the transparent, non-square (130x170) export it
+  # arrived as. See DECISIONS.md.
+  image_path: "assets/brand/app_icon.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#0A0A0A"
-  adaptive_icon_foreground: "assets/brand/sokoni_logo_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/brand/app_icon.png"
   remove_alpha_ios: true
 
 flutter_native_splash:

@@ -161,12 +161,19 @@ class DiagnosticMainActivity : Activity() {
     }
 
     /**
-     * Order matters: everything low-suspicion first, the eight named
-     * suspects last — geolocator, google_maps_flutter,
-     * flutter_secure_storage, video_compress, firebase_core,
-     * firebase_messaging, google_sign_in, sign_in_with_apple. Class names
-     * copied from the generated `GeneratedPluginRegistrant.java` (do not
-     * edit that file directly — it's regenerated on every build).
+     * Order matters: everything low-suspicion first, the named suspects
+     * last — geolocator, flutter_secure_storage, video_compress,
+     * firebase_core, firebase_messaging, google_sign_in,
+     * sign_in_with_apple. Class names copied from the generated
+     * `GeneratedPluginRegistrant.java` (do not edit that file directly —
+     * it's regenerated on every build).
+     *
+     * `google_maps_flutter` was on this list at the time of the original
+     * investigation but was removed from the project entirely in a later
+     * round (replaced with `flutter_map`, tester feedback B3 — see
+     * DECISIONS.md) — its plugin class no longer exists in the dependency
+     * tree at all, so the reference here was dropped rather than left as
+     * dead code that breaks every build of this flavour.
      */
     private fun buildStepList(): List<Pair<String, () -> FlutterPlugin>> {
         return listOf(
@@ -186,7 +193,6 @@ class DiagnosticMainActivity : Activity() {
             "wakelock_plus" to { dev.fluttercommunity.plus.wakelock.WakelockPlusPlugin() },
             // Named suspects, deliberately last.
             "geolocator_android" to { com.baseflow.geolocator.GeolocatorPlugin() },
-            "google_maps_flutter_android" to { io.flutter.plugins.googlemaps.GoogleMapsPlugin() },
             "flutter_secure_storage" to { com.it_nomads.fluttersecurestorage.FlutterSecureStoragePlugin() },
             "video_compress" to { com.example.video_compress.VideoCompressPlugin() },
             "firebase_core" to { io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin() },
