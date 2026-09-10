@@ -43,7 +43,7 @@ You may browse Sokoni without an account. Creating an account (via phone number,
 Sokoni is a marketplace connecting buyers and sellers — we are not a party to the sale itself. Orders, pricing, delivery and payment terms are agreed between you and the seller. Payment on the platform today is cash on delivery or pay on pickup only.
 
 4. Selling on Sokoni
-To sell, you must complete seller registration, including providing a valid NIDA (National Identification Authority) number and a photo of your ID, plus a business or trading licence. This information is used solely for manual identity and business verification by our team and is never shown publicly. Submitting false or fraudulent identity or licence information will result in account suspension or termination.
+To sell, you must complete seller registration, including providing a valid NIDA (National Identification Authority) number. This information is used solely for manual identity verification by our team and is never shown publicly. Submitting false or fraudulent identity information will result in account suspension or termination.
 
 Your shop and products may be visible to buyers once your account is verified. Until verification, your products remain hidden from public search and browsing, though you may continue building your shop.
 
@@ -89,7 +89,7 @@ Unaweza kutazama Sokoni bila akaunti. Kufungua akaunti (kwa nambari ya simu, Goo
 Sokoni ni soko linalounganisha wanunuzi na wauzaji — sisi si sehemu ya mauzo yenyewe. Oda, bei, uwasilishaji na masharti ya malipo hukubaliwa kati yako na muuzaji. Malipo kwa sasa ni malipo baada ya kuletewa au wakati wa kuchukua pekee.
 
 4. Kuuza kwenye Sokoni
-Ili kuuza, lazima ukamilishe usajili wa muuzaji, ukiwemo kutoa namba halali ya NIDA na picha ya kitambulisho chako, pamoja na leseni ya biashara. Taarifa hii hutumika tu kwa uthibitishaji wa kibinafsi na timu yetu na haionyeshwi hadharani. Kuwasilisha taarifa za uongo za utambulisho au leseni kutasababisha kusimamishwa au kufutwa kwa akaunti.
+Ili kuuza, lazima ukamilishe usajili wa muuzaji, ukiwemo kutoa namba halali ya NIDA. Taarifa hii hutumika tu kwa uthibitishaji wa kibinafsi na timu yetu na haionyeshwi hadharani. Kuwasilisha taarifa za uongo za utambulisho kutasababisha kusimamishwa au kufutwa kwa akaunti.
 
 Duka na bidhaa zako zinaweza kuonekana kwa wanunuzi mara akaunti yako itakapothibitishwa. Kabla ya uthibitisho, bidhaa zako hazitaonekana kwenye utafutaji wa hadharani, ingawa unaweza kuendelea kujenga duka lako.
 

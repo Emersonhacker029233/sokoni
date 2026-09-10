@@ -78,24 +78,16 @@ class SellerRepository {
     }
   }
 
-  /// Onboarding step 3: NIDA number + ID photo (already compressed by the
-  /// caller — see NidaPhotoPicker).
+  /// Onboarding step 3 (final step — B1/B2, tester feedback: no ID photo,
+  /// no licence step after this): the typed NIDA number alone.
   Future<SellerProfile> submitIdentity({
     required int sellerId,
     required String nidaNumber,
-    required String nidaImagePath,
   }) async {
     try {
-      // Laravel method-spoofing: PHP doesn't parse multipart bodies on
-      // PUT/PATCH requests, so this must be a real POST with a `_method`
-      // field telling the framework to treat it as PATCH.
-      final response = await _dio.post(
+      final response = await _dio.patch(
         '/sellers/$sellerId/identity',
-        data: FormData.fromMap({
-          '_method': 'PATCH',
-          'nida_number': nidaNumber,
-          'nida_image': await MultipartFile.fromFile(nidaImagePath),
-        }),
+        data: {'nida_number': nidaNumber},
       );
       return SellerProfile.fromJson((response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {
@@ -173,24 +165,4 @@ class SellerRepository {
     }
   }
 
-  /// Onboarding step 4: business/trading licence (image or PDF). Optional —
-  /// NIDA (step 3) is the actual basis of verification, so a null
-  /// [licenceFilePath] simply advances the wizard with nothing attached.
-  Future<SellerProfile> submitLicence({
-    required int sellerId,
-    String? licenceFilePath,
-  }) async {
-    try {
-      final response = await _dio.post(
-        '/sellers/$sellerId/licence',
-        data: FormData.fromMap({
-          '_method': 'PATCH',
-          if (licenceFilePath != null) 'licence_file': await MultipartFile.fromFile(licenceFilePath),
-        }),
-      );
-      return SellerProfile.fromJson((response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>);
-    } catch (e) {
-      throw mapDioError(e);
-    }
-  }
 }

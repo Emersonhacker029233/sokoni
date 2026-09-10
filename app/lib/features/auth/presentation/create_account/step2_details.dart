@@ -29,12 +29,11 @@ enum _CheckStatus { idle, checking, ok, problem, unknown }
 const _checkTimeout = Duration(seconds: 6);
 
 /// Step 2 — buyer: full name + phone, that's all. Seller: the same, plus
-/// shop name/handle/category/region/district/address/WhatsApp — NIDA and
-/// the business licence are deliberately not asked for here (CLAUDE.md
-/// restructure, 2026-08-25: identity documents belong in a separate
-/// "verify your shop" step *after* the account exists, reusing the
-/// existing onboarding wizard's Identity/Licence steps — see
-/// `CreateAccountController.submit()`).
+/// shop name/handle/category/region/district/address/WhatsApp — the NIDA
+/// number is deliberately not asked for here (CLAUDE.md restructure,
+/// 2026-08-25: identity verification belongs in a separate "verify your
+/// shop" step *after* the account exists, reusing the existing onboarding
+/// wizard's Identity step — see `CreateAccountController.submit()`).
 ///
 /// Validates as it goes, not at the end: the phone number and (for a
 /// seller) the handle are checked against the server the moment their

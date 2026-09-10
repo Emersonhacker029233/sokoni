@@ -13,12 +13,13 @@ import 'onboarding_pending_screen.dart';
 import 'step1_business.dart';
 import 'step2_location.dart';
 import 'step3_identity.dart';
-import 'step4_licence.dart';
 
-/// 4-step seller onboarding wizard with a progress bar and saved drafts
-/// (CLAUDE.md feature 4). Draft persistence is the server record itself:
-/// each step PATCHes the SellerProfile created in step 1, so resuming after
-/// the app is killed just means re-entering at the right step — see
+/// 3-step seller onboarding wizard with a progress bar and saved drafts
+/// (CLAUDE.md feature 4; B1/B2 tester feedback removed the 4th "licence"
+/// step entirely — identity is now just the NIDA number). Draft
+/// persistence is the server record itself: each step PATCHes the
+/// SellerProfile created in step 1, so resuming after the app is killed
+/// just means re-entering at the right step — see
 /// SellerOnboardingController's docs.
 class SellerOnboardingScreen extends ConsumerStatefulWidget {
   const SellerOnboardingScreen({super.key});
@@ -61,7 +62,7 @@ class _SellerOnboardingScreenState extends ConsumerState<SellerOnboardingScreen>
         data: (draft) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_pageController.hasClients && _pageController.page?.round() != draft.step) {
-              _goToStep(draft.step.clamp(0, 4));
+              _goToStep(draft.step.clamp(0, 2));
             }
           });
 
@@ -90,13 +91,6 @@ class _SellerOnboardingScreenState extends ConsumerState<SellerOnboardingScreen>
                       },
                     ),
                     OnboardingStep3Identity(
-                      sellerId: draft.sellerId ?? _seller?.id,
-                      onSubmitted: (seller) {
-                        setState(() => _seller = seller);
-                        _goToStep(3);
-                      },
-                    ),
-                    OnboardingStep4Licence(
                       sellerId: draft.sellerId ?? _seller?.id,
                       onSubmitted: (seller) async {
                         await ref.read(sellerOnboardingProvider.notifier).complete();
@@ -130,7 +124,6 @@ class _ProgressBar extends StatelessWidget {
       l10n.onboardingStepBusiness,
       l10n.onboardingStepLocation,
       l10n.onboardingStepIdentity,
-      l10n.onboardingStepLicence,
     ];
 
     return Row(

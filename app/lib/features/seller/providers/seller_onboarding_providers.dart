@@ -90,26 +90,16 @@ class SellerOnboardingController extends AsyncNotifier<OnboardingDraft> {
     }
   }
 
+  /// B1/B2 (tester feedback): the typed NIDA number alone is the whole
+  /// submission — no ID photo, and this is now the wizard's final step.
   Future<SellerProfile> submitIdentity({
     required int sellerId,
     required String nidaNumber,
-    required String nidaImagePath,
   }) async {
     final seller = await ref
         .read(sellerRepositoryProvider)
-        .submitIdentity(sellerId: sellerId, nidaNumber: nidaNumber, nidaImagePath: nidaImagePath);
-    await _persist(OnboardingDraft(sellerId: sellerId, step: 3));
-    return seller;
-  }
-
-  Future<SellerProfile> submitLicence({
-    required int sellerId,
-    String? licenceFilePath,
-  }) async {
-    final seller = await ref
-        .read(sellerRepositoryProvider)
-        .submitLicence(sellerId: sellerId, licenceFilePath: licenceFilePath);
-    await _persist(OnboardingDraft(sellerId: sellerId, step: 4));
+        .submitIdentity(sellerId: sellerId, nidaNumber: nidaNumber);
+    await _persist(OnboardingDraft(sellerId: sellerId, step: 2));
     return seller;
   }
 

@@ -29,7 +29,7 @@ Last updated: 2026
 
 1. What we collect
 Account: name, phone number or email, and profile photo, from you directly or from Google/Apple when you sign in that way.
-Seller verification: NIDA number, a photo of your national ID, and your business/trading licence — used only by our verification team, never shown publicly.
+Seller verification: your NIDA number — used only by our verification team, never shown publicly.
 Location: your device's approximate or precise location, if you grant permission, used to show nearby sellers and products. You can decline and pick a region/district manually instead.
 Usage: products you view or favourite, orders you place, messages you send, and reviews you leave.
 Device: a push-notification token, so we can notify you about orders and messages.
@@ -40,8 +40,8 @@ To operate the marketplace — showing you relevant products/sellers, processing
 3. Who we share it with
 Other users see what you'd expect from a marketplace: your name and photo on your reviews and messages, your shop details if you're a seller. We do not sell your personal data. We share data with service providers who help us operate Sokoni (e.g. hosting, push notifications), under confidentiality obligations, and with authorities when legally required.
 
-4. Your identity documents
-NIDA numbers and ID photos are collected solely to verify that a seller is a real, identifiable person or business, as a defence against fraudulent shops. This data is visible only to our verification team and is never exposed through the app's public API or shown to other users.
+4. Your NIDA number
+NIDA numbers are collected solely to verify that a seller is a real, identifiable person or business, as a defence against fraudulent shops. This data is visible only to our verification team and is never exposed through the app's public API or shown to other users.
 
 5. Your choices
 You can decline location access at any time — Sokoni falls back to manual area selection. You can request a copy of your data or ask us to delete your account by contacting support@sokoni.co.tz. Deleting your account removes your personal data, though some records (like completed orders) may be retained where required by law.
@@ -66,7 +66,7 @@ Ilisasishwa mwisho: 2026
 
 1. Tunachokusanya
 Akaunti: jina, nambari ya simu au barua pepe, na picha ya wasifu, kutoka kwako moja kwa moja au kutoka Google/Apple ukijisajili kwa njia hiyo.
-Uthibitisho wa muuzaji: namba ya NIDA, picha ya kitambulisho cha taifa, na leseni yako ya biashara — hutumika tu na timu yetu ya uthibitisho, haionyeshwi hadharani.
+Uthibitisho wa muuzaji: namba ya NIDA — hutumika tu na timu yetu ya uthibitisho, haionyeshwi hadharani.
 Mahali: mahali pa kifaa chako, kwa ridhaa yako, hutumika kuonyesha wauzaji na bidhaa za karibu. Unaweza kukataa na kuchagua mkoa/wilaya kwa mkono badala yake.
 Matumizi: bidhaa unazotazama au kupenda, oda unazoweka, ujumbe unaotuma, na maoni unayotoa.
 Kifaa: alama ya arifa za push, ili tuweze kukujulisha kuhusu oda na ujumbe.
@@ -77,8 +77,8 @@ Kuendesha soko — kukuonyesha bidhaa/wauzaji husika, kuchakata oda, kuwezesha m
 3. Tunashiriki na nani
 Watumiaji wengine wanaona kile unachotarajia kutoka soko: jina lako na picha kwenye maoni na ujumbe wako, maelezo ya duka lako ikiwa wewe ni muuzaji. Hatuuzi taarifa zako binafsi. Tunashiriki taarifa na watoa huduma wanaotusaidia kuendesha Sokoni (mfano, uhifadhi, arifa za push), chini ya wajibu wa usiri, na na mamlaka pale inapohitajika kisheria.
 
-4. Hati zako za utambulisho
-Namba za NIDA na picha za kitambulisho hukusanywa tu kuthibitisha kuwa muuzaji ni mtu au biashara halisi, kama ulinzi dhidi ya maduka ya udanganyifu. Taarifa hii inaonekana tu kwa timu yetu ya uthibitisho na haionyeshwi kamwe kupitia API ya hadharani ya programu au kwa watumiaji wengine.
+4. Namba yako ya NIDA
+Namba ya NIDA hukusanywa tu kuthibitisha kuwa muuzaji ni mtu au biashara halisi, kama ulinzi dhidi ya maduka ya udanganyifu. Taarifa hii inaonekana tu kwa timu yetu ya uthibitisho na haionyeshwi kamwe kupitia API ya hadharani ya programu au kwa watumiaji wengine.
 
 5. Chaguo zako
 Unaweza kukataa ruhusa ya mahali wakati wowote — Sokoni itarudi kwenye uchaguzi wa eneo kwa mkono. Unaweza kuomba nakala ya taarifa zako au kutuomba tufute akaunti yako kwa kuwasiliana na support@sokoni.co.tz. Kufuta akaunti yako huondoa taarifa zako binafsi, ingawa baadhi ya rekodi (kama oda zilizokamilika) zinaweza kuhifadhiwa pale sheria inapohitaji.

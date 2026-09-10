@@ -225,9 +225,9 @@ class CreateAccountController extends AsyncNotifier<CreateAccountDraft> {
   /// for a seller, the SellerProfile) in one request, then clears the
   /// local draft. For a new seller, also seeds the *existing* seller
   /// onboarding wizard's own local draft straight to its Identity step
-  /// (step index 2) — NIDA/licence upload deliberately stays that
-  /// separate "verify your shop" flow, entered here rather than
-  /// duplicated, per instruction: identity documents don't belong on an
+  /// (step index 2) — the NIDA number deliberately stays that separate
+  /// "verify your shop" flow, entered here rather than duplicated, per
+  /// instruction: identity verification doesn't belong on an
   /// account-creation form.
   Future<AuthResponse> submit(String code) async {
     final d = state.value ?? const CreateAccountDraft();
