@@ -49,7 +49,21 @@ class OtpAuthController extends Controller
             'step' => $request->session()->get('otp_phone') ? 'code' : 'phone',
             'phone' => $request->session()->get('otp_phone'),
             'isNewAccount' => $request->session()->get('otp_is_new_account', false),
-            'googleConfigured' => filled(config('services.google.client_id')),
+            // C1 (tester feedback): this used to check only `client_id`,
+            // but `GoogleAuthController::redirect()` 404s unless
+            // client_id + client_secret + redirect are ALL set — a config
+            // with just client_id set (e.g. only the app's native flow
+            // configured) would have shown a button that then 404'd.
+            // Delegate to the controller's own check so there's exactly
+            // one definition of "configured" for this flow.
+            // C1 (tester feedback): this used to check only `client_id`,
+            // but `GoogleAuthController::redirect()` 404s unless
+            // client_id + client_secret + redirect are ALL set — a config
+            // with just client_id set (e.g. only the app's native flow
+            // configured) would have shown a button that then 404'd.
+            // Delegate to the controller's own check so there's exactly
+            // one definition of "configured" for this flow.
+            'googleConfigured' => GoogleAuthController::isConfigured(),
             'title' => 'Sign in or create an account',
         ]);
     }
