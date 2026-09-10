@@ -61,9 +61,17 @@
                 <a href="{{ route('web.search') }}?sort=nearby" class="text-sm font-medium text-sokoni-black/60 hover:underline">{{ __('site.see_all') }}</a>
             </div>
             <div class="no-scrollbar mt-16 flex gap-16 overflow-x-auto pb-8 sm:grid sm:grid-cols-3 sm:overflow-visible md:grid-cols-4 lg:grid-cols-6 lg:gap-24">
+                {{-- B2 (tester feedback): this is the first product grid on
+                     the page — its first row sits at or near the fold, so
+                     lazy-loading it (the default for every other card)
+                     just defers the very photos a visitor sees first,
+                     reading as a pop-in/flicker of its own on a slow
+                     connection. Eager + high fetch priority for the first
+                     4 (a typical above-the-fold count across breakpoints);
+                     everything after stays lazy as before. --}}
                 @foreach ($nearYou as $product)
                     <div class="w-[160px] shrink-0 sm:w-auto">
-                        <x-product-card :product="$product" />
+                        <x-product-card :product="$product" :lazy="$loop->index >= 4" />
                     </div>
                 @endforeach
             </div>

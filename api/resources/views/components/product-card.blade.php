@@ -8,7 +8,32 @@
 @endphp
 
 <a href="{{ $productUrl }}" class="product-card group flex h-full flex-col">
-    <div class="skeleton relative aspect-square overflow-hidden rounded-t-[12px] bg-sokoni-surface-alt">
+    {{-- A2 (tester feedback, re-diagnosed from scratch): this container
+         carried the shared `.skeleton` class — `animate-pulse`, an
+         infinite CSS animation — with nothing anywhere that ever removed
+         it once the real photo loaded. The <img> below sits fully opaque
+         on top of it (h-full w-full object-cover), so the constant pulsing
+         compositing underneath was invisible in the steady state but
+         showed through at the rounded corners and on any partial-paint
+         moment as a persistent flicker — on every product card, on every
+         page that uses this component, which is why it read as "still
+         broken" after the earlier, unrelated PDP-gallery x-cloak fix. A
+         static placeholder background needs no animation at all; the
+         plain surface colour alone (kept below) already does that job. --}}
+    {{-- B2 (tester feedback, re-diagnosed live): considered — and
+         deliberately rejected — adding a JS-driven opacity crossfade here
+         (Alpine `@load` + `x-init` checking `$refs.img.complete` for
+         already-cached images). It has no safe failure mode: default the
+         image to `opacity-0` and it stays invisible forever if Alpine
+         fails to load for any reason (a blocked script, a slow connection
+         racing the fetch); default it to `opacity-100` and there's a
+         window between first paint and Alpine hydrating where the image
+         can flash visible then snap invisible then fade back in — a worse
+         flicker than the one being fixed. A plain `<img>` popping in once
+         decoded, with no animation at all, is the safer choice; the
+         reserved aspect-ratio box + solid background below it already
+         does the actual job (no layout shift, no visible "hole"). --}}
+    <div class="relative aspect-square overflow-hidden rounded-t-[12px] bg-sokoni-surface-alt">
         @if ($cover)
             <img
                 src="{{ $cover->card_path ?? $cover->path }}"
@@ -16,6 +41,7 @@
                 sizes="(min-width: 1024px) 260px, 45vw"
                 alt="{{ $product->title }}"
                 loading="{{ $lazy ? 'lazy' : 'eager' }}"
+                @unless ($lazy) fetchpriority="high" @endunless
                 decoding="async"
                 class="h-full w-full object-cover"
             >

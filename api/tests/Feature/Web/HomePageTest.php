@@ -31,6 +31,37 @@ class HomePageTest extends TestCase
     }
 
     /**
+     * B2 (tester feedback): "Near you" is the first product grid on the
+     * page — its first row sits at/near the fold, so lazy-loading it like
+     * every other card just defers the very photos a visitor sees first.
+     * The first 4 get `loading="eager"` + `fetchpriority="high"`; the 5th
+     * (and up) stay lazy, same as any other section.
+     */
+    public function test_the_first_four_near_you_cards_are_eager_loaded_and_the_rest_stay_lazy(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        // Dar es Salaam-jittered coordinates by default (SellerProfileFactory) —
+        // within HomeController::nearYou()'s 25km radius of DarEsSalaam::LAT/LNG.
+        $products = Product::factory()->count(5)->create(['seller_id' => $seller->id]);
+        foreach ($products as $product) {
+            \App\Models\ProductMedia::factory()->create(['product_id' => $product->id]);
+        }
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $eagerCount = substr_count($html, 'loading="eager"');
+        $highPriorityCount = substr_count($html, 'fetchpriority="high"');
+        // Exactly 4 — not "at least 4" — since a wrong `>=` off-by-one
+        // fix could otherwise silently make every card eager and this
+        // assertion would still pass.
+        $this->assertSame(4, $eagerCount);
+        $this->assertSame(4, $highPriorityCount);
+    }
+
+    /**
      * Guards specifically against the Part 2 "nothing renders below the
      * hero" report: proves every below-the-fold section — latest listings,
      * featured shops, a live offer, the app-download band — actually
