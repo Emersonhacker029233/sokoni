@@ -67,7 +67,17 @@ class HomeController extends Controller
             // category-page links (/c/{category}) still need to resolve a
             // temporarily-empty category correctly, just not advertise it
             // as a browsing option on the home page.
-            'categories' => $categories->withCounts()->filter(fn ($category) => $category->products_count > 0)->values(),
+            //
+            // B6 (tester feedback): "Other" is exempt from that rule — it's
+            // a permanent catch-all bucket, not a signal of how much
+            // content exists, so a temporarily-empty "Other" reads
+            // completely differently from a temporarily-empty real
+            // category and shouldn't disappear the same way. sort_order
+            // already places it last (CategorySeeder), so simply not
+            // filtering it out is enough to get "last" for free.
+            'categories' => $categories->withCounts()
+                ->filter(fn ($category) => $category->products_count > 0 || $category->name_en === 'Other')
+                ->values(),
             'title' => null,
             'description' => __('site.home_hero_subtitle'),
         ]);

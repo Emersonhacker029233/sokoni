@@ -3,6 +3,8 @@
 namespace Tests\Feature\Web;
 
 use App\Models\Category;
+use App\Models\Product;
+use App\Models\SellerProfile;
 use App\Services\Catalog\CategoryCatalogService;
 use Database\Seeders\CategorySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -105,6 +107,81 @@ class MegaMenuTest extends TestCase
         $freshTree = $service->megaMenuTree();
         $renamed = collect($freshTree)->firstWhere('id', $electronics->id);
         $this->assertSame('Consumer Electronics', $renamed['name_en']);
+    }
+
+    /**
+     * B3 (tester feedback): "Other" reportedly wasn't last in the home
+     * page's own Browse-categories grid, unlike the top menu. Both
+     * actually read the identical `CategoryCatalogService::withCounts()`
+     * query (same `orderBy('sort_order')`, "Other" seeded/migrated to the
+     * highest sort_order — see CategorySeeder and the rename migration),
+     * so this proves the two surfaces already agree rather than assuming
+     * a fix is needed without checking first.
+     */
+    public function test_the_home_pages_category_grid_lists_other_last_matching_the_mega_menu(): void
+    {
+        (new CategorySeeder)->run();
+        $topLevel = Category::whereNull('parent_id')->where('is_active', true)->get();
+        foreach ($topLevel as $category) {
+            Product::factory()->for(SellerProfile::factory()->verified(), 'seller')->create(['category_id' => $category->id]);
+        }
+
+        $response = $this->get('/');
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $otherPosition = strpos($html, route('web.category', 'other'));
+        $this->assertNotFalse($otherPosition, 'Other should appear in the Browse-categories grid.');
+
+        foreach ($topLevel as $category) {
+            if ($category->name_en === 'Other') {
+                continue;
+            }
+            $position = strpos($html, route('web.category', app(CategoryCatalogService::class)->slug($category)));
+            $this->assertNotFalse($position, "{$category->name_en} should appear in the Browse-categories grid.");
+            $this->assertGreaterThan($position, $otherPosition, "Other should come after {$category->name_en} in the Browse-categories grid.");
+        }
+    }
+
+    /**
+     * B6 (tester feedback): "The homepage's yellow category icon row is
+     * missing 'Other'." Root cause: the grid drops any category with zero
+     * currently-visible products (so "Agriculture 0" never reads as "this
+     * marketplace is empty") — a sensible rule for a real category, but
+     * "Other" is a permanent catch-all with no products of its own most
+     * of the time by definition, so the exact same rule silently erased
+     * it from the row entirely. The earlier "Other last" test above never
+     * caught this because it happened to give every category, "Other"
+     * included, at least one product — this seeds zero for "Other"
+     * specifically, the actual real-world case.
+     */
+    public function test_other_appears_on_the_homepage_even_with_zero_products_but_a_genuinely_empty_real_category_still_hides(): void
+    {
+        (new CategorySeeder)->run();
+        $electronics = Category::whereNull('parent_id')->where('name_en', 'Electronics')->firstOrFail();
+        $other = Category::whereNull('parent_id')->where('name_en', 'Other')->firstOrFail();
+        // A product in some other category so the grid isn't just empty outright.
+        Product::factory()->for(SellerProfile::factory()->verified(), 'seller')->create([
+            'category_id' => Category::whereNull('parent_id')->where('name_en', 'Fashion')->firstOrFail()->id,
+        ]);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        // Electronics' own link legitimately still exists elsewhere on the
+        // page (the header's mega menu shows every category regardless of
+        // count — a deliberate, different rule from this one section), so
+        // a plain page-wide assertDontSee would be testing the wrong
+        // thing. Isolate just the "Browse categories" <section>...</section>
+        // block and assert within that slice only.
+        $this->assertMatchesRegularExpression('#<section[^>]*>.*?Browse categories.*?</section>#s', $html);
+        preg_match('#<section[^>]*>.*?Browse categories.*?</section>#s', $html, $matches);
+        $browseCategoriesHtml = $matches[0];
+
+        $this->assertStringContainsString(route('web.category', app(CategoryCatalogService::class)->slug($other)), $browseCategoriesHtml);
+        $this->assertStringNotContainsString(route('web.category', app(CategoryCatalogService::class)->slug($electronics)), $browseCategoriesHtml);
     }
 
     public function test_the_swahili_locale_shows_swahili_names(): void
