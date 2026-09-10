@@ -2,6 +2,8 @@
 
 Target: `sokoni.co.tz`, cPanel user `sokoftsn`, home `/home/sokoftsn`, shared IP `198.54.126.252`. No Docker, no persistent queue workers, no WebSocket server — the app is built to work within those constraints (see CLAUDE.md's stack notes).
 
+> **What's actually live right now (2026-09-08):** the current client-testing site runs from a single combined docroot, `/home/sokoftsn/beta.sokoni.co.tz` — not yet split into the separate `api.sokoni.co.tz`/root-domain subdomains the rest of this document describes for eventual production. `APP_URL` and `PUBLIC_UPLOADS_URL`/`PUBLIC_UPLOADS_ROOT` on that host should both be based on `https://beta.sokoni.co.tz`, not `sokoni.co.tz`. This value has moved more than once (tester feedback D2) — every media URL (`product_media`, seller logos, avatars, ...) is a full absolute URL baked in at upload time, so changing this again fixes nothing for rows already uploaded under the old value. After any change, run `https://beta.sokoni.co.tz/setup.php?step=rewrite-media-host&from=<old, URL-encoded>&to=<new, URL-encoded>&confirm=1` (dry run without `&confirm=1`) to actually rewrite them — see `public/setup.php`'s own `rewrite-media-host` step for the full column list it covers. The rest of this document is the eventual production runbook (a real subdomain split); follow it when the client is ready to leave the beta subdomain.
+
 This cPanel account exposes **Manage Shell** and **Setup Node.js App**, so check for SSH access first — it makes Composer and `artisan` far easier. Everything below also works via File Manager + phpMyAdmin if SSH is disabled; the File-Manager alternative is noted at each step.
 
 ## 1. Directory layout

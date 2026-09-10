@@ -136,6 +136,10 @@
   "radiusLabel": "Umbali",
   "radiusAll": "Zote",
   "radiusKm": "km {km}",
+  "carsFilterTitle": "Vichujio vya magari",
+  "carsFilterCarsOnly": "Magari pekee",
+  "carsFilterAnyMake": "Chapa yoyote",
+  "carsFilterAnyModel": "Aina yoyote",
 
   "feedEmptyTitle": "Hakuna bidhaa karibu bado",
   "feedEmptyBody": "Jaribu umbali mkubwa zaidi au kategoria tofauti.",
@@ -171,6 +175,16 @@
   "shopNoReviews": "Hakuna maoni bado",
   "shopVerifiedBadge": "Muuzaji aliyethibitishwa",
   "shopPendingBadge": "Inasubiri uthibitisho",
+  "shopHoursTitle": "Muda wa kufungua",
+  "shopHoursClosed": "Imefungwa",
+  "shopLocationTitle": "Mahali",
+  "dayMonday": "Jumatatu",
+  "dayTuesday": "Jumanne",
+  "dayWednesday": "Jumatano",
+  "dayThursday": "Alhamisi",
+  "dayFriday": "Ijumaa",
+  "daySaturday": "Jumamosi",
+  "daySunday": "Jumapili",
 
   "favoritesTitle": "Yaliyohifadhiwa",
   "favoritesEmptyTitle": "Hakuna kilichohifadhiwa bado",
@@ -246,7 +260,6 @@
   "onboardingStepBusiness": "Biashara",
   "onboardingStepLocation": "Mahali",
   "onboardingStepIdentity": "Utambulisho",
-  "onboardingStepLicence": "Leseni",
 
   "onboardingShopName": "Jina la duka",
   "onboardingHandle": "Jina la mtumiaji",
@@ -262,14 +275,6 @@
   "onboardingConfirmLocation": "Thibitisha mahali",
 
   "onboardingNidaNumber": "Namba ya NIDA (tarakimu 20)",
-  "onboardingNidaPhoto": "Picha ya kitambulisho",
-  "onboardingTakePhoto": "Piga picha",
-  "onboardingChooseFromGallery": "Chagua picha kutoka kwenye picha za simu",
-
-  "onboardingLicenceFile": "Leseni ya biashara",
-  "onboardingLicenceHint": "Picha au PDF, upeo MB 5",
-  "onboardingLicenceOptional": "Si lazima — maelezo yako ya NIDA ndiyo msingi halisi wa uthibitisho. Ongeza leseni sasa au ruka na uongeze baadaye kwenye mipangilio ya duka lako.",
-  "onboardingChooseFile": "Chagua faili",
 
   "onboardingNext": "Endelea",
   "onboardingSubmit": "Wasilisha kwa ukaguzi",
@@ -303,6 +308,9 @@
   "productFormCategory": "Kategoria",
   "productFormSubcategory": "Kategoria ndogo (si lazima)",
   "productFormSubcategoryNone": "Tumia kategoria kuu",
+  "productFormMake": "Chapa",
+  "productFormModel": "Aina",
+  "productFormMakeModelRequired": "Chagua chapa na aina ya gari hili",
   "productFormSave": "Hifadhi",
   "productFormSavedAddMedia": "Imehifadhiwa — sasa ongeza picha au video.",
   "productFormMediaTitle": "Picha na video",
@@ -344,6 +352,7 @@
   "orderCancelReason": "Sababu (hiari)",
 
   "commonCancel": "Ghairi",
+  "commonApply": "Tumia",
 
   "reviewLeaveReview": "Toa maoni",
   "reviewCommentHint": "Maoni (hiari)",
