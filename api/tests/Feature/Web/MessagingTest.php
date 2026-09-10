@@ -122,4 +122,53 @@ class MessagingTest extends TestCase
         $poll->assertOk();
         $poll->assertJsonFragment(['body' => 'Is this still available?']);
     }
+
+    /**
+     * A4 (tester feedback): "no new-message notification on desktop" — the
+     * unread badge existed only in the mobile bottom nav's own markup,
+     * computed once per page load; the desktop header's Chats link never
+     * had one at all, and neither surface updated without a navigation.
+     * These cover the new shared endpoint both badges now poll, and that
+     * both surfaces actually render the (initial, server-rendered) count.
+     */
+    public function test_the_unread_count_endpoint_reports_messages_from_others_not_yet_read(): void
+    {
+        $buyer = $this->onboardedBuyer();
+        $conversation = Conversation::factory()->create(['buyer_id' => $buyer->id]);
+        \App\Models\Message::factory()->create(['conversation_id' => $conversation->id, 'sender_id' => $conversation->seller->user_id, 'read_at' => null]);
+        \App\Models\Message::factory()->create(['conversation_id' => $conversation->id, 'sender_id' => $buyer->id, 'read_at' => null]);
+
+        $response = $this->actingAsWebUser($buyer)->getJson(route('web.account.messages.unread-count'));
+
+        $response->assertOk();
+        // Only the other party's message counts — the buyer's own sent
+        // message is never "unread" to the buyer.
+        $response->assertJson(['count' => 1]);
+    }
+
+    public function test_the_desktop_header_shows_the_same_unread_badge_the_mobile_bottom_nav_shows(): void
+    {
+        $buyer = $this->onboardedBuyer();
+        $conversation = Conversation::factory()->create(['buyer_id' => $buyer->id]);
+        \App\Models\Message::factory()->create(['conversation_id' => $conversation->id, 'sender_id' => $conversation->seller->user_id, 'read_at' => null]);
+
+        $response = $this->actingAsWebUser($buyer)->get(route('web.home'));
+
+        $response->assertOk();
+        // Both surfaces are rendered on every page (one hidden per
+        // breakpoint via CSS, not conditionally in Blade) — the count "1"
+        // must appear at least twice: once in the desktop header's badge,
+        // once in the mobile bottom nav's.
+        $response->assertSeeInOrder(['display: inline-flex', '>1<'], false);
+        $response->assertSeeInOrder(['display: flex', '>1<'], false);
+    }
+
+    public function test_a_signed_out_visitor_gets_no_unread_polling(): void
+    {
+        $response = $this->get(route('web.home'));
+
+        $response->assertOk();
+        $response->assertSee('messageNotifier(0,', false);
+        $response->assertSee(', false)', false);
+    }
 }

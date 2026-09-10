@@ -4,17 +4,37 @@ namespace App\Observers;
 
 use App\Models\Review;
 use App\Notifications\ReviewReceivedNotification;
+use App\Services\Push\PushNotifier;
 use App\Support\SafeMail;
 
 /** Keeps SellerProfile.rating_avg / rating_count denormalised off the reviews table. */
 class ReviewObserver
 {
+    public function __construct(private readonly PushNotifier $push) {}
+
     public function created(Review $review): void
     {
         $this->recalculate($review);
 
         $seller = $review->seller?->user;
-        if ($seller?->email !== null) {
+        if (! $seller) {
+            return;
+        }
+
+        // A5 (tester feedback): this was email-only — most sellers have no
+        // email on file (it's optional, see C5), so in practice almost
+        // none of them were ever actually notified. Orders already notify
+        // both ways (OrderController::store()/updateStatus()); reviews now
+        // match that, push first since it reaches the app immediately
+        // regardless of whether an email exists at all.
+        $this->push->notify(
+            $seller,
+            'New review',
+            "You received a {$review->rating}-star review.",
+            ['review_id' => $review->id],
+        );
+
+        if ($seller->email !== null) {
             SafeMail::send($seller, new ReviewReceivedNotification($review));
         }
     }

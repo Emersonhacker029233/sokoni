@@ -51,6 +51,20 @@ class NavigationRestructureTest extends TestCase
         $this->get(route('web.stores', ['sort' => 'listings']))->assertOk();
     }
 
+    /** A6 (tester feedback) audit: same missing whereNull('parent_id') found on seller registration, in this page's own category filter dropdown. */
+    public function test_the_stores_directorys_category_filter_offers_only_top_level_categories(): void
+    {
+        (new \Database\Seeders\CategorySeeder)->run();
+        $electronics = Category::whereNull('parent_id')->where('name_en', 'Electronics')->firstOrFail();
+        $tvs = Category::where('parent_id', $electronics->id)->where('name_en', 'TVs')->firstOrFail();
+
+        $response = $this->get(route('web.stores'));
+
+        $response->assertOk();
+        $response->assertSee('<option value="'.$electronics->id.'"', false);
+        $response->assertDontSee('<option value="'.$tvs->id.'"', false);
+    }
+
     public function test_the_explore_feed_shows_the_newest_products_across_categories(): void
     {
         $seller = SellerProfile::factory()->verified()->create();
@@ -128,9 +142,20 @@ class NavigationRestructureTest extends TestCase
 
     public function test_the_bottom_nav_shows_no_badge_for_a_guest(): void
     {
+        // A4 (tester feedback): the badge markup is now always present in
+        // the DOM (Alpine needs a real element to control for live
+        // updates — see Alpine.data('messageNotifier') in app.js), hidden
+        // via style="display: none" and gated on $store.messages.count,
+        // rather than omitted entirely via a server-side @if. A guest's
+        // messageNotifier(..., false) never polls at all, so the store
+        // stays at 0 and the badge stays hidden — this checks the actual
+        // visible behaviour (never shown), not the markup's mere existence.
         $response = $this->get(route('web.home'));
 
         $response->assertOk();
-        $response->assertDontSee('bg-sokoni-danger', false);
+        $response->assertSee('messageNotifier(0,', false);
+        $response->assertSee(', false)', false);
+        $response->assertDontSee('>1<', false);
+        $response->assertDontSee('>9+<', false);
     }
 }

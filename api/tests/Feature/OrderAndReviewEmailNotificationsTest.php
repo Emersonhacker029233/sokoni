@@ -110,4 +110,44 @@ class OrderAndReviewEmailNotificationsTest extends TestCase
 
         Notification::assertNothingSentTo($seller->user);
     }
+
+    /**
+     * A5 (tester feedback): "no notification after a review is submitted"
+     * — the seller-facing half was email-only, and most sellers have no
+     * email on file at all (it's optional, see C5), so in practice almost
+     * none of them were ever actually notified. Reviews now push-notify
+     * the seller the same way orders already do, regardless of whether an
+     * email exists — a real in-app notification (LogPushNotifier persists
+     * one alongside the push itself), not just a log line.
+     */
+    public function test_leaving_a_review_creates_an_in_app_notification_for_the_seller_even_with_no_email(): void
+    {
+        $seller = SellerProfile::factory()->create(['user_id' => User::factory()->create(['email' => null])]);
+        $buyer = User::factory()->create();
+        $order = Order::factory()->create(['buyer_id' => $buyer->id, 'seller_id' => $seller->id, 'status' => 'completed']);
+
+        $this->actingAs($buyer)->postJson("/api/orders/{$order->id}/review", ['rating' => 5, 'comment' => 'Great shop!'])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('app_notifications', [
+            'user_id' => $seller->user_id,
+            'title' => 'New review',
+        ]);
+    }
+
+    /** The reviewer's own confirmation is a web-only concern (a flash message) — covered in ReviewSubmissionTest. */
+    public function test_leaving_a_review_from_the_website_also_creates_an_in_app_notification_for_the_seller(): void
+    {
+        $seller = SellerProfile::factory()->create();
+        $buyer = User::factory()->create(['terms_accepted_at' => now(), 'terms_version' => \App\Support\Legal::TERMS_VERSION, 'account_intent' => 'buy']);
+        $order = Order::factory()->create(['buyer_id' => $buyer->id, 'seller_id' => $seller->id, 'status' => 'completed']);
+
+        $this->actingAsWebUser($buyer)->post(route('web.account.orders.review', $order), ['rating' => 4])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('app_notifications', [
+            'user_id' => $seller->user_id,
+            'title' => 'New review',
+        ]);
+    }
 }

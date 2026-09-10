@@ -54,7 +54,11 @@ class StoresController extends Controller
 
         return view('web.stores', [
             'stores' => $stores,
-            'categories' => Category::where('is_active', true)->orderBy('sort_order')->get(),
+            // A6 (tester feedback) audit: same missing whereNull('parent_id')
+            // found on the seller registration form — a shop's own category
+            // (which this filter dropdown matches against) is always
+            // top-level, so subcategories have no business appearing here.
+            'categories' => Category::whereNull('parent_id')->where('is_active', true)->orderBy('sort_order')->get(),
             'regions' => TanzaniaRegions::options(),
             'query' => $request->string('q')->toString(),
             'sort' => $sort,

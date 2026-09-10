@@ -146,8 +146,17 @@
     .chip-active {
         @apply border-transparent bg-sokoni-yellow text-sokoni-black;
     }
+    /* A7 (tester feedback): matches the app's own Icons.verified_rounded
+       exactly — a filled yellow badge with a white check, not black. Black
+       on yellow technically passes contrast, but it read as a plain
+       decorative dot rather than the same trust signal the app shows;
+       white is also what actually renders on the app given how that
+       Material icon's glyph is drawn (the checkmark is a cutout in a
+       single-color shape, showing through to whatever's behind it — always
+       a light card/page background here, so it reads as white on yellow
+       there too, not black). */
     .badge-verified {
-        @apply inline-flex h-16 w-16 items-center justify-center rounded-full bg-sokoni-yellow text-sokoni-black;
+        @apply inline-flex h-16 w-16 items-center justify-center rounded-full bg-sokoni-yellow text-white;
     }
     .badge-sponsored {
         @apply inline-flex items-center rounded-chip bg-sokoni-surface-alt px-8 py-4 text-xs font-medium text-sokoni-black/60;

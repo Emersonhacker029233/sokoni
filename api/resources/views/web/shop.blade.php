@@ -164,6 +164,32 @@
                     </div>
                 @endforeach
             </div>
+
+            {{-- A1 (tester feedback): this tab used to give zero indication
+                 either way — a buyer with a qualifying order and one without
+                 saw the exact same blank list, both reading as "broken".
+                 The actual review form lives on the order page (it needs a
+                 specific order to bind to), so this is a link there, or the
+                 honest reason it's not available yet. --}}
+            @auth('web')
+                @if ($reviewableOrder)
+                    <div class="mb-24 rounded-card border border-sokoni-outline bg-sokoni-surface-alt p-16">
+                        <p class="text-sm font-medium">{{ __('site.shop_reviewable_prompt') }}</p>
+                        <a href="{{ route('web.account.orders.show', $reviewableOrder) }}" class="btn-primary mt-12 inline-flex px-16 py-10 text-sm">
+                            {{ __('site.order_leave_review') }}
+                        </a>
+                    </div>
+                @else
+                    <p class="mb-24 rounded-card border border-sokoni-outline bg-sokoni-surface-alt p-16 text-sm text-sokoni-black/60">
+                        {{ __('site.shop_review_gate_explanation') }}
+                    </p>
+                @endif
+            @else
+                <p class="mb-24 rounded-card border border-sokoni-outline bg-sokoni-surface-alt p-16 text-sm text-sokoni-black/60">
+                    {{ __('site.shop_review_gate_explanation') }}
+                </p>
+            @endauth
+
             @forelse ($reviews as $review)
                 <div class="border-b border-sokoni-outline py-16">
                     <div class="flex items-center justify-between">

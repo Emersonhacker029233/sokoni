@@ -7,6 +7,7 @@ use App\Http\Requests\StartConversationRequest;
 use App\Http\Requests\StoreMessageRequest;
 use App\Models\Conversation;
 use App\Services\Push\PushNotifier;
+use App\Support\UnreadMessages;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,20 @@ use Illuminate\View\View;
 class MessagesController extends Controller
 {
     public function __construct(private readonly PushNotifier $push) {}
+
+    /**
+     * A4 (tester feedback): the unread badge only ever existed on the
+     * mobile bottom nav, computed once per page load — never on the
+     * desktop header's Chats link, and never live-updating on either
+     * surface while someone stayed on a page. Polled site-wide (see
+     * Alpine.data('messageNotifier') in app.js) so both the badge and a
+     * toast for a genuinely new message work identically on both
+     * breakpoints, not just at the moment of navigation.
+     */
+    public function unreadCount(): JsonResponse
+    {
+        return response()->json(['count' => UnreadMessages::countFor(Auth::user())]);
+    }
 
     public function index(): View
     {

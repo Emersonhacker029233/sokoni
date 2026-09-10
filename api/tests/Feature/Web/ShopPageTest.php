@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Web;
 
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\SellerProfile;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -65,6 +67,61 @@ class ShopPageTest extends TestCase
         $seller = SellerProfile::factory()->verified()->create();
 
         $this->get("/@{$seller->handle}?tab=reviews")->assertOk();
+    }
+
+    /**
+     * A1 (tester feedback): "buyer cannot leave a review", reported from
+     * this exact tab. The gate itself (order-completed, not-already-
+     * reviewed) is correct and stays — the bug was this tab giving zero
+     * indication either way, reading as broken for every buyer regardless
+     * of eligibility. These three cover each real state.
+     */
+    public function test_a_buyer_with_a_completed_unreviewed_order_sees_a_link_to_review_it(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $buyer = User::factory()->create();
+        $order = Order::factory()->create(['buyer_id' => $buyer->id, 'seller_id' => $seller->id, 'status' => 'completed']);
+
+        $response = $this->actingAsWebUser($buyer)->get("/@{$seller->handle}?tab=reviews");
+
+        $response->assertOk();
+        $response->assertSee(__('site.shop_reviewable_prompt'));
+        $response->assertSee(route('web.account.orders.show', $order), false);
+    }
+
+    public function test_a_buyer_with_no_completed_order_sees_the_gate_explanation_not_a_blank_tab(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $buyer = User::factory()->create();
+
+        $response = $this->actingAsWebUser($buyer)->get("/@{$seller->handle}?tab=reviews");
+
+        $response->assertOk();
+        $response->assertSee(__('site.shop_review_gate_explanation'));
+    }
+
+    public function test_a_buyer_who_already_reviewed_their_completed_order_sees_the_gate_explanation_not_a_stale_link(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $buyer = User::factory()->create();
+        $order = Order::factory()->create(['buyer_id' => $buyer->id, 'seller_id' => $seller->id, 'status' => 'completed']);
+        \App\Models\Review::factory()->create(['order_id' => $order->id, 'seller_id' => $seller->id, 'buyer_id' => $buyer->id]);
+
+        $response = $this->actingAsWebUser($buyer)->get("/@{$seller->handle}?tab=reviews");
+
+        $response->assertOk();
+        $response->assertSee(__('site.shop_review_gate_explanation'));
+        $response->assertDontSee(__('site.shop_reviewable_prompt'));
+    }
+
+    public function test_a_signed_out_visitor_sees_the_gate_explanation_not_a_blank_tab(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+
+        $response = $this->get("/@{$seller->handle}?tab=reviews");
+
+        $response->assertOk();
+        $response->assertSee(__('site.shop_review_gate_explanation'));
     }
 
     public function test_the_full_address_and_member_since_year_render_in_the_header(): void

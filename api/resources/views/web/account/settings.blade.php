@@ -18,8 +18,12 @@
                 <div class="relative h-64 w-64 shrink-0 overflow-hidden rounded-full bg-sokoni-surface-alt">
                     <img x-show="logoUrl" :src="logoUrl" alt="" class="h-full w-full object-cover">
                     <div x-show="!logoUrl" class="flex h-full w-full items-center justify-center text-lg font-bold">{{ strtoupper(substr($seller->shop_name, 0, 1)) }}</div>
+                    {{-- A3 (tester feedback): this used to be an indeterminate
+                         spinner only — no percentage at all, unlike the
+                         product photo manager's own real per-file progress.
+                         Now shows the same real XHR upload progress. --}}
                     <div x-show="uploading" x-cloak class="absolute inset-0 flex items-center justify-center bg-black/40">
-                        <svg class="h-20 w-20 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                        <span class="text-xs font-semibold text-white" x-text="progress + '%'"></span>
                     </div>
                 </div>
                 <label class="btn-secondary cursor-pointer text-sm">
