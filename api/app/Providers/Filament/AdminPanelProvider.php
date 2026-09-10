@@ -70,7 +70,9 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('Sokoni Admin')
             ->brandLogo(asset('images/brand/sokoni_logo.png'))
             ->brandLogoHeight('2rem')
-            ->favicon(asset('images/brand/sokoni_logo_icon.png'))
+            // B4 (tester feedback): a real 32x32 favicon, not the full
+            // 1080px source scaled down by the browser.
+            ->favicon(asset('images/brand/favicon-32.png'))
             ->login()
             ->colors([
                 'primary' => $this->sokoniYellowPalette(),

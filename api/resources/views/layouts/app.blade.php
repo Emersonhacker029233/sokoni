@@ -28,16 +28,43 @@
     <meta name="twitter:description" content="{{ $description ?? 'Sokoni is Tanzania\'s marketplace for verified sellers.' }}">
     <meta name="twitter:image" content="{{ $ogImage ?? asset('images/brand/sokoni_logo.png') }}">
 
-    <link rel="icon" href="{{ asset('images/brand/sokoni_logo_icon.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('images/brand/sokoni_logo_icon.png') }}">
+    {{-- B4 (tester feedback): a real favicon set, not one 1080px source
+         image reused at every size — favicon.ico was previously a 0-byte
+         placeholder file (browsers requesting /favicon.ico directly got an
+         empty response). Every size below is flattened onto a solid white
+         background, never transparent (see the generator script noted in
+         DECISIONS.md) — solid so the mark stays legible on a dark browser
+         chrome/tab-switcher background, per the tester's own note. --}}
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/brand/favicon-32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/brand/apple-touch-icon-180.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
 
     @stack('schema')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="flex min-h-screen flex-col bg-sokoni-surface text-sokoni-black">
+<body
+    class="flex min-h-screen flex-col bg-sokoni-surface text-sokoni-black"
+    x-data="messageNotifier({{ (int) ($unreadMessagesCount ?? 0) }}, '{{ route('web.account.messages.unread-count') }}', '{{ route('web.chats') }}', {{ auth('web')->check() ? 'true' : 'false' }})"
+>
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-sokoni-yellow focus:px-16 focus:py-8">Skip to content</a>
+
+    {{-- A4 (tester feedback): a new message arriving while browsing
+         elsewhere on the site previously surfaced nowhere at all — this is
+         the toast half of that fix, the badge half lives in the header and
+         bottom nav (both read from the same $store.messages this sets). --}}
+    <div
+        x-show="toast"
+        x-cloak
+        x-transition
+        role="status"
+        aria-live="polite"
+        class="fixed bottom-72 left-1/2 z-50 -translate-x-1/2 rounded-chip bg-sokoni-black px-16 py-10 text-sm text-white shadow-lg lg:bottom-16"
+    >
+        <a :href="toastHref" class="flex items-center gap-8" x-text="toast"></a>
+    </div>
 
     @include('partials.header')
     @include('partials.flash')

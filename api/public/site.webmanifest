@@ -1,0 +1,14 @@
+{
+    "name": "Sokoni",
+    "short_name": "Sokoni",
+    "icons": [
+        {
+            "src": "/images/brand/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#FAC902",
+    "background_color": "#FFFFFF",
+    "display": "standalone"
+}
