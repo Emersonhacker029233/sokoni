@@ -49,36 +49,51 @@ class AnimatedNavBar extends StatelessWidget {
     final left = items.sublist(0, half);
     final right = items.sublist(half);
 
-    return Container(
-      height: SokoniDimens.navBarHeight,
-      decoration: BoxDecoration(
-        color: surface,
-        border: Border(top: BorderSide(color: outline)),
-      ),
-      child: Row(
-        children: [
-          ...List.generate(left.length, (i) {
-            return Expanded(
-              child: _NavIcon(
-                item: left[i],
-                selected: currentIndex == i,
-                onTap: () => onTap(i),
-              ),
-            );
-          }),
-          if (centerAction != null)
-            SizedBox(width: SokoniDimens.navFabSize + 16, child: Center(child: centerAction)),
-          ...List.generate(right.length, (i) {
-            final index = half + i;
-            return Expanded(
-              child: _NavIcon(
-                item: right[i],
-                selected: currentIndex == index,
-                onTap: () => onTap(index),
-              ),
-            );
-          }),
-        ],
+    // D1 (tester feedback): the bar previously had no notion of the
+    // device's own bottom inset at all — a fixed-height Container sitting
+    // flush with the screen edge, so gesture-nav's home-indicator strip
+    // (and, on some OEM skins, three-button nav) drew right on top of the
+    // icons/labels. SafeArea adds exactly the system inset as extra space
+    // *below* the bar's own fixed-height content (growing the total
+    // footprint, never squeezing icons into less room) on a gesture-nav
+    // device, and adds nothing at all on three-button nav or an
+    // insetless device — `viewPadding.bottom` is already 0 there, so this
+    // is a genuine no-op on those two configurations, not just "usually
+    // fine." Tested against all three via `MediaQuery` overrides in
+    // `animated_nav_bar_test.dart`.
+    return SafeArea(
+      top: false,
+      child: Container(
+        height: SokoniDimens.navBarHeight,
+        decoration: BoxDecoration(
+          color: surface,
+          border: Border(top: BorderSide(color: outline)),
+        ),
+        child: Row(
+          children: [
+            ...List.generate(left.length, (i) {
+              return Expanded(
+                child: _NavIcon(
+                  item: left[i],
+                  selected: currentIndex == i,
+                  onTap: () => onTap(i),
+                ),
+              );
+            }),
+            if (centerAction != null)
+              SizedBox(width: SokoniDimens.navFabSize + 16, child: Center(child: centerAction)),
+            ...List.generate(right.length, (i) {
+              final index = half + i;
+              return Expanded(
+                child: _NavIcon(
+                  item: right[i],
+                  selected: currentIndex == index,
+                  onTap: () => onTap(index),
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
