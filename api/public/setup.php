@@ -29,6 +29,7 @@ try {
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 $step = $_GET['step'] ?? 'check';
 
@@ -268,6 +269,93 @@ try {
             }
             break;
 
+        case 'diagnose-media':
+            // B1 (tester feedback): "diagnose before changing code" — this
+            // answers, for a real sample of product_media rows, the exact
+            // question the URL-rewrite tool above can't: is the *file*
+            // actually sitting where the *current* config says to look for
+            // it, regardless of what the stored URL says? Two things can
+            // independently be wrong (a stale URL baked into the row, and
+            // the physical file living in the wrong of two known upload
+            // folders on this account), and only checking the URL string
+            // (rewrite-media-host) can't tell them apart. Deliberately
+            // reads real file_exists() results against real paths on this
+            // exact server, not a guess from config values alone.
+            $sample = max(1, min(200, (int) ($_GET['sample'] ?? 10)));
+
+            $currentRoot = rtrim(config('filesystems.disks.public.root'), '/');
+            $currentUrl = rtrim(config('filesystems.disks.public.url'), '/');
+            echo "Current PUBLIC_UPLOADS_ROOT (filesystems.disks.public.root): {$currentRoot}\n";
+            echo "Current PUBLIC_UPLOADS_URL  (filesystems.disks.public.url):  {$currentUrl}\n\n";
+
+            // Both physical locations the client named, checked regardless
+            // of what's currently configured — this is what actually
+            // answers "is this a path problem or a code problem."
+            $knownRoots = [
+                'public_html/uploads' => '/home/sokoftsn/public_html/uploads',
+                'beta.sokoni.co.tz/uploads' => '/home/sokoftsn/beta.sokoni.co.tz/uploads',
+            ];
+
+            $rows = DB::table('product_media')->orderByDesc('id')->limit($sample)->get(['id', 'product_id', 'path']);
+
+            if ($rows->isEmpty()) {
+                echo "No product_media rows exist at all.\n";
+                break;
+            }
+
+            $tally = array_fill_keys(array_keys($knownRoots), 0);
+            $tally['configured_root'] = 0;
+            $tally['found_nowhere'] = 0;
+
+            foreach ($rows as $row) {
+                // Every stored URL is {some host}/uploads/{relative path} —
+                // the "/uploads/" segment is the one constant across every
+                // host this value has ever been baked in under (root
+                // domain, beta subdomain, local dev), so anchoring on it
+                // (rather than assuming today's config's own host matches
+                // what's actually stored) is what makes this work no
+                // matter how stale the row's own URL is.
+                if (! preg_match('#/uploads/(.+)$#', $row->path, $m)) {
+                    echo "#{$row->id} (product {$row->product_id}): stored path has no /uploads/ segment at all -- {$row->path}\n";
+                    continue;
+                }
+                $relative = $m[1];
+
+                echo "#{$row->id} (product {$row->product_id})\n";
+                echo "  stored URL:    {$row->path}\n";
+
+                $configuredPath = $currentRoot . '/' . $relative;
+                $configuredExists = is_file($configuredPath);
+                echo '  configured disk path: ' . $configuredPath . ' -- ' . ($configuredExists ? 'EXISTS' : 'missing') . "\n";
+                if ($configuredExists) {
+                    $tally['configured_root']++;
+                }
+
+                $foundAnywhere = $configuredExists;
+                foreach ($knownRoots as $label => $root) {
+                    $path = $root . '/' . $relative;
+                    $exists = is_file($path);
+                    echo "  {$label}: {$path} -- " . ($exists ? 'EXISTS' : 'missing') . "\n";
+                    if ($exists) {
+                        $tally[$label]++;
+                        $foundAnywhere = true;
+                    }
+                }
+                if (! $foundAnywhere) {
+                    $tally['found_nowhere']++;
+                    echo "  !! NOT FOUND in the configured root or either known upload folder.\n";
+                }
+                echo "\n";
+            }
+
+            echo "--- Summary over {$rows->count()} sampled row(s) ---\n";
+            echo "Resolves via the currently configured root: {$tally['configured_root']}\n";
+            foreach ($knownRoots as $label => $root) {
+                echo "Physically present under {$label}: {$tally[$label]}\n";
+            }
+            echo "Found in neither known location: {$tally['found_nowhere']}\n";
+            break;
+
         case 'admin':
             $email    = $_GET['email'] ?? '';
             $password = $_GET['password'] ?? '';
@@ -312,10 +400,11 @@ try {
             break;
 
         default:
-            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, admin, tables, cache, clear\n";
+            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, diagnose-media, admin, tables, cache, clear\n";
             echo "demo-seed accepts &fresh=1 to clear previously seeded demo shops/buyers first.\n";
             echo "cleanup-original-seed is a dry run by default; add &confirm=1 to actually delete.\n";
             echo "rewrite-media-host needs &from=&to= (URL-encoded); dry run by default, add &confirm=1 to rewrite.\n";
+            echo "diagnose-media accepts &sample=N (default 10, max 200) -- prints stored URL, resolved disk path, and file_exists() for each, against both known upload folders.\n";
     }
 } catch (Throwable $e) {
     echo "ERROR on step '{$step}'\n\n";
