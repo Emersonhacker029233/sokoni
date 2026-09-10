@@ -2,7 +2,10 @@
 /**
  * Sokoni one-time setup runner (v2).
  *
- * Upload to: /home/sokoftsn/sokoni-api/public/setup.php  (replace the old one)
+ * Upload to the actual live public docroot so it's reachable by URL —
+ * currently /home/sokoftsn/beta.sokoni.co.tz/setup.php (not the app
+ * root's own public/ folder some earlier notes named; this file must
+ * sit wherever a browser GET request can actually reach it).
  * DELETE THIS FILE as soon as setup is finished.
  */
 
