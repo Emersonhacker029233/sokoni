@@ -359,6 +359,47 @@ try {
             echo "Found in neither known location: {$tally['found_nowhere']}\n";
             break;
 
+        case 'test-mail':
+            // B7 (tester feedback): "SMTP failures are silent by default"
+            // — SafeMail already catches and logs every real send failure
+            // (see app/Support/SafeMail.php), but that only helps once
+            // something has already tried to send through the app's own
+            // flows. This sends one real message right now, on this
+            // request, and prints the exact underlying exception if it
+            // fails — connection refused, auth rejected, TLS handshake
+            // failure, whatever it actually is — rather than a generic
+            // "didn't arrive" with no further signal. Also prints the
+            // resolved mail config so a wrong host/port/encryption value
+            // is visible without needing shell access to read .env.
+            $to = $_GET['to'] ?? '';
+            if ($to === '' || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                echo "Provide &to=<a real email address you can check>.\n";
+                break;
+            }
+
+            echo "MAIL_MAILER:     " . config('mail.default') . "\n";
+            echo "MAIL_HOST:       " . config('mail.mailers.smtp.host') . "\n";
+            echo "MAIL_PORT:       " . config('mail.mailers.smtp.port') . "\n";
+            echo "MAIL_ENCRYPTION: " . (config('mail.mailers.smtp.scheme') ?: '(none)') . "\n";
+            echo "MAIL_USERNAME:   " . (config('mail.mailers.smtp.username') ? '(set)' : '(EMPTY -- likely the actual problem)') . "\n";
+            echo "MAIL_FROM:       " . config('mail.from.address') . "\n\n";
+
+            if (config('mail.default') !== 'smtp') {
+                echo "MAIL_MAILER is \"" . config('mail.default') . "\", not \"smtp\" -- no real email will ever leave this server while that's the case, regardless of whether the SMTP fields above are correct. This alone would explain \"nothing arrives, no error\" exactly.\n\n";
+            }
+
+            try {
+                \Illuminate\Support\Facades\Mail::raw(
+                    'This is a test message from setup.php?step=test-mail, sent at ' . now()->toDateTimeString() . '.',
+                    fn ($message) => $message->to($to)->subject('Sokoni setup.php test email')
+                );
+                echo "SENT -- no exception was thrown. Check the inbox at {$to} (and spam folder). If it still never arrives despite this succeeding, the problem is downstream of this server (the receiving mail server rejecting/silently dropping it), not this app's own mail sending.\n";
+            } catch (Throwable $e) {
+                echo "FAILED -- " . get_class($e) . ": " . $e->getMessage() . "\n\n";
+                echo "This is the exact reason no verification email (or any other transactional email) is reaching anyone right now.\n";
+            }
+            break;
+
         case 'admin':
             $email    = $_GET['email'] ?? '';
             $password = $_GET['password'] ?? '';
@@ -403,11 +444,12 @@ try {
             break;
 
         default:
-            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, diagnose-media, admin, tables, cache, clear\n";
+            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, diagnose-media, test-mail, admin, tables, cache, clear\n";
             echo "demo-seed accepts &fresh=1 to clear previously seeded demo shops/buyers first.\n";
             echo "cleanup-original-seed is a dry run by default; add &confirm=1 to actually delete.\n";
             echo "rewrite-media-host needs &from=&to= (URL-encoded); dry run by default, add &confirm=1 to rewrite.\n";
             echo "diagnose-media accepts &sample=N (default 10, max 200) -- prints stored URL, resolved disk path, and file_exists() for each, against both known upload folders.\n";
+            echo "test-mail needs &to=<email> -- sends one real email right now and prints the exact SMTP exception if it fails, plus the resolved mail config.\n";
     }
 } catch (Throwable $e) {
     echo "ERROR on step '{$step}'\n\n";
