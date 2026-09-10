@@ -33,6 +33,11 @@ abstract class SellerProfile with _$SellerProfile {
     @JsonKey(name: 'is_owner') @Default(false) bool isOwner,
     @JsonKey(name: 'is_following') @Default(false) bool isFollowing,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    // D3 (tester feedback): keyed by lowercase weekday ('monday'..'sunday'),
+    // each value either null (closed) or {"open": "HH:MM", "close": "HH:MM"} —
+    // mirrors `App\Support\OpeningHours::parse()` exactly, which always
+    // returns the full seven-day shape.
+    @JsonKey(name: 'opening_hours') Map<String, dynamic>? openingHours,
   }) = _SellerProfile;
 
   factory SellerProfile.fromJson(Map<String, dynamic> json) => _$SellerProfileFromJson(json);

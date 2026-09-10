@@ -1,7 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -10,6 +12,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
+import '../../../core/utils/opening_hours.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/seller_profile.dart';
@@ -225,12 +228,135 @@ class _ProfileHeader extends ConsumerWidget {
           ),
           const SizedBox(height: SokoniDimens.space16),
           _ActionButtonsRow(seller: seller),
+          // D3 (tester feedback): both exist on the website's shop page
+          // already — the app's own profile screen never had either.
+          if (seller.openingHours != null) ...[
+            const SizedBox(height: SokoniDimens.space16),
+            _OpeningHoursCard(openingHours: seller.openingHours!),
+          ],
+          if (seller.hasLocation) ...[
+            const SizedBox(height: SokoniDimens.space16),
+            _ShopLocationMap(lat: seller.lat!, lng: seller.lng!),
+          ],
           if (seller.isOwner) ...[
             const SizedBox(height: SokoniDimens.space16),
             _DashboardStrip(sellerId: seller.id),
           ],
         ],
       ),
+    );
+  }
+}
+
+/// D3 (tester feedback): the website's shop page already shows this — a
+/// plain Monday-Sunday list, "Closed" for any day with no hours set.
+class _OpeningHoursCard extends StatelessWidget {
+  const _OpeningHoursCard({required this.openingHours});
+
+  final Map<String, dynamic> openingHours;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final outline = isDark ? SokoniColors.darkOutline : SokoniColors.outline;
+    final dayLabels = {
+      'monday': l10n.dayMonday,
+      'tuesday': l10n.dayTuesday,
+      'wednesday': l10n.dayWednesday,
+      'thursday': l10n.dayThursday,
+      'friday': l10n.dayFriday,
+      'saturday': l10n.daySaturday,
+      'sunday': l10n.daySunday,
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(SokoniDimens.space12),
+      decoration: BoxDecoration(border: Border.all(color: outline), borderRadius: BorderRadius.circular(SokoniDimens.radiusCard)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.shopHoursTitle, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: SokoniDimens.space8),
+          for (final day in SokoniOpeningHours.days)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(dayLabels[day]!, style: Theme.of(context).textTheme.bodySmall),
+                  Builder(
+                    builder: (context) {
+                      final hours = SokoniOpeningHours.hoursFor(openingHours, day);
+                      return Text(
+                        hours != null ? '${hours['open']} - ${hours['close']}' : l10n.shopHoursClosed,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// D3 (tester feedback): OpenStreetMap via flutter_map — no Google Maps
+/// key configured or coming (see seller onboarding step 2's identical
+/// reasoning) — a small, non-interactive preview centred on the shop's
+/// own pin, tapping through to a full map for directions.
+class _ShopLocationMap extends StatelessWidget {
+  const _ShopLocationMap({required this.lat, required this.lng});
+
+  final double lat;
+  final double lng;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final point = LatLng(lat, lng);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.shopLocationTitle, style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: SokoniDimens.space8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(SokoniDimens.radiusCard),
+          child: SizedBox(
+            height: 160,
+            child: IgnorePointer(
+              child: FlutterMap(
+                options: MapOptions(initialCenter: point, initialZoom: 15, interactionOptions: const InteractionOptions(flags: InteractiveFlag.none)),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'tz.co.sokoni.sokoni',
+                    maxNativeZoom: 17,
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: point,
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Icons.location_on,
+                          color: SokoniColors.sokoniYellow,
+                          size: 40,
+                          shadows: [Shadow(color: Colors.black45, blurRadius: 4)],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

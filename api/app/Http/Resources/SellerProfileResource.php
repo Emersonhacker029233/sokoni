@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\OpeningHours;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,6 +24,14 @@ class SellerProfileResource extends JsonResource
             'address' => $this->address,
             'region' => $this->region,
             'district' => $this->district,
+            // D3 (tester feedback): the website's shop page already shows
+            // this (server-rendered Blade reading $seller->opening_hours
+            // directly); the app's own shop profile never had it at all
+            // because this JSON resource simply never sent it — not a
+            // frontend rendering gap, a missing field. Parsed into the
+            // full Monday-Sunday shape (never null) so the app never has
+            // to special-case a partially-filled `opening_hours` column.
+            'opening_hours' => OpeningHours::parse($this->opening_hours),
             'status' => $this->status,
             'rejection_reason' => $this->when(
                 $request->user()?->id === $this->user_id,

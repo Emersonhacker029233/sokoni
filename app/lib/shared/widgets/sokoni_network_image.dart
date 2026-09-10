@@ -52,6 +52,13 @@ class SokoniNetworkImage extends StatelessWidget {
         width: width,
         height: height,
         placeholderBuilder: placeholder != null ? (context) => placeholder!(context, imageUrl) : null,
+        // D2 (tester feedback): this was previously the one branch with no
+        // error handling at all — a caller's `errorWidget` (the raster
+        // path already honours it) was silently dropped for an SVG that
+        // 404s (a stale PUBLIC_UPLOADS_URL host, a deleted demo asset,
+        // ...), showing flutter_svg's own default error rendering instead
+        // of whatever empty/error state the caller actually asked for.
+        errorBuilder: errorWidget != null ? (context, error, stackTrace) => errorWidget!(context, imageUrl, error) : null,
       );
     }
 
