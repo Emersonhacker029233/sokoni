@@ -43,11 +43,12 @@ void main() {
       ),
     );
 
-    // Splash plays first (max 900ms); pump it to completion explicitly
-    // rather than pumpAndSettle — the home tab's shimmer skeleton animates
-    // continuously while its network request is pending, so pumpAndSettle
-    // would never find a quiet frame even with the fail-fast adapter above.
-    await tester.pump(const Duration(milliseconds: 950));
+    // Splash plays first (D5: ~1.8s brand moment); pump it to completion
+    // explicitly rather than pumpAndSettle — the home tab's shimmer
+    // skeleton animates continuously while its network request is
+    // pending, so pumpAndSettle would never find a quiet frame even with
+    // the fail-fast adapter above.
+    await tester.pump(const Duration(milliseconds: 1800));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 

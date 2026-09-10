@@ -39,7 +39,12 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  static const _navigateDuration = Duration(milliseconds: 950);
+  // D5 (tester feedback): reads SokoniSplashTransition's own duration
+  // constant so the two can never silently drift apart — this is just a
+  // plain compile-time value, not a dependency on the animation's actual
+  // controller/status, which is the coupling this class's own docblock
+  // warns against; navigation still runs off this independent Timer.
+  static const _navigateDuration = SokoniSplashTransition.duration;
   static const _watchdogDuration = Duration(seconds: 5);
 
   Timer? _navigateTimer;
