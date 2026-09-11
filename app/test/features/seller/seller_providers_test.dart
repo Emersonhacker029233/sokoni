@@ -123,6 +123,85 @@ void main() {
     });
   });
 
+  group('displayedCustomerCount', () {
+    testWidgets(
+      'follows optimistically bump the shown count by one, before any server round trip resolves — '
+      'regression: the count previously never moved at all on a successful follow',
+      (tester) async {
+        final repo = _ScriptedSellerRepository();
+        final ref = await _pumpAndCaptureRef(tester, repo);
+
+        expect(displayedCustomerCount(ref, sellerId: 1, baseCount: 10, baseIsFollowing: false), 10);
+
+        await toggleSellerFollow(
+          ref,
+          sellerId: 1,
+          handle: 'amina',
+          isFollowing: false,
+          onUnauthenticated: () {},
+          onFailed: (_) {},
+        );
+
+        // Same base (10, isFollowing still false — the profile hasn't been
+        // refetched in this test), but the optimistic override now says
+        // "following", so the shown count reflects the follow immediately.
+        expect(displayedCustomerCount(ref, sellerId: 1, baseCount: 10, baseIsFollowing: false), 11);
+      },
+    );
+
+    testWidgets('unfollowing optimistically decrements the shown count by one', (tester) async {
+      final repo = _ScriptedSellerRepository();
+      final ref = await _pumpAndCaptureRef(tester, repo);
+
+      await toggleSellerFollow(
+        ref,
+        sellerId: 1,
+        handle: 'amina',
+        isFollowing: true, // already following
+        onUnauthenticated: () {},
+        onFailed: (_) {},
+      );
+
+      expect(displayedCustomerCount(ref, sellerId: 1, baseCount: 10, baseIsFollowing: true), 9);
+    });
+
+    testWidgets(
+      'a failed follow reverts the optimistic count along with the optimistic follow state — '
+      'the count must not stay bumped when the request never actually went through',
+      (tester) async {
+        final repo = _ScriptedSellerRepository(throwing: const ServerException('Something went wrong. Please try again.'));
+        final ref = await _pumpAndCaptureRef(tester, repo);
+
+        await toggleSellerFollow(
+          ref,
+          sellerId: 1,
+          handle: 'amina',
+          isFollowing: false,
+          onUnauthenticated: () {},
+          onFailed: (_) {},
+        );
+
+        expect(displayedCustomerCount(ref, sellerId: 1, baseCount: 10, baseIsFollowing: false), 10);
+      },
+    );
+
+    testWidgets(
+      'once the base profile itself reflects the new follow state, the adjustment collapses back to zero — '
+      'proving no double-count once toggleSellerFollow\'s post-success invalidation delivers a fresh profile',
+      (tester) async {
+        final repo = _ScriptedSellerRepository();
+        final ref = await _pumpAndCaptureRef(tester, repo);
+        ref.read(followOverridesProvider.notifier).set(1, true);
+
+        // Base still says not-following (stale) — override adds one.
+        expect(displayedCustomerCount(ref, sellerId: 1, baseCount: 10, baseIsFollowing: false), 11);
+        // Base has refetched and now agrees with the override — no more
+        // adjustment applied, avoiding a double-count.
+        expect(displayedCustomerCount(ref, sellerId: 1, baseCount: 11, baseIsFollowing: true), 11);
+      },
+    );
+  });
+
   group('startConversationOrPromptSignIn', () {
     testWidgets('returns the new conversation id on success', (tester) async {
       final repo = _ScriptedSellerRepository();

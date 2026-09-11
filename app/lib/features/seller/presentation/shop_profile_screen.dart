@@ -1,9 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -20,6 +18,7 @@ import '../../../shared/widgets/connectivity_banner.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/report_sheet.dart';
+import '../../../shared/widgets/shop_location_map.dart';
 import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../discovery/presentation/widgets/sticky_category_header.dart';
@@ -45,52 +44,73 @@ class ShopProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final sellerAsync = ref.watch(sellerProfileProvider(handle));
+    // Tester feedback (follower count not updating): toggling Follow now
+    // invalidates this provider to reconcile the shown count against the
+    // server — reading `.value` here rather than `.when()`'s `loading`
+    // branch means that refetch keeps showing the current profile in
+    // place while it's in flight, instead of blanking the whole screen to
+    // a spinner on every single follow/unfollow tap.
+    final seller = sellerAsync.value;
 
     return Scaffold(
       body: ConnectivityBanner(
-        child: sellerAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => SokoniErrorState(
-            message: error is ApiException ? error.message : l10n.feedErrorBody,
-            onRetry: () => ref.invalidate(sellerProfileProvider(handle)),
-          ),
-          data: (seller) => DefaultTabController(
-            length: 4,
-            child: NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                SliverAppBar(
-                  pinned: false,
-                  title: Text('@${seller.handle}'),
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.ios_share_rounded),
-                      onPressed: () => SharePlus.instance.share(
-                        ShareParams(text: 'https://sokoni.co.tz/@${seller.handle}'),
+        child: seller == null
+            ? sellerAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => SokoniErrorState(
+                  message: error is ApiException
+                      ? error.message
+                      : l10n.feedErrorBody,
+                  onRetry: () => ref.invalidate(sellerProfileProvider(handle)),
+                ),
+                data: (_) => const SizedBox.shrink(),
+              )
+            : DefaultTabController(
+                length: 4,
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                    SliverAppBar(
+                      pinned: false,
+                      title: Text('@${seller.handle}'),
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.ios_share_rounded),
+                          onPressed: () => SharePlus.instance.share(
+                            ShareParams(
+                              text: 'https://sokoni.co.tz/@${seller.handle}',
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.flag_outlined),
+                          onPressed: () => showReportSheet(
+                            context,
+                            ref,
+                            reportableType: 'shop',
+                            reportableId: seller.id,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SliverToBoxAdapter(child: _ProfileHeader(seller: seller)),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: StickyCategoryHeaderDelegate(
+                        height: 48,
+                        child: const _ShopTabBar(),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.flag_outlined),
-                      onPressed: () => showReportSheet(context, ref, reportableType: 'shop', reportableId: seller.id),
-                    ),
                   ],
+                  body: TabBarView(
+                    children: [
+                      ShopListingsGrid(sellerId: seller.id),
+                      ShowcaseThumbGrid(sellerId: seller.id),
+                      UpdatesList(sellerId: seller.id),
+                      _ShopReviewsTab(handle: handle),
+                    ],
+                  ),
                 ),
-                SliverToBoxAdapter(child: _ProfileHeader(seller: seller)),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: StickyCategoryHeaderDelegate(height: 48, child: const _ShopTabBar()),
-                ),
-              ],
-              body: TabBarView(
-                children: [
-                  ShopListingsGrid(sellerId: seller.id),
-                  ShowcaseThumbGrid(sellerId: seller.id),
-                  UpdatesList(sellerId: seller.id),
-                  _ShopReviewsTab(handle: handle),
-                ],
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -104,10 +124,22 @@ class _ShopTabBar extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return TabBar(
       tabs: [
-        Tab(icon: const Icon(Icons.grid_on_outlined), child: Text(l10n.shopProductsTitle)),
-        Tab(icon: const Icon(Icons.play_circle_outline_rounded), child: Text(l10n.shopShowcaseTitle)),
-        Tab(icon: const Icon(Icons.person_outline_rounded), child: Text(l10n.shopUpdatesTitle)),
-        Tab(icon: const Icon(Icons.star_outline_rounded), child: Text(l10n.shopReviewsTitle)),
+        Tab(
+          icon: const Icon(Icons.grid_on_outlined),
+          child: Text(l10n.shopProductsTitle),
+        ),
+        Tab(
+          icon: const Icon(Icons.play_circle_outline_rounded),
+          child: Text(l10n.shopShowcaseTitle),
+        ),
+        Tab(
+          icon: const Icon(Icons.person_outline_rounded),
+          child: Text(l10n.shopUpdatesTitle),
+        ),
+        Tab(
+          icon: const Icon(Icons.star_outline_rounded),
+          child: Text(l10n.shopReviewsTitle),
+        ),
       ],
     );
   }
@@ -134,17 +166,35 @@ class _ProfileHeader extends ConsumerWidget {
               CircleAvatar(
                 radius: 36,
                 backgroundColor: SokoniColors.surfaceAlt,
-                backgroundImage: seller.logo != null ? CachedNetworkImageProvider(seller.logo!) : null,
-                child: seller.logo == null ? const Icon(Icons.storefront_outlined, size: 32) : null,
+                backgroundImage: seller.logo != null
+                    ? CachedNetworkImageProvider(seller.logo!)
+                    : null,
+                child: seller.logo == null
+                    ? const Icon(Icons.storefront_outlined, size: 32)
+                    : null,
               ),
               const SizedBox(width: SokoniDimens.space20),
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _CountColumn(count: seller.productsCount, label: l10n.shopProductsTitle),
-                    _CountColumn(count: seller.customerCount, label: l10n.customerCountLabel),
-                    _CountColumn(count: seller.followingCount, label: l10n.followingFilterLabel),
+                    _CountColumn(
+                      count: seller.productsCount,
+                      label: l10n.shopProductsTitle,
+                    ),
+                    _CountColumn(
+                      count: displayedCustomerCount(
+                        ref,
+                        sellerId: seller.id,
+                        baseCount: seller.customerCount,
+                        baseIsFollowing: seller.isFollowing,
+                      ),
+                      label: l10n.customerCountLabel,
+                    ),
+                    _CountColumn(
+                      count: seller.followingCount,
+                      label: l10n.followingFilterLabel,
+                    ),
                   ],
                 ),
               ),
@@ -156,7 +206,9 @@ class _ProfileHeader extends ConsumerWidget {
               Flexible(
                 child: Text(
                   seller.shopName,
-                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -164,12 +216,21 @@ class _ProfileHeader extends ConsumerWidget {
               if (seller.isVerified)
                 const Padding(
                   padding: EdgeInsets.only(left: 4),
-                  child: Icon(Icons.verified_rounded, size: 16, color: SokoniColors.sokoniYellow),
+                  child: Icon(
+                    Icons.verified_rounded,
+                    size: 16,
+                    color: SokoniColors.sokoniYellow,
+                  ),
                 ),
             ],
           ),
           if (seller.category != null)
-            Text(seller.category!.name(Localizations.localeOf(context).languageCode), style: textTheme.bodySmall),
+            Text(
+              seller.category!.name(
+                Localizations.localeOf(context).languageCode,
+              ),
+              style: textTheme.bodySmall,
+            ),
           if (seller.bio != null && seller.bio!.isNotEmpty) ...[
             const SizedBox(height: SokoniDimens.space4),
             Text(seller.bio!, style: textTheme.bodyMedium),
@@ -178,7 +239,11 @@ class _ProfileHeader extends ConsumerWidget {
             const SizedBox(height: SokoniDimens.space4),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 14, color: Theme.of(context).hintColor),
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 14,
+                  color: Theme.of(context).hintColor,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -198,12 +263,18 @@ class _ProfileHeader extends ConsumerWidget {
             const SizedBox(height: SokoniDimens.space4),
             GestureDetector(
               onTap: () => launchUrl(
-                Uri.parse('https://wa.me/${seller.whatsapp!.replaceAll('+', '')}'),
+                Uri.parse(
+                  'https://wa.me/${seller.whatsapp!.replaceAll('+', '')}',
+                ),
                 mode: LaunchMode.externalApplication,
               ),
               child: Row(
                 children: [
-                  Icon(Icons.phone_in_talk_outlined, size: 14, color: Theme.of(context).hintColor),
+                  Icon(
+                    Icons.phone_in_talk_outlined,
+                    size: 14,
+                    color: Theme.of(context).hintColor,
+                  ),
                   const SizedBox(width: 4),
                   Text(seller.whatsapp!, style: textTheme.bodySmall),
                 ],
@@ -214,16 +285,32 @@ class _ProfileHeader extends ConsumerWidget {
           Row(
             children: [
               Icon(
-                seller.isVerified ? Icons.verified_rounded : Icons.hourglass_empty_rounded,
+                seller.isVerified
+                    ? Icons.verified_rounded
+                    : Icons.hourglass_empty_rounded,
                 size: 14,
-                color: seller.isVerified ? SokoniColors.sokoniYellow : Theme.of(context).hintColor,
+                color: seller.isVerified
+                    ? SokoniColors.sokoniYellow
+                    : Theme.of(context).hintColor,
               ),
               const SizedBox(width: 4),
-              Text(seller.isVerified ? l10n.shopVerifiedBadge : l10n.shopPendingBadge, style: textTheme.bodySmall),
+              Text(
+                seller.isVerified
+                    ? l10n.shopVerifiedBadge
+                    : l10n.shopPendingBadge,
+                style: textTheme.bodySmall,
+              ),
               const SizedBox(width: SokoniDimens.space12),
-              const Icon(Icons.star_rounded, size: 14, color: SokoniColors.sokoniYellow),
+              const Icon(
+                Icons.star_rounded,
+                size: 14,
+                color: SokoniColors.sokoniYellow,
+              ),
               const SizedBox(width: 2),
-              Text('${seller.ratingAvg.toStringAsFixed(1)} (${seller.ratingCount})', style: textTheme.bodySmall),
+              Text(
+                '${seller.ratingAvg.toStringAsFixed(1)} (${seller.ratingCount})',
+                style: textTheme.bodySmall,
+              ),
             ],
           ),
           const SizedBox(height: SokoniDimens.space16),
@@ -234,9 +321,15 @@ class _ProfileHeader extends ConsumerWidget {
             const SizedBox(height: SokoniDimens.space16),
             _OpeningHoursCard(openingHours: seller.openingHours!),
           ],
-          if (seller.hasLocation) ...[
+          if (seller.hasLocation ||
+              (seller.address != null && seller.address!.isNotEmpty)) ...[
             const SizedBox(height: SokoniDimens.space16),
-            _ShopLocationMap(lat: seller.lat!, lng: seller.lng!),
+            ShopLocationMap(
+              shopName: seller.shopName,
+              address: seller.address,
+              lat: seller.lat,
+              lng: seller.lng,
+            ),
           ],
           if (seller.isOwner) ...[
             const SizedBox(height: SokoniDimens.space16),
@@ -272,11 +365,17 @@ class _OpeningHoursCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(SokoniDimens.space12),
-      decoration: BoxDecoration(border: Border.all(color: outline), borderRadius: BorderRadius.circular(SokoniDimens.radiusCard)),
+      decoration: BoxDecoration(
+        border: Border.all(color: outline),
+        borderRadius: BorderRadius.circular(SokoniDimens.radiusCard),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.shopHoursTitle, style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            l10n.shopHoursTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: SokoniDimens.space8),
           for (final day in SokoniOpeningHours.days)
             Padding(
@@ -284,12 +383,20 @@ class _OpeningHoursCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(dayLabels[day]!, style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    dayLabels[day]!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                   Builder(
                     builder: (context) {
-                      final hours = SokoniOpeningHours.hoursFor(openingHours, day);
+                      final hours = SokoniOpeningHours.hoursFor(
+                        openingHours,
+                        day,
+                      );
                       return Text(
-                        hours != null ? '${hours['open']} - ${hours['close']}' : l10n.shopHoursClosed,
+                        hours != null
+                            ? '${hours['open']} - ${hours['close']}'
+                            : l10n.shopHoursClosed,
                         style: Theme.of(context).textTheme.bodySmall,
                       );
                     },
@@ -299,64 +406,6 @@ class _OpeningHoursCard extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-/// D3 (tester feedback): OpenStreetMap via flutter_map — no Google Maps
-/// key configured or coming (see seller onboarding step 2's identical
-/// reasoning) — a small, non-interactive preview centred on the shop's
-/// own pin, tapping through to a full map for directions.
-class _ShopLocationMap extends StatelessWidget {
-  const _ShopLocationMap({required this.lat, required this.lng});
-
-  final double lat;
-  final double lng;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final point = LatLng(lat, lng);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(l10n.shopLocationTitle, style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: SokoniDimens.space8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(SokoniDimens.radiusCard),
-          child: SizedBox(
-            height: 160,
-            child: IgnorePointer(
-              child: FlutterMap(
-                options: MapOptions(initialCenter: point, initialZoom: 15, interactionOptions: const InteractionOptions(flags: InteractiveFlag.none)),
-                children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'tz.co.sokoni.sokoni',
-                    maxNativeZoom: 17,
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: point,
-                        width: 40,
-                        height: 40,
-                        child: const Icon(
-                          Icons.location_on,
-                          color: SokoniColors.sokoniYellow,
-                          size: 40,
-                          shadows: [Shadow(color: Colors.black45, blurRadius: 4)],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -371,7 +420,12 @@ class _CountColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('$count', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        Text(
+          '$count',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
@@ -409,7 +463,11 @@ class _ActionButtonsRow extends ConsumerWidget {
       );
     }
 
-    final following = isSellerFollowed(ref, sellerId: seller.id, isFollowing: seller.isFollowing);
+    final following = isSellerFollowed(
+      ref,
+      sellerId: seller.id,
+      isFollowing: seller.isFollowing,
+    );
 
     return Row(
       children: [
@@ -421,8 +479,13 @@ class _ActionButtonsRow extends ConsumerWidget {
                     sellerId: seller.id,
                     handle: seller.handle,
                     isFollowing: seller.isFollowing,
-                    onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptFollow),
-                    onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+                    onUnauthenticated: () => showSignInPrompt(
+                      context,
+                      message: l10n.guestPromptFollow,
+                    ),
+                    onFailed: (message) => ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message))),
                   ),
                   child: Text(l10n.followingAction),
                 )
@@ -432,8 +495,13 @@ class _ActionButtonsRow extends ConsumerWidget {
                     sellerId: seller.id,
                     handle: seller.handle,
                     isFollowing: seller.isFollowing,
-                    onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptFollow),
-                    onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+                    onUnauthenticated: () => showSignInPrompt(
+                      context,
+                      message: l10n.guestPromptFollow,
+                    ),
+                    onFailed: (message) => ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message))),
                   ),
                   child: Text(l10n.followAction),
                 ),
@@ -446,11 +514,15 @@ class _ActionButtonsRow extends ConsumerWidget {
                 ref,
                 sellerId: seller.id,
                 onUnauthenticated: () {
-                  if (context.mounted) showSignInPrompt(context, message: l10n.guestPromptMessage);
+                  if (context.mounted) {
+                    showSignInPrompt(context, message: l10n.guestPromptMessage);
+                  }
                 },
                 onFailed: (message) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message)));
                   }
                 },
               );
@@ -485,12 +557,30 @@ class _DashboardStrip extends ConsumerWidget {
       error: (error, _) => const SizedBox.shrink(),
       data: (stats) => Container(
         padding: const EdgeInsets.symmetric(vertical: SokoniDimens.space12),
-        decoration: BoxDecoration(border: Border.all(color: outline), borderRadius: BorderRadius.circular(SokoniDimens.radiusCard)),
+        decoration: BoxDecoration(
+          border: Border.all(color: outline),
+          borderRadius: BorderRadius.circular(SokoniDimens.radiusCard),
+        ),
         child: Row(
           children: [
-            Expanded(child: _StatColumn(value: stats.totalViews, label: l10n.dashboardTotalViews)),
-            Expanded(child: _StatColumn(value: stats.savesLast30Days, label: l10n.dashboardSaves30d)),
-            Expanded(child: _StatColumn(value: stats.ordersLast30Days, label: l10n.dashboardOrders30d)),
+            Expanded(
+              child: _StatColumn(
+                value: stats.totalViews,
+                label: l10n.dashboardTotalViews,
+              ),
+            ),
+            Expanded(
+              child: _StatColumn(
+                value: stats.savesLast30Days,
+                label: l10n.dashboardSaves30d,
+              ),
+            ),
+            Expanded(
+              child: _StatColumn(
+                value: stats.ordersLast30Days,
+                label: l10n.dashboardOrders30d,
+              ),
+            ),
           ],
         ),
       ),
@@ -508,8 +598,17 @@ class _StatColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('$value', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        Text(label, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+        Text(
+          '$value',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
@@ -534,14 +633,22 @@ class _ShopReviewsTab extends ConsumerWidget {
       data: (data) {
         final (page, distribution) = data;
         if (page.items.isEmpty) {
-          return SokoniEmptyState(icon: Icons.star_border_rounded, title: l10n.shopNoReviews, message: '');
+          return SokoniEmptyState(
+            icon: Icons.star_border_rounded,
+            title: l10n.shopNoReviews,
+            message: '',
+          );
         }
         return ListView(
           padding: const EdgeInsets.all(SokoniDimens.space16),
           children: [
-            ReviewDistributionBar(distribution: distribution, total: page.total),
+            ReviewDistributionBar(
+              distribution: distribution,
+              total: page.total,
+            ),
             const SizedBox(height: SokoniDimens.space16),
-            for (final review in page.items) _ReviewTile(review: review, shopHandle: handle),
+            for (final review in page.items)
+              _ReviewTile(review: review, shopHandle: handle),
           ],
         );
       },
@@ -559,7 +666,9 @@ class _ReviewTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceAlt = isDark ? SokoniColors.darkSurfaceAlt : SokoniColors.surfaceAlt;
+    final surfaceAlt = isDark
+        ? SokoniColors.darkSurfaceAlt
+        : SokoniColors.surfaceAlt;
     final currentUserAsync = ref.watch(currentUserProvider);
     final isOwner = currentUserAsync.maybeWhen(
       data: (user) => user.sellerHandle == shopHandle,
@@ -575,14 +684,18 @@ class _ReviewTile extends ConsumerWidget {
             children: [
               Text(
                 review.buyer?.name ?? '',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: SokoniDimens.space8),
               Row(
                 children: List.generate(
                   5,
                   (i) => Icon(
-                    i < review.rating ? Icons.star_rounded : Icons.star_border_rounded,
+                    i < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
                     size: 14,
                     color: SokoniColors.sokoniYellow,
                   ),
@@ -598,12 +711,21 @@ class _ReviewTile extends ConsumerWidget {
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(SokoniDimens.space8),
-              decoration: BoxDecoration(color: surfaceAlt, borderRadius: BorderRadius.circular(SokoniDimens.radiusField)),
-              child: Text(review.reply!, style: Theme.of(context).textTheme.bodySmall),
+              decoration: BoxDecoration(
+                color: surfaceAlt,
+                borderRadius: BorderRadius.circular(SokoniDimens.radiusField),
+              ),
+              child: Text(
+                review.reply!,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ),
           ] else if (isOwner) ...[
             const SizedBox(height: 8),
-            OutlinedButton(onPressed: () => _showReplySheet(context, ref), child: Text(l10n.reviewReply)),
+            OutlinedButton(
+              onPressed: () => _showReplySheet(context, ref),
+              child: Text(l10n.reviewReply),
+            ),
           ],
         ],
       ),
@@ -622,18 +744,24 @@ class _ReviewTile extends ConsumerWidget {
           left: SokoniDimens.space20,
           right: SokoniDimens.space20,
           top: SokoniDimens.space20,
-          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + SokoniDimens.space24,
+          bottom:
+              MediaQuery.viewInsetsOf(sheetContext).bottom +
+              SokoniDimens.space24,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.reviewReply, style: Theme.of(sheetContext).textTheme.titleLarge),
+            Text(
+              l10n.reviewReply,
+              style: Theme.of(sheetContext).textTheme.titleLarge,
+            ),
             const SizedBox(height: SokoniDimens.space16),
             TextField(controller: controller, maxLines: 3, autofocus: true),
             const SizedBox(height: SokoniDimens.space20),
             FilledButton(
-              onPressed: () => Navigator.of(sheetContext).pop(controller.text.trim()),
+              onPressed: () =>
+                  Navigator.of(sheetContext).pop(controller.text.trim()),
               child: Text(l10n.reviewSubmit),
             ),
           ],
@@ -643,11 +771,15 @@ class _ReviewTile extends ConsumerWidget {
     if (reply == null || reply.isEmpty) return;
 
     try {
-      await ref.read(reviewRepositoryProvider).reply(reviewId: review.id, reply: reply);
+      await ref
+          .read(reviewRepositoryProvider)
+          .reply(reviewId: review.id, reply: reply);
       ref.invalidate(sellerReviewsProvider(shopHandle));
     } on ApiException catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }

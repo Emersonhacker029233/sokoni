@@ -64,6 +64,29 @@ bool isSellerFollowed(WidgetRef ref, {required int sellerId, required bool isFol
   return ref.watch(followOverridesProvider)[sellerId] ?? isFollowing;
 }
 
+/// Tester feedback: tapping Follow saved correctly (the follow itself, and
+/// `seller_profiles.customer_count` server-side via `CustomerObserver`, were
+/// both already right — confirmed via the existing passing
+/// `CustomerTest::test_following_a_shop_updates_its_denormalised_customer_count`)
+/// but the shown count never moved, because [sellerProfileProvider] is a
+/// plain `FutureProvider.family` fetched once and never invalidated after a
+/// follow/unfollow, and the follow/unfollow endpoints only ever returned
+/// `{"message": ...}` — no count to read off the response even if the
+/// client had asked for one.
+///
+/// Derives the on-screen delta purely by comparing the optimistic override
+/// against the *fetched* profile's own `isFollowing` — no separate delta
+/// state to keep in sync or forget to clear: once [toggleSellerFollow]'s
+/// post-success invalidation lands a fresh profile whose `isFollowing`
+/// already matches the override, this naturally collapses back to zero
+/// adjustment on its own, rather than risking a double-count if the
+/// override were left stacking on top of an already-updated base.
+int displayedCustomerCount(WidgetRef ref, {required int sellerId, required int baseCount, required bool baseIsFollowing}) {
+  final overridden = ref.watch(followOverridesProvider)[sellerId];
+  if (overridden == null || overridden == baseIsFollowing) return baseCount;
+  return overridden ? baseCount + 1 : baseCount - 1;
+}
+
 /// Haptic on every toggle (CLAUDE.md Part 5) — centralised here rather
 /// than at each call site, same reasoning as `toggleProductFavorite`. Same
 /// [onUnauthenticated]/[onFailed] split too, and for the same reason: a
@@ -87,6 +110,11 @@ Future<void> toggleSellerFollow(
     } else {
       await ref.read(sellerRepositoryProvider).unfollow(handle);
     }
+    // Reconcile against the server rather than trust the optimistic count
+    // forever — the follow/unfollow endpoints don't return a count to read
+    // directly, so a real refetch is what makes displayedCustomerCount's
+    // adjustment collapse back to zero once the base profile catches up.
+    ref.invalidate(sellerProfileProvider(handle));
   } catch (e) {
     ref.read(followOverridesProvider.notifier).set(sellerId, current);
     if (e is UnauthenticatedException) {

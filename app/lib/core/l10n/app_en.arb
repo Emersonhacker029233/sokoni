@@ -336,6 +336,8 @@
   "@shopHoursClosed": {},
   "shopLocationTitle": "Location",
   "@shopLocationTitle": {},
+  "shopLocationDirections": "Directions",
+  "@shopLocationDirections": {},
   "dayMonday": "Monday",
   "@dayMonday": {},
   "dayTuesday": "Tuesday",
