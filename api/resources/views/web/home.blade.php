@@ -7,9 +7,28 @@
          tester feedback item 6 explicitly calls for this fallback over a stock
          photo that doesn't fit) plus a dark gradient, so the search card is what
          actually stands out rather than the backdrop competing for attention. --}}
+    {{-- B1 (client feedback): a "search_background" banner renders behind
+         this whole band — artwork visible at the left/right edges, a
+         scrim over the centre (where the search card sits) instead of a
+         flat overlay across the whole image, so it never fights the
+         input's own legibility. Falls back to exactly today's plain
+         pattern+gradient backdrop when no such banner is active. --}}
+    @php($searchBg = \App\Models\Banner::live()->forPosition('search_background')->first())
     <section class="relative overflow-hidden border-b border-sokoni-outline bg-sokoni-black">
-        <div class="absolute inset-0" style="background-image: url('{{ asset('images/hero-pattern.svg') }}'); background-repeat: repeat;" aria-hidden="true"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-sokoni-black/60 via-sokoni-black/80 to-sokoni-black" aria-hidden="true"></div>
+        @if ($searchBg)
+            @php($searchBg->recordImpression())
+            <a href="{{ route('web.banners.click', $searchBg) }}" class="absolute inset-0 block" aria-label="{{ $searchBg->title }}">
+                <img src="{{ $searchBg->image_path }}" alt="" class="h-full w-full object-cover">
+            </a>
+            <div
+                class="absolute inset-0"
+                style="background: linear-gradient(to right, transparent 0%, rgba(10,10,10,.88) 32%, rgba(10,10,10,.88) 68%, transparent 100%)"
+                aria-hidden="true"
+            ></div>
+        @else
+            <div class="absolute inset-0" style="background-image: url('{{ asset('images/hero-pattern.svg') }}'); background-repeat: repeat;" aria-hidden="true"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-sokoni-black/60 via-sokoni-black/80 to-sokoni-black" aria-hidden="true"></div>
+        @endif
         <div class="relative mx-auto max-w-4xl px-16 py-40 text-center lg:py-56">
             <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{{ __('site.home_hero_title') }}</h1>
             <p class="mx-auto mt-12 max-w-xl text-white/70">{{ __('site.home_hero_subtitle') }}</p>
@@ -35,45 +54,55 @@
 
     <x-banner-slot position="home_hero" />
 
-    {{-- Category grid --}}
+    {{-- Category grid. B2 (client feedback): a narrow side slot next to the
+         icon row, noon.com-style — desktop-only (a vertical/square ad has
+         nowhere good to go once this collapses to a 2-column mobile grid),
+         and collapses to nothing on its own when no banner is active. --}}
     <section class="mx-auto max-w-7xl px-16 py-32 lg:px-24">
         <h2 class="text-h2 fade-in-section">{{ __('site.home_categories') }}</h2>
-        <div class="mt-16 grid grid-cols-2 gap-16 lg:gap-24 sm:grid-cols-3 md:grid-cols-5">
-            @foreach ($categories as $category)
-                {{-- No product count here on purpose (tester feedback) — a category
-                     with zero currently-visible products is filtered out of this
-                     list entirely by HomeController rather than shown as "...  0". --}}
-                <a href="{{ route('web.category', app(\App\Services\Catalog\CategoryCatalogService::class)->slug($category)) }}" class="card flex flex-col items-center gap-8 p-16 text-center transition hover:shadow-md">
-                    <span class="flex h-48 w-48 items-center justify-center rounded-full bg-sokoni-yellow/20 text-sokoni-black">
-                        <x-category-icon :icon="$category->icon" />
-                    </span>
-                    <span class="text-sm font-semibold">{{ $category->name(app()->getLocale()) }}</span>
-                </a>
-            @endforeach
+        <div class="mt-16 flex flex-col gap-16 lg:flex-row">
+            <div class="grid flex-1 grid-cols-2 gap-16 lg:gap-24 sm:grid-cols-3 md:grid-cols-5">
+                @foreach ($categories as $category)
+                    {{-- No product count here on purpose (tester feedback) — a category
+                         with zero currently-visible products is filtered out of this
+                         list entirely by HomeController rather than shown as "...  0". --}}
+                    <a href="{{ route('web.category', app(\App\Services\Catalog\CategoryCatalogService::class)->slug($category)) }}" class="card flex flex-col items-center gap-8 p-16 text-center transition hover:shadow-md">
+                        <span class="flex h-48 w-48 items-center justify-center rounded-full bg-sokoni-yellow/20 text-sokoni-black">
+                            <x-category-icon :icon="$category->icon" />
+                        </span>
+                        <span class="text-sm font-semibold">{{ $category->name(app()->getLocale()) }}</span>
+                    </a>
+                @endforeach
+            </div>
+            <x-banner-slot position="category_strip_side" variant="side" class="hidden lg:block" />
         </div>
     </section>
 
-    {{-- Near you --}}
+    {{-- Near you. B3 (client feedback): a side slot to the right of the
+         row, same collapsing rules as the category strip's side slot. --}}
     @if ($nearYou->isNotEmpty())
         <section class="mx-auto max-w-7xl px-16 py-16 lg:px-24">
             <div class="flex items-center justify-between">
                 <h2 class="text-h2 fade-in-section">{{ __('site.home_near_you') }}</h2>
                 <a href="{{ route('web.search') }}?sort=nearby" class="text-sm font-medium text-sokoni-black/60 hover:underline">{{ __('site.see_all') }}</a>
             </div>
-            <div class="no-scrollbar mt-16 flex gap-16 overflow-x-auto pb-8 sm:grid sm:grid-cols-3 sm:overflow-visible md:grid-cols-4 lg:grid-cols-6 lg:gap-24">
-                {{-- B2 (tester feedback): this is the first product grid on
-                     the page — its first row sits at or near the fold, so
-                     lazy-loading it (the default for every other card)
-                     just defers the very photos a visitor sees first,
-                     reading as a pop-in/flicker of its own on a slow
-                     connection. Eager + high fetch priority for the first
-                     4 (a typical above-the-fold count across breakpoints);
-                     everything after stays lazy as before. --}}
-                @foreach ($nearYou as $product)
-                    <div class="w-[160px] shrink-0 sm:w-auto">
-                        <x-product-card :product="$product" :lazy="$loop->index >= 4" />
-                    </div>
-                @endforeach
+            <div class="mt-16 flex gap-16 lg:gap-24">
+                <div class="no-scrollbar flex flex-1 gap-16 overflow-x-auto pb-8 sm:grid sm:grid-cols-3 sm:overflow-visible md:grid-cols-4 lg:grid-cols-6">
+                    {{-- B2 (tester feedback): this is the first product grid on
+                         the page — its first row sits at or near the fold, so
+                         lazy-loading it (the default for every other card)
+                         just defers the very photos a visitor sees first,
+                         reading as a pop-in/flicker of its own on a slow
+                         connection. Eager + high fetch priority for the first
+                         4 (a typical above-the-fold count across breakpoints);
+                         everything after stays lazy as before. --}}
+                    @foreach ($nearYou as $product)
+                        <div class="w-[160px] shrink-0 sm:w-auto">
+                            <x-product-card :product="$product" :lazy="$loop->index >= 4" />
+                        </div>
+                    @endforeach
+                </div>
+                <x-banner-slot position="near_you_side" variant="side" class="hidden lg:block" />
             </div>
         </section>
     @endif

@@ -55,6 +55,10 @@ class BannersTable
                         'home_mid' => 'Home — mid-page',
                         'category_top' => 'Category — top',
                         'sidebar' => 'Sidebar',
+                        // Part B (client feedback): noon.com-pattern ad inventory.
+                        'search_background' => 'Home — search background',
+                        'category_strip_side' => 'Home — category strip side',
+                        'near_you_side' => 'Home — Near you side',
                     ]),
                 TernaryFilter::make('is_active'),
             ])

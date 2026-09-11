@@ -24,6 +24,28 @@ class BannerForm
                     ->disk('public')
                     ->directory('banners')
                     ->required()
+                    // Part B (client feedback): "compression on upload —
+                    // this is a 3G market." Resizes (and re-encodes, which
+                    // is where the real byte savings come from) in the
+                    // browser before the file ever leaves it, rather than
+                    // only shrinking it after a slow upload has already
+                    // happened — the more meaningful saving on this
+                    // connection quality. 1920px covers every position's
+                    // guidance below at full resolution on a large
+                    // desktop display; maxSize is a hard backstop against
+                    // whatever the browser's own resize can't help with
+                    // (an unusually dense source image, an animated GIF).
+                    ->automaticallyResizeImagesMode('contain')
+                    ->automaticallyResizeImagesToWidth('1920')
+                    ->automaticallyUpscaleImagesWhenResizing(false)
+                    ->maxSize(2048)
+                    ->helperText(
+                        'Recommended sizes — Home hero/mid, Category top: 1600×500px wide banner. '
+                        .'Sidebar: 300×600px. Search background: 1600×400px, keep the important '
+                        .'artwork within the outer thirds — the centre third is dimmed for the '
+                        .'search field. Category strip side: 200×200px square. Near you side: '
+                        .'300×250px. Max 2MB — larger images are resized automatically.'
+                    )
                     // The website reads image_path as a full public URL —
                     // same convention as product photos and seller logos —
                     // not the disk-relative path FileUpload stores/expects
@@ -52,6 +74,10 @@ class BannerForm
                         'home_mid' => 'Home — mid-page',
                         'category_top' => 'Category page — top',
                         'sidebar' => 'Sidebar (category/search)',
+                        // Part B (client feedback): noon.com-pattern ad inventory.
+                        'search_background' => 'Home — search bar background',
+                        'category_strip_side' => 'Home — beside the category strip',
+                        'near_you_side' => 'Home — beside "Near you"',
                     ])
                     ->required(),
                 TextInput::make('sort_order')

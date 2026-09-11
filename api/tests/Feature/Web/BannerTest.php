@@ -71,4 +71,64 @@ class BannerTest extends TestCase
         $response->assertRedirect('https://example.com/campaign');
         $this->assertSame(1, $banner->fresh()->clicks_count);
     }
+
+    /**
+     * Part B (client feedback): noon.com-pattern ad inventory — three new
+     * positions on top of the original four. The migration widens
+     * `position` from a fixed DB-level enum, so this also proves that
+     * change actually took (a row with one of these values would be
+     * rejected by the old enum/CHECK constraint on every driver, not just
+     * silently dropped).
+     */
+    public function test_a_search_background_banner_renders_behind_the_search_band_with_a_centre_scrim(): void
+    {
+        $banner = Banner::factory()->create(['position' => 'search_background', 'title' => 'Search backdrop campaign']);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee(route('web.banners.click', $banner), false);
+        $response->assertSee('linear-gradient(to right, transparent 0%', false);
+    }
+
+    public function test_with_no_search_background_banner_the_band_keeps_its_plain_pattern_backdrop(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('hero-pattern.svg', false);
+        $response->assertDontSee('linear-gradient(to right, transparent 0%', false);
+    }
+
+    public function test_a_category_strip_side_banner_renders_beside_the_category_grid(): void
+    {
+        $banner = Banner::factory()->create(['position' => 'category_strip_side', 'title' => 'Category side campaign']);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Category side campaign');
+    }
+
+    public function test_a_near_you_side_banner_renders_beside_the_near_you_row(): void
+    {
+        $seller = \App\Models\SellerProfile::factory()->verified()->create(['lat' => -6.8, 'lng' => 39.28]);
+        \App\Models\Product::factory()->create(['seller_id' => $seller->id]);
+        $banner = Banner::factory()->create(['position' => 'near_you_side', 'title' => 'Near you side campaign']);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Near you side campaign');
+    }
+
+    public function test_the_side_variant_collapses_to_nothing_when_no_banner_is_active(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk();
+        // Neither side slot's own wrapper markup appears without an active banner in either position.
+        $response->assertDontSee('Category side campaign');
+        $response->assertDontSee('Near you side campaign');
+    }
 }

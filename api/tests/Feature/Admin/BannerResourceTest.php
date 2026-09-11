@@ -55,6 +55,35 @@ class BannerResourceTest extends TestCase
         $this->assertStringContainsString('/banners/', $banner->image_path);
     }
 
+    /**
+     * Part B (client feedback): the three new noon.com-pattern positions —
+     * `position` is a real DB-level enum, widened by a migration rather
+     * than just a Filament Select option, so this proves the row actually
+     * saves rather than the form silently rejecting a value the schema
+     * itself would still refuse.
+     */
+    public function test_an_admin_can_create_a_banner_in_one_of_the_new_ad_positions(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->admin()->create();
+
+        Livewire::actingAs($admin)
+            ->test(CreateBanner::class)
+            ->fillForm([
+                'title' => 'Search backdrop campaign',
+                'image_path' => UploadedFile::fake()->image('banner.jpg'),
+                'link_url' => 'https://sokoni.co.tz/search',
+                'position' => 'search_background',
+                'sort_order' => 0,
+                'is_active' => true,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $banner = Banner::where('title', 'Search backdrop campaign')->firstOrFail();
+        $this->assertSame('search_background', $banner->position);
+    }
+
     public function test_an_admin_can_deactivate_a_banner(): void
     {
         $admin = User::factory()->admin()->create();
