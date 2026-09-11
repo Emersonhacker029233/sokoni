@@ -4,12 +4,15 @@ namespace Tests\Feature\Admin;
 
 use App\Filament\Resources\SellerProfiles\Pages\ListSellerProfiles;
 use App\Filament\Resources\SellerProfiles\Pages\ViewSellerProfile;
+use App\Filament\Resources\Users\Pages\CreateUser;
+use App\Filament\Resources\Users\Pages\EditUser;
 use App\Models\Product;
 use App\Models\Report;
 use App\Models\SellerProfile;
 use App\Models\User;
 use App\Notifications\SellerVerificationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -258,5 +261,118 @@ class FilamentPanelTest extends TestCase
         $this->assertTrue($banned->isBanned());
         $this->assertFalse($suspendedExpired->isBanned());
         $this->assertTrue($suspendedActive->isBanned());
+    }
+
+    /**
+     * D1 (tester feedback): "edit ... role/status." `is_admin`/`role` are
+     * deliberately outside User's #[Fillable] (same reason banned_at/
+     * ban_reason are forceFill-only) — a version of this form/page once
+     * relied on plain mass-assignment, which silently dropped both on
+     * every save (no exception; preventSilentlyDiscardingAttributes()
+     * isn't enabled anywhere in this app). This proves the real save
+     * path, not just that the form renders.
+     */
+    public function test_editing_a_user_persists_is_admin_and_role(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $target = User::factory()->create(['is_admin' => false, 'role' => null]);
+
+        $this->actingAsAdmin($admin);
+
+        Livewire::test(EditUser::class, ['record' => $target->id])
+            ->fillForm(['is_admin' => true, 'role' => 'staff'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $target->refresh();
+        $this->assertTrue($target->is_admin);
+        $this->assertSame('staff', $target->role);
+        $this->assertDatabaseHas('activity_logs', ['action' => 'user.updated', 'subject_id' => $target->id]);
+    }
+
+    /** Demoting an admin back to a plain user must not leave a stale role behind. */
+    public function test_removing_admin_access_clears_the_role(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $target = User::factory()->admin()->create();
+
+        $this->actingAsAdmin($admin);
+
+        Livewire::test(EditUser::class, ['record' => $target->id])
+            ->fillForm(['is_admin' => false])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $target->refresh();
+        $this->assertFalse($target->is_admin);
+        $this->assertNull($target->role);
+    }
+
+    /**
+     * D1: email is nullable in the schema and plenty of real accounts —
+     * phone-OTP buyers/sellers — have none. A prior version of this form
+     * marked email `required()` unconditionally, which made it impossible
+     * to save ANY edit (even just fixing a typo'd name) on such an
+     * account without inventing a fake email first.
+     */
+    public function test_editing_a_phone_only_user_does_not_require_an_email(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $target = User::factory()->create(['email' => null, 'phone' => '+255754000111']);
+
+        $this->actingAsAdmin($admin);
+
+        Livewire::test(EditUser::class, ['record' => $target->id])
+            ->fillForm(['name' => 'Corrected Name'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('Corrected Name', $target->fresh()->name);
+    }
+
+    public function test_creating_a_staff_account_persists_is_admin_and_role(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAsAdmin($admin);
+
+        Livewire::test(CreateUser::class)
+            ->fillForm([
+                'name' => 'New Staffer',
+                'email' => 'staffer@example.com',
+                'password' => 'password123',
+                'is_admin' => true,
+                'role' => 'staff',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $created = User::where('email', 'staffer@example.com')->firstOrFail();
+        $this->assertTrue($created->is_admin);
+        $this->assertSame('staff', $created->role);
+        $this->assertDatabaseHas('activity_logs', ['action' => 'user.created', 'subject_id' => $created->id]);
+    }
+
+    /**
+     * D1: "never allow deleting own account or another admin." This used
+     * to be enforced only inside UsersTable's own delete-action closure —
+     * the policy itself ignored the target record entirely, so Filament's
+     * generic DeleteAction (as EditUser's header used to expose it,
+     * unprotected) would have authorized deleting yourself or a fellow
+     * admin. The policy is the actual authorization boundary Filament
+     * checks everywhere; this proves it holds regardless of which UI
+     * action asks.
+     */
+    public function test_the_user_policy_refuses_deleting_your_own_account_or_another_admin(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $otherAdmin = User::factory()->admin()->create();
+        $ordinaryUser = User::factory()->create();
+
+        $this->actingAsAdmin($admin);
+
+        $this->assertFalse(Gate::allows('delete', $admin));
+        $this->assertFalse(Gate::allows('delete', $otherAdmin));
+        $this->assertTrue(Gate::allows('delete', $ordinaryUser));
     }
 }

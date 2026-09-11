@@ -33,8 +33,19 @@ class UserPolicy
         return $user->isAdminRole();
     }
 
-    public function delete(User $user): bool
+    /**
+     * D1 (tester feedback): "never allow deleting own account or another
+     * admin" — this used to ignore $model entirely (a bare
+     * `isAdminRole()` check), so it authorized deleting *any* user
+     * including yourself or a fellow admin; only `UsersTable`'s own
+     * `isProtectedFromDeletion()` closure actually enforced this, and
+     * only on that one action. Filament's generic `DeleteAction` (as
+     * used, unprotected, on EditUser's header — now removed for the
+     * same reason) authorizes purely through this policy, so the rule
+     * belongs here too, not only in one UI's action closure.
+     */
+    public function delete(User $user, User $model): bool
     {
-        return $user->isAdminRole();
+        return $user->isAdminRole() && $user->id !== $model->id && ! $model->is_admin;
     }
 }
