@@ -11,6 +11,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/seller_profile.dart';
 import '../../providers/seller_providers.dart';
+import '../../../../shared/widgets/sokoni_avatar.dart';
 
 /// Owner's "Edit profile" action (CLAUDE.md Part 4) — shop logo, bio and
 /// WhatsApp visibility. Shop name/handle/category are set once at
@@ -18,7 +19,11 @@ import '../../providers/seller_providers.dart';
 /// doesn't add one either — editing an identity field a buyer may already
 /// be following/searching by is a bigger product decision than this brief
 /// asks for.
-Future<void> showEditShopProfileSheet(BuildContext context, WidgetRef ref, SellerProfile seller) {
+Future<void> showEditShopProfileSheet(
+  BuildContext context,
+  WidgetRef ref,
+  SellerProfile seller,
+) {
   return showSokoniBottomSheet<void>(
     context: context,
     initialChildSize: 0.6,
@@ -32,7 +37,8 @@ class _EditShopProfileForm extends ConsumerStatefulWidget {
   final SellerProfile seller;
 
   @override
-  ConsumerState<_EditShopProfileForm> createState() => _EditShopProfileFormState();
+  ConsumerState<_EditShopProfileForm> createState() =>
+      _EditShopProfileFormState();
 }
 
 class _EditShopProfileFormState extends ConsumerState<_EditShopProfileForm> {
@@ -47,7 +53,9 @@ class _EditShopProfileFormState extends ConsumerState<_EditShopProfileForm> {
   void initState() {
     super.initState();
     _bioController = TextEditingController(text: widget.seller.bio ?? '');
-    _whatsappController = TextEditingController(text: widget.seller.whatsapp ?? '');
+    _whatsappController = TextEditingController(
+      text: widget.seller.whatsapp ?? '',
+    );
     _showWhatsapp = widget.seller.whatsapp != null;
   }
 
@@ -59,13 +67,19 @@ class _EditShopProfileFormState extends ConsumerState<_EditShopProfileForm> {
   }
 
   Future<void> _pickLogo() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 90,
+    );
     if (picked == null) return;
 
     setState(() => _uploadingLogo = true);
     try {
       final targetDir = await getTemporaryDirectory();
-      final targetPath = p.join(targetDir.path, 'shop_logo_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final targetPath = p.join(
+        targetDir.path,
+        'shop_logo_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
       final compressed = await FlutterImageCompress.compressAndGetFile(
         picked.path,
         targetPath,
@@ -75,7 +89,10 @@ class _EditShopProfileFormState extends ConsumerState<_EditShopProfileForm> {
       );
       await ref
           .read(sellerRepositoryProvider)
-          .uploadLogo(sellerId: widget.seller.id, logoPath: compressed?.path ?? picked.path);
+          .uploadLogo(
+            sellerId: widget.seller.id,
+            logoPath: compressed?.path ?? picked.path,
+          );
       ref.invalidate(sellerProfileProvider(widget.seller.handle));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -90,14 +107,17 @@ class _EditShopProfileFormState extends ConsumerState<_EditShopProfileForm> {
       _error = null;
     });
     try {
-      await ref.read(sellerRepositoryProvider).updateProfile(
-        sellerId: widget.seller.id,
-        bio: _bioController.text.trim(),
-        whatsapp: _showWhatsapp && _whatsappController.text.trim().isNotEmpty
-            ? _whatsappController.text.trim()
-            : null,
-        showWhatsapp: _showWhatsapp,
-      );
+      await ref
+          .read(sellerRepositoryProvider)
+          .updateProfile(
+            sellerId: widget.seller.id,
+            bio: _bioController.text.trim(),
+            whatsapp:
+                _showWhatsapp && _whatsappController.text.trim().isNotEmpty
+                ? _whatsappController.text.trim()
+                : null,
+            showWhatsapp: _showWhatsapp,
+          );
       ref.invalidate(sellerProfileProvider(widget.seller.handle));
       if (mounted) Navigator.of(context).pop();
     } on ApiException catch (e) {
@@ -115,7 +135,10 @@ class _EditShopProfileFormState extends ConsumerState<_EditShopProfileForm> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.editProfileTitle, style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          l10n.editProfileTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: SokoniDimens.space16),
         Center(
           child: GestureDetector(
@@ -123,17 +146,21 @@ class _EditShopProfileFormState extends ConsumerState<_EditShopProfileForm> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                CircleAvatar(
+                SokoniAvatar(
+                  imageUrl: widget.seller.logo,
                   radius: 40,
-                  backgroundImage: widget.seller.logo != null ? NetworkImage(widget.seller.logo!) : null,
-                  child: widget.seller.logo == null ? const Icon(Icons.storefront_outlined, size: 32) : null,
+                  fallbackIcon: Icons.storefront_outlined,
+                  fallbackIconSize: 32,
                 ),
                 if (_uploadingLogo)
                   const CircularProgressIndicator()
                 else
                   const Align(
                     alignment: Alignment.bottomRight,
-                    child: CircleAvatar(radius: 14, child: Icon(Icons.edit_rounded, size: 14)),
+                    child: CircleAvatar(
+                      radius: 14,
+                      child: Icon(Icons.edit_rounded, size: 14),
+                    ),
                   ),
               ],
             ),
@@ -169,7 +196,11 @@ class _EditShopProfileFormState extends ConsumerState<_EditShopProfileForm> {
         FilledButton(
           onPressed: _submitting ? null : _save,
           child: _submitting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : Text(l10n.editProfileSave),
         ),
       ],

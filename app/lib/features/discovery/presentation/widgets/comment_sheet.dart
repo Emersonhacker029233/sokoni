@@ -9,6 +9,7 @@ import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/comment.dart';
 import '../../../auth/presentation/auth_entry_sheet.dart';
 import '../../providers/feed_providers.dart';
+import '../../../../shared/widgets/sokoni_avatar.dart';
 
 /// Comment sheet (CLAUDE.md Part 3) — opened from a feed card's comment
 /// icon or its "N comments" line. Built directly on `showModalBottomSheet`/
@@ -102,7 +103,9 @@ class _CommentSheetBodyState extends ConsumerState<_CommentSheetBody> {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? SokoniColors.darkSurface : SokoniColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(SokoniDimens.radiusSheet)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(SokoniDimens.radiusSheet),
+            ),
           ),
           child: Column(
             children: [
@@ -111,26 +114,41 @@ class _CommentSheetBodyState extends ConsumerState<_CommentSheetBody> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? SokoniColors.darkOutline : SokoniColors.outline,
+                  color: isDark
+                      ? SokoniColors.darkOutline
+                      : SokoniColors.outline,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: SokoniDimens.space12),
-                child: Text(l10n.commentSheetTitle, style: Theme.of(context).textTheme.titleMedium),
+                padding: const EdgeInsets.symmetric(
+                  vertical: SokoniDimens.space12,
+                ),
+                child: Text(
+                  l10n.commentSheetTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
               const Divider(height: 1),
               Expanded(
                 child: threadAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (error, _) => Center(
-                    child: Text(error is ApiException ? error.message : l10n.feedErrorBody),
+                    child: Text(
+                      error is ApiException
+                          ? error.message
+                          : l10n.feedErrorBody,
+                    ),
                   ),
                   data: (state) => state.items.isEmpty
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.all(SokoniDimens.space24),
-                            child: Text(l10n.commentEmptyBody, textAlign: TextAlign.center),
+                            child: Text(
+                              l10n.commentEmptyBody,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         )
                       : ListView.builder(
@@ -139,18 +157,28 @@ class _CommentSheetBodyState extends ConsumerState<_CommentSheetBody> {
                             horizontal: SokoniDimens.space16,
                             vertical: SokoniDimens.space8,
                           ),
-                          itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                          itemCount:
+                              state.items.length + (state.hasMore ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (index >= state.items.length) {
                               return Center(
                                 child: TextButton(
-                                  onPressed: () => ref.read(commentThreadProvider(widget.productId).notifier).loadMore(),
+                                  onPressed: () => ref
+                                      .read(
+                                        commentThreadProvider(
+                                          widget.productId,
+                                        ).notifier,
+                                      )
+                                      .loadMore(),
                                   child: Text(l10n.commonLoadMore),
                                 ),
                               );
                             }
                             final comment = state.items[index];
-                            return _CommentTile(comment: comment, onReply: () => _startReply(comment));
+                            return _CommentTile(
+                              comment: comment,
+                              onReply: () => _startReply(comment),
+                            );
                           },
                         ),
                 ),
@@ -164,7 +192,9 @@ class _CommentSheetBodyState extends ConsumerState<_CommentSheetBody> {
                     children: [
                       if (_replyingToName != null)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: SokoniDimens.space4),
+                          padding: const EdgeInsets.only(
+                            bottom: SokoniDimens.space4,
+                          ),
                           child: Row(
                             children: [
                               Expanded(
@@ -178,15 +208,26 @@ class _CommentSheetBodyState extends ConsumerState<_CommentSheetBody> {
                                   _replyingToId = null;
                                   _replyingToName = null;
                                 }),
-                                child: const Icon(Icons.close_rounded, size: 16),
+                                child: const Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       if (_error != null)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: SokoniDimens.space4),
-                          child: Text(_error!, style: const TextStyle(color: SokoniColors.danger, fontSize: 12)),
+                          padding: const EdgeInsets.only(
+                            bottom: SokoniDimens.space4,
+                          ),
+                          child: Text(
+                            _error!,
+                            style: const TextStyle(
+                              color: SokoniColors.danger,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       Row(
                         children: [
@@ -195,14 +236,25 @@ class _CommentSheetBodyState extends ConsumerState<_CommentSheetBody> {
                               controller: _bodyController,
                               minLines: 1,
                               maxLines: 4,
-                              decoration: InputDecoration(hintText: l10n.commentInputHint),
+                              decoration: InputDecoration(
+                                hintText: l10n.commentInputHint,
+                              ),
                             ),
                           ),
                           const SizedBox(width: SokoniDimens.space8),
                           IconButton(
-                            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
+                            ),
                             icon: _posting
-                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                 : const Icon(Icons.send_rounded),
                             onPressed: _posting ? null : _post,
                           ),
@@ -236,7 +288,10 @@ class _CommentTile extends StatelessWidget {
           _CommentRow(comment: comment, onReply: onReply),
           for (final reply in comment.replies)
             Padding(
-              padding: const EdgeInsets.only(left: SokoniDimens.space32, top: SokoniDimens.space8),
+              padding: const EdgeInsets.only(
+                left: SokoniDimens.space32,
+                top: SokoniDimens.space8,
+              ),
               child: _CommentRow(comment: reply, onReply: null),
             ),
         ],
@@ -259,11 +314,12 @@ class _CommentRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(
+        SokoniAvatar(
+          imageUrl: comment.user.avatar,
           radius: 14,
           backgroundColor: SokoniColors.surfaceAlt,
-          backgroundImage: comment.user.avatar != null ? NetworkImage(comment.user.avatar!) : null,
-          child: comment.user.avatar == null ? const Icon(Icons.person_outline, size: 14) : null,
+          fallbackIcon: Icons.person_outline,
+          fallbackIconSize: 14,
         ),
         const SizedBox(width: SokoniDimens.space8),
         Expanded(
@@ -272,18 +328,32 @@ class _CommentRow extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text(comment.user.name, style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    comment.user.name,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   if (comment.isFromSeller) ...[
                     const SizedBox(width: SokoniDimens.space4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: SokoniColors.sokoniYellow,
-                        borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
+                        borderRadius: BorderRadius.circular(
+                          SokoniDimens.radiusChip,
+                        ),
                       ),
                       child: Text(
                         l10n.commentSellerBadge,
-                        style: const TextStyle(color: SokoniColors.onYellow, fontSize: 10, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          color: SokoniColors.onYellow,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -297,7 +367,9 @@ class _CommentRow extends StatelessWidget {
                     onTap: onReply,
                     child: Text(
                       l10n.commentReplyAction,
-                      style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),

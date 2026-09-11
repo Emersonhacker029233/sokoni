@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +18,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/report_sheet.dart';
 import '../../../shared/widgets/shop_location_map.dart';
+import '../../../shared/widgets/sokoni_avatar.dart';
 import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../discovery/presentation/widgets/sticky_category_header.dart';
@@ -163,15 +163,12 @@ class _ProfileHeader extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CircleAvatar(
+              SokoniAvatar(
+                imageUrl: seller.logo,
                 radius: 36,
                 backgroundColor: SokoniColors.surfaceAlt,
-                backgroundImage: seller.logo != null
-                    ? CachedNetworkImageProvider(seller.logo!)
-                    : null,
-                child: seller.logo == null
-                    ? const Icon(Icons.storefront_outlined, size: 32)
-                    : null,
+                fallbackIcon: Icons.storefront_outlined,
+                fallbackIconSize: 32,
               ),
               const SizedBox(width: SokoniDimens.space20),
               Expanded(

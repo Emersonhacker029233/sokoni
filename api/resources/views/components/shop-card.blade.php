@@ -3,7 +3,19 @@
 <a href="{{ route('web.shop', $shop->handle) }}" class="product-card flex h-full flex-col items-center gap-8 p-16 text-center">
     <div class="relative">
         @if ($shop->logo)
-            <img src="{{ $shop->logo }}" alt="{{ $shop->shop_name }}" loading="lazy" class="h-64 w-64 rounded-full object-cover ring-1 ring-sokoni-outline">
+            {{-- Part A (client feedback): never blank on a failed load —
+                 hides the broken <img> and reveals the same initial-letter
+                 fallback shown below for a shop with no logo at all. --}}
+            <img
+                src="{{ $shop->logo }}"
+                alt="{{ $shop->shop_name }}"
+                loading="lazy"
+                class="h-64 w-64 rounded-full object-cover ring-1 ring-sokoni-outline"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
+            >
+            <div class="hidden h-64 w-64 items-center justify-center rounded-full bg-sokoni-surface-alt text-lg font-bold text-sokoni-black/40 ring-1 ring-sokoni-outline" style="display:none">
+                {{ strtoupper(substr($shop->shop_name, 0, 1)) }}
+            </div>
         @else
             <div class="flex h-64 w-64 items-center justify-center rounded-full bg-sokoni-surface-alt text-lg font-bold text-sokoni-black/40 ring-1 ring-sokoni-outline">
                 {{ strtoupper(substr($shop->shop_name, 0, 1)) }}

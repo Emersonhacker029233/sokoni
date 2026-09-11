@@ -6,7 +6,15 @@
 <div class="mx-auto max-w-6xl px-16 lg:px-24">
     <div class="-mt-32 flex flex-col items-center sm:-mt-24 sm:flex-row sm:items-end sm:gap-16">
         @if ($seller->logo)
-            <img src="{{ $seller->logo }}" alt="{{ $seller->shop_name }}" class="h-96 w-96 rounded-full border-4 border-white object-cover shadow-sm sm:h-112 sm:w-112">
+            <img
+                src="{{ $seller->logo }}"
+                alt="{{ $seller->shop_name }}"
+                class="h-96 w-96 rounded-full border-4 border-white object-cover shadow-sm sm:h-112 sm:w-112"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
+            >
+            <div class="hidden h-96 w-96 items-center justify-center rounded-full border-4 border-white bg-sokoni-surface-alt text-3xl font-bold shadow-sm sm:h-112 sm:w-112" style="display:none">
+                {{ strtoupper(substr($seller->shop_name, 0, 1)) }}
+            </div>
         @else
             <div class="flex h-96 w-96 items-center justify-center rounded-full border-4 border-white bg-sokoni-surface-alt text-3xl font-bold shadow-sm sm:h-112 sm:w-112">
                 {{ strtoupper(substr($seller->shop_name, 0, 1)) }}

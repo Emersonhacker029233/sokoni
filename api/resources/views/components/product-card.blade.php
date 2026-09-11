@@ -35,6 +35,15 @@
          does the actual job (no layout shift, no visible "hole"). --}}
     <div class="relative aspect-square overflow-hidden rounded-t-[12px] bg-sokoni-surface-alt">
         @if ($cover)
+            {{-- Part A (client feedback): "a failed image must never render
+                 as blank space" — no onerror handling existed at all, so a
+                 404/stale-host image just left the browser's own tiny
+                 broken-image glyph (or nothing, depending on the browser)
+                 sitting on the plain surface-colour background. Hides the
+                 failed <img> and reveals the exact same "no photo" glyph
+                 already used below for a product with no cover at all, so
+                 both cases read identically rather than as two different
+                 kinds of broken. --}}
             <img
                 src="{{ $cover->card_path ?? $cover->path }}"
                 srcset="{{ $cover->thumb_path }} 300w, {{ $cover->card_path }} 800w"
@@ -44,7 +53,11 @@
                 @unless ($lazy) fetchpriority="high" @endunless
                 decoding="async"
                 class="h-full w-full object-cover"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
             >
+            <div class="hidden h-full w-full items-center justify-center text-sokoni-black/20" style="display:none">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-40 w-40"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 4.5h18M3 4.5v15a1.5 1.5 0 001.5 1.5h15a1.5 1.5 0 001.5-1.5v-15" /></svg>
+            </div>
             @if ($cover->isVideo())
                 <span class="absolute bottom-8 right-8 rounded-full bg-black/60 p-6 text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-12 w-12"><path d="M6.3 2.8a1 1 0 00-1.5.87v12.66a1 1 0 001.5.87l11-6.33a1 1 0 000-1.74l-11-6.33z" /></svg>

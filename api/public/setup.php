@@ -284,7 +284,12 @@ try {
             // (rewrite-media-host) can't tell them apart. Deliberately
             // reads real file_exists() results against real paths on this
             // exact server, not a guess from config values alone.
-            $sample = max(1, min(200, (int) ($_GET['sample'] ?? 10)));
+            // Part A (client feedback): bumped the default sample and the
+            // per-row report to also cover extension, size, and upload
+            // date — "some images work and some don't" needs grouping by
+            // those axes to say *which* rows fail and why, not just a
+            // pass/fail count.
+            $sample = max(1, min(200, (int) ($_GET['sample'] ?? 50)));
 
             $currentRoot = rtrim(config('filesystems.disks.public.root'), '/');
             $currentUrl = rtrim(config('filesystems.disks.public.url'), '/');
@@ -299,7 +304,7 @@ try {
                 'beta.sokoni.co.tz/uploads' => '/home/sokoftsn/beta.sokoni.co.tz/uploads',
             ];
 
-            $rows = DB::table('product_media')->orderByDesc('id')->limit($sample)->get(['id', 'product_id', 'path']);
+            $rows = DB::table('product_media')->orderByDesc('id')->limit($sample)->get(['id', 'product_id', 'path', 'created_at']);
 
             if ($rows->isEmpty()) {
                 echo "No product_media rows exist at all.\n";
@@ -309,6 +314,22 @@ try {
             $tally = array_fill_keys(array_keys($knownRoots), 0);
             $tally['configured_root'] = 0;
             $tally['found_nowhere'] = 0;
+
+            // Grouping buckets for the summary — keyed by the axis value,
+            // each holding [total, missing] so a share-of-failures per
+            // group is visible directly, not just a raw count.
+            $byExtension = [];
+            $byDate = [];
+            $bySource = [];
+            $byDirectory = [];
+
+            $bump = function (array &$bucket, string $key, bool $missing): void {
+                $bucket[$key] ??= ['total' => 0, 'missing' => 0];
+                $bucket[$key]['total']++;
+                if ($missing) {
+                    $bucket[$key]['missing']++;
+                }
+            };
 
             foreach ($rows as $row) {
                 // Every stored URL is {some host}/uploads/{relative path} —
@@ -323,32 +344,54 @@ try {
                     continue;
                 }
                 $relative = $m[1];
+                $extension = strtolower(pathinfo($relative, PATHINFO_EXTENSION)) ?: '(none)';
+                // Real uploads always land under "products/{id}/..."
+                // (ImageVariants::generate's own directory convention);
+                // everything the demo seeder writes lives under "demo/..."
+                // instead — that prefix alone tells seeded and
+                // user-uploaded rows apart without guessing.
+                $source = str_starts_with($relative, 'demo/') ? 'seeded (demo/)' : 'user-uploaded';
+                $uploadDate = $row->created_at ? substr($row->created_at, 0, 10) : '(no timestamp)';
 
                 echo "#{$row->id} (product {$row->product_id})\n";
                 echo "  stored URL:    {$row->path}\n";
+                echo "  extension:     {$extension}\n";
+                echo "  source:        {$source}\n";
+                echo "  uploaded:      {$uploadDate}\n";
 
                 $configuredPath = $currentRoot . '/' . $relative;
                 $configuredExists = is_file($configuredPath);
-                echo '  configured disk path: ' . $configuredPath . ' -- ' . ($configuredExists ? 'EXISTS' : 'missing') . "\n";
+                $configuredSize = $configuredExists ? filesize($configuredPath) : null;
+                echo '  configured disk path: ' . $configuredPath . ' -- '
+                    . ($configuredExists ? "EXISTS ({$configuredSize} bytes)" : 'missing') . "\n";
                 if ($configuredExists) {
                     $tally['configured_root']++;
                 }
 
                 $foundAnywhere = $configuredExists;
+                $foundUnderLabel = $configuredExists ? 'configured_root' : null;
                 foreach ($knownRoots as $label => $root) {
                     $path = $root . '/' . $relative;
                     $exists = is_file($path);
-                    echo "  {$label}: {$path} -- " . ($exists ? 'EXISTS' : 'missing') . "\n";
+                    $size = $exists ? filesize($path) : null;
+                    echo "  {$label}: {$path} -- " . ($exists ? "EXISTS ({$size} bytes)" : 'missing') . "\n";
                     if ($exists) {
                         $tally[$label]++;
                         $foundAnywhere = true;
+                        $foundUnderLabel ??= $label;
                     }
                 }
-                if (! $foundAnywhere) {
+                $missing = ! $foundAnywhere;
+                if ($missing) {
                     $tally['found_nowhere']++;
                     echo "  !! NOT FOUND in the configured root or either known upload folder.\n";
                 }
                 echo "\n";
+
+                $bump($byExtension, $extension, $missing);
+                $bump($byDate, $uploadDate, $missing);
+                $bump($bySource, $source, $missing);
+                $bump($byDirectory, $foundUnderLabel ?? 'nowhere', $missing);
             }
 
             echo "--- Summary over {$rows->count()} sampled row(s) ---\n";
@@ -357,6 +400,18 @@ try {
                 echo "Physically present under {$label}: {$tally[$label]}\n";
             }
             echo "Found in neither known location: {$tally['found_nowhere']}\n";
+
+            $printGroup = function (string $title, array $bucket): void {
+                echo "\n--- By {$title} ---\n";
+                ksort($bucket);
+                foreach ($bucket as $key => $counts) {
+                    echo "  {$key}: {$counts['missing']} missing / {$counts['total']} total\n";
+                }
+            };
+            $printGroup('extension', $byExtension);
+            $printGroup('upload date', $byDate);
+            $printGroup('source', $bySource);
+            $printGroup('directory (where it was actually found, if anywhere)', $byDirectory);
             break;
 
         case 'test-mail':
@@ -448,7 +503,7 @@ try {
             echo "demo-seed accepts &fresh=1 to clear previously seeded demo shops/buyers first.\n";
             echo "cleanup-original-seed is a dry run by default; add &confirm=1 to actually delete.\n";
             echo "rewrite-media-host needs &from=&to= (URL-encoded); dry run by default, add &confirm=1 to rewrite.\n";
-            echo "diagnose-media accepts &sample=N (default 10, max 200) -- prints stored URL, resolved disk path, and file_exists() for each, against both known upload folders.\n";
+            echo "diagnose-media accepts &sample=N (default 50, max 200) -- prints stored URL, resolved disk path, file size, extension, upload date and source (seeded vs user-uploaded) for each, against both known upload folders, then groups the results by each of those axes.\n";
             echo "test-mail needs &to=<email> -- sends one real email right now and prints the exact SMTP exception if it fails, plus the resolved mail config.\n";
     }
 } catch (Throwable $e) {

@@ -72,4 +72,24 @@ class ProductCardTest extends TestCase
         $response->assertDontSee('M10 1l2.39 1.36L15 2', false);
         $response->assertDontSee('bg-sokoni-yellow text-white', false);
     }
+
+    /**
+     * Part A (client feedback): "images inconsistently missing... add a
+     * visible placeholder so a failed image never renders as blank
+     * space." There was no `onerror` handling at all before this — a
+     * 404/stale-host photo just left whatever the browser's own default
+     * broken-image rendering is. Pins the fallback markup in place rather
+     * than just "the image tag exists."
+     */
+    public function test_a_product_cards_photo_falls_back_to_a_visible_placeholder_on_a_failed_load(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id]);
+        ProductMedia::factory()->create(['product_id' => $product->id]);
+
+        $response = $this->get('/search');
+
+        $response->assertOk();
+        $response->assertSee("onerror=\"this.style.display='none'; this.nextElementSibling.style.display='flex'\"", false);
+    }
 }

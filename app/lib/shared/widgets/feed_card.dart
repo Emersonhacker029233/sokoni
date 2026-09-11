@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +25,7 @@ import '../../features/discovery/presentation/widgets/comment_sheet.dart';
 import '../../features/product/providers/favorites_providers.dart';
 import '../../features/seller/providers/seller_providers.dart';
 import 'bottom_gradient_scrim.dart';
+import 'sokoni_avatar.dart';
 import 'sokoni_network_image.dart';
 
 /// One card in the "For You" feed (CLAUDE.md Part 3) — dispatches on
@@ -74,7 +74,9 @@ class _FeedCardShell extends StatelessWidget {
     final outline = isDark ? SokoniColors.darkOutline : SokoniColors.outline;
 
     return Container(
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: outline))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: outline)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -85,11 +87,17 @@ class _FeedCardShell extends StatelessWidget {
               SokoniDimens.space16,
               SokoniDimens.space8,
             ),
-            child: _SellerHeader(seller: seller, onTap: onSellerTap, distanceKm: distanceKm),
+            child: _SellerHeader(
+              seller: seller,
+              onTap: onSellerTap,
+              distanceKm: distanceKm,
+            ),
           ),
           if (sponsoredContactMethod != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: SokoniDimens.space16,
+              ),
               child: _SponsoredLabel(contactMethod: sponsoredContactMethod!),
             ),
           const SizedBox(height: SokoniDimens.space8),
@@ -110,7 +118,11 @@ class _FeedCardShell extends StatelessWidget {
 }
 
 class _SellerHeader extends StatelessWidget {
-  const _SellerHeader({required this.seller, required this.onTap, this.distanceKm});
+  const _SellerHeader({
+    required this.seller,
+    required this.onTap,
+    this.distanceKm,
+  });
 
   final SellerSummary? seller;
   final VoidCallback? onTap;
@@ -126,11 +138,12 @@ class _SellerHeader extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          CircleAvatar(
+          SokoniAvatar(
+            imageUrl: s.logo,
             radius: 18,
             backgroundColor: SokoniColors.surfaceAlt,
-            backgroundImage: s.logo != null ? CachedNetworkImageProvider(s.logo!) : null,
-            child: s.logo == null ? const Icon(Icons.storefront_outlined, size: 18) : null,
+            fallbackIcon: Icons.storefront_outlined,
+            fallbackIconSize: 18,
           ),
           const SizedBox(width: SokoniDimens.space8),
           Expanded(
@@ -144,18 +157,27 @@ class _SellerHeader extends StatelessWidget {
                         s.shopName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     if (s.isVerified)
                       const Padding(
                         padding: EdgeInsets.only(left: 4),
-                        child: Icon(Icons.verified_rounded, size: 14, color: SokoniColors.sokoniYellow),
+                        child: Icon(
+                          Icons.verified_rounded,
+                          size: 14,
+                          color: SokoniColors.sokoniYellow,
+                        ),
                       ),
                   ],
                 ),
                 if (distanceKm != null)
-                  Text(SokoniFormat.distanceKm(distanceKm!), style: textTheme.bodySmall),
+                  Text(
+                    SokoniFormat.distanceKm(distanceKm!),
+                    style: textTheme.bodySmall,
+                  ),
               ],
             ),
           ),
@@ -174,7 +196,11 @@ class _FeedFollowButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final following = isSellerFollowed(ref, sellerId: seller.id, isFollowing: seller.isFollowing);
+    final following = isSellerFollowed(
+      ref,
+      sellerId: seller.id,
+      isFollowing: seller.isFollowing,
+    );
     if (following) return const SizedBox.shrink();
 
     return TextButton(
@@ -187,10 +213,16 @@ class _FeedFollowButton extends ConsumerWidget {
         sellerId: seller.id,
         handle: seller.handle,
         isFollowing: seller.isFollowing,
-        onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptFollow),
-        onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+        onUnauthenticated: () =>
+            showSignInPrompt(context, message: l10n.guestPromptFollow),
+        onFailed: (message) => ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message))),
       ),
-      child: Text(l10n.followAction, style: const TextStyle(fontWeight: FontWeight.w700)),
+      child: Text(
+        l10n.followAction,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
     );
   }
 }
@@ -218,7 +250,12 @@ class _SponsoredLabel extends StatelessWidget {
 /// tab's vertical PageView) has each item fully on- or off-screen, which
 /// doesn't apply to a card partway scrolled into view.
 class FeedVisibilityVideo extends StatefulWidget {
-  const FeedVisibilityVideo({required this.videoUrl, required this.visibilityKey, this.thumbnailUrl, super.key});
+  const FeedVisibilityVideo({
+    required this.videoUrl,
+    required this.visibilityKey,
+    this.thumbnailUrl,
+    super.key,
+  });
 
   final String videoUrl;
   final String? thumbnailUrl;
@@ -241,7 +278,9 @@ class _FeedVisibilityVideoState extends State<FeedVisibilityVideo> {
   Future<void> _ensureController() async {
     if (_controller != null || _initializing || !mounted) return;
     _initializing = true;
-    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.videoUrl),
+    );
     await controller.initialize();
     await controller.setLooping(true);
     await controller.setVolume(0);
@@ -280,7 +319,10 @@ class _FeedVisibilityVideoState extends State<FeedVisibilityVideo> {
         fit: StackFit.expand,
         children: [
           if (widget.thumbnailUrl != null)
-            SokoniNetworkImage(imageUrl: widget.thumbnailUrl!, fit: BoxFit.cover),
+            SokoniNetworkImage(
+              imageUrl: widget.thumbnailUrl!,
+              fit: BoxFit.cover,
+            ),
           if (controller != null && controller.value.isInitialized)
             FittedBox(
               fit: BoxFit.cover,
@@ -294,7 +336,11 @@ class _FeedVisibilityVideoState extends State<FeedVisibilityVideo> {
           const Positioned(
             right: 12,
             bottom: 12,
-            child: Icon(Icons.volume_off_rounded, color: Colors.white, shadows: [Shadow(blurRadius: 4)]),
+            child: Icon(
+              Icons.volume_off_rounded,
+              color: Colors.white,
+              shadows: [Shadow(blurRadius: 4)],
+            ),
           ),
         ],
       ),
@@ -311,16 +357,25 @@ class _ProductFeedCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _FeedCardShell(
       seller: product.seller,
-      onSellerTap: product.seller == null ? null : () => context.push(SokoniRoutes.shop(product.seller!.handle)),
+      onSellerTap: product.seller == null
+          ? null
+          : () => context.push(SokoniRoutes.shop(product.seller!.handle)),
       distanceKm: product.distanceKm,
-      sponsoredContactMethod: product.isSponsored ? product.sponsorContactMethod : null,
+      sponsoredContactMethod: product.isSponsored
+          ? product.sponsorContactMethod
+          : null,
       media: DoubleTapToSave(
         onSave: () => saveProductViaDoubleTap(
           ref,
           productId: product.id,
           knownFavorited: product.isFavorited,
-          onUnauthenticated: () => showSignInPrompt(context, message: AppLocalizations.of(context).guestPromptSave),
-          onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+          onUnauthenticated: () => showSignInPrompt(
+            context,
+            message: AppLocalizations.of(context).guestPromptSave,
+          ),
+          onFailed: (message) => ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message))),
         ),
         onSingleTap: () => context.push(SokoniRoutes.product(product.id)),
         child: _ProductMedia(product: product),
@@ -367,7 +422,8 @@ class _ProductMedia extends StatelessWidget {
         return SokoniNetworkImage(
           imageUrl: item.cardPath ?? item.path,
           fit: BoxFit.cover,
-          placeholder: (context, url) => Container(color: SokoniColors.surfaceAlt),
+          placeholder: (context, url) =>
+              Container(color: SokoniColors.surfaceAlt),
         );
       },
     );
@@ -389,10 +445,15 @@ class _ProductFooter extends ConsumerWidget {
       children: [
         _ActionRow(
           product: product,
-          contactMethod: product.isSponsored ? product.sponsorContactMethod : null,
+          contactMethod: product.isSponsored
+              ? product.sponsorContactMethod
+              : null,
         ),
         const SizedBox(height: SokoniDimens.space8),
-        Text(SokoniFormat.tzs(product.price), style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        Text(
+          SokoniFormat.tzs(product.price),
+          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
         const SizedBox(height: SokoniDimens.space4),
         RichText(
           maxLines: 2,
@@ -416,7 +477,9 @@ class _ProductFooter extends ConsumerWidget {
               onTap: () => showCommentSheet(context, productId: product.id),
               child: Text(
                 l10n.feedViewAllComments(product.commentsCount!),
-                style: textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
+                style: textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).hintColor,
+                ),
               ),
             ),
           ),
@@ -434,7 +497,11 @@ class _ActionRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final favorited = isProductFavorited(ref, productId: product.id, knownFavorited: product.isFavorited);
+    final favorited = isProductFavorited(
+      ref,
+      productId: product.id,
+      knownFavorited: product.isFavorited,
+    );
 
     return Row(
       children: [
@@ -443,7 +510,9 @@ class _ActionRow extends ConsumerWidget {
           icon: SpringOnTrue(
             trigger: favorited,
             child: Icon(
-              favorited ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              favorited
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
               color: favorited ? SokoniColors.danger : null,
             ),
           ),
@@ -451,8 +520,11 @@ class _ActionRow extends ConsumerWidget {
             ref,
             productId: product.id,
             knownFavorited: product.isFavorited,
-            onUnauthenticated: () => showSignInPrompt(context, message: l10n.guestPromptSave),
-            onFailed: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+            onUnauthenticated: () =>
+                showSignInPrompt(context, message: l10n.guestPromptSave),
+            onFailed: (message) => ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message))),
           ),
         ),
         IconButton(
@@ -465,7 +537,8 @@ class _ActionRow extends ConsumerWidget {
           icon: const Icon(Icons.ios_share_rounded),
           onPressed: () => SharePlus.instance.share(
             ShareParams(
-              text: '${product.title} — ${SokoniFormat.tzs(product.price)}\n'
+              text:
+                  '${product.title} — ${SokoniFormat.tzs(product.price)}\n'
                   'https://sokoni.co.tz/products/${product.id}',
             ),
           ),
@@ -478,7 +551,9 @@ class _ActionRow extends ConsumerWidget {
             context.push(SokoniRoutes.product(product.id));
           },
           style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space16),
+            padding: const EdgeInsets.symmetric(
+              horizontal: SokoniDimens.space16,
+            ),
             minimumSize: const Size(0, 44),
           ),
           child: Text(l10n.feedOrderAction),
@@ -522,7 +597,9 @@ class _ChatButton extends ConsumerWidget {
         return IconButton(
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           icon: const Icon(Icons.call_outlined),
-          onPressed: seller.whatsapp == null ? null : () => launchUrl(Uri.parse('tel:${seller.whatsapp}')),
+          onPressed: seller.whatsapp == null
+              ? null
+              : () => launchUrl(Uri.parse('tel:${seller.whatsapp}')),
         );
       default:
         return IconButton(
@@ -535,11 +612,15 @@ class _ChatButton extends ConsumerWidget {
               sellerId: seller.id,
               productId: product.id,
               onUnauthenticated: () {
-                if (context.mounted) showSignInPrompt(context, message: l10n.guestPromptMessage);
+                if (context.mounted) {
+                  showSignInPrompt(context, message: l10n.guestPromptMessage);
+                }
               },
               onFailed: (message) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(message)));
                 }
               },
             );
@@ -568,23 +649,38 @@ class _OfferFeedCard extends StatelessWidget {
 
     return _FeedCardShell(
       seller: offer.seller,
-      onSellerTap: offer.seller == null ? null : () => context.push(SokoniRoutes.shop(offer.seller!.handle)),
+      onSellerTap: offer.seller == null
+          ? null
+          : () => context.push(SokoniRoutes.shop(offer.seller!.handle)),
       distanceKm: null,
       media: product?.coverImageUrl != null
-          ? SokoniNetworkImage(imageUrl: product!.coverImageUrl!, fit: BoxFit.cover)
-          : Container(color: SokoniColors.surfaceAlt, child: const Icon(Icons.local_offer_outlined, size: 48)),
+          ? SokoniNetworkImage(
+              imageUrl: product!.coverImageUrl!,
+              fit: BoxFit.cover,
+            )
+          : Container(
+              color: SokoniColors.surfaceAlt,
+              child: const Icon(Icons.local_offer_outlined, size: 48),
+            ),
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space8, vertical: 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: SokoniDimens.space8,
+              vertical: 2,
+            ),
             decoration: BoxDecoration(
               color: SokoniColors.sokoniYellow,
               borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
             ),
             child: Text(
               countdown,
-              style: const TextStyle(color: SokoniColors.onYellow, fontSize: 12, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: SokoniColors.onYellow,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           const SizedBox(height: SokoniDimens.space8),
@@ -593,17 +689,26 @@ class _OfferFeedCard extends StatelessWidget {
             children: [
               Text(
                 SokoniFormat.tzs(offer.priceSnapshot.round()),
-                style: const TextStyle(decoration: TextDecoration.lineThrough, color: SokoniColors.danger),
+                style: const TextStyle(
+                  decoration: TextDecoration.lineThrough,
+                  color: SokoniColors.danger,
+                ),
               ),
               const SizedBox(width: SokoniDimens.space8),
               Text(
                 SokoniFormat.tzs(offer.discountedPrice),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
             ],
           ),
           const SizedBox(height: SokoniDimens.space4),
-          Text(product?.title ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
+          Text(
+            product?.title ?? '',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: SokoniDimens.space8),
           if (product != null)
             FilledButton(
@@ -631,14 +736,20 @@ class _ShowcaseFeedCard extends StatelessWidget {
       onTap: () => context.push(SokoniRoutes.showcaseFeed),
       child: _FeedCardShell(
         seller: showcase.seller,
-        onSellerTap: showcase.seller == null ? null : () => context.push(SokoniRoutes.shop(showcase.seller!.handle)),
+        onSellerTap: showcase.seller == null
+            ? null
+            : () => context.push(SokoniRoutes.shop(showcase.seller!.handle)),
         distanceKm: null,
         media: FeedVisibilityVideo(
           visibilityKey: ValueKey('feed-showcase-video-${showcase.id}'),
           videoUrl: showcase.videoPath,
           thumbnailUrl: showcase.thumbPath,
         ),
-        footer: Text(showcase.caption ?? showcase.product?.title ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
+        footer: Text(
+          showcase.caption ?? showcase.product?.title ?? '',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }

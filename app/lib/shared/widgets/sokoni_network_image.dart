@@ -41,24 +41,32 @@ class SokoniNetworkImage extends StatelessWidget {
   /// pending", and `cached_network_image`/`flutter_svg`'s network fetches
   /// go through Flutter's own `HttpClient`, not this app's overridable
   /// `dioProvider`).
-  static bool isSvgUrl(String url) => Uri.tryParse(url)?.path.toLowerCase().endsWith('.svg') ?? false;
+  static bool isSvgUrl(String url) =>
+      Uri.tryParse(url)?.path.toLowerCase().endsWith('.svg') ?? false;
 
   @override
   Widget build(BuildContext context) {
+    // Part A (client feedback): "a failed image must never render as blank
+    // space." Most call sites across the app never passed their own
+    // `errorWidget` at all — `CachedNetworkImage` renders nothing without
+    // one, and neither does `flutter_svg` in any visible way — so a 404,
+    // a stale host, or a genuinely corrupt file all looked identical to
+    // "no image was ever there," which is exactly what made this bug read
+    // as "inconsistently missing" rather than "sometimes errors." A caller
+    // that does pass its own still wins; this only fills the gap.
+    final effectivePlaceholder = placeholder ?? _defaultPlaceholder;
+    final effectiveError = errorWidget ?? _defaultError;
+
     if (isSvgUrl(imageUrl)) {
       return SvgPicture.network(
         imageUrl,
         fit: fit ?? BoxFit.contain,
         width: width,
         height: height,
-        placeholderBuilder: placeholder != null ? (context) => placeholder!(context, imageUrl) : null,
-        // D2 (tester feedback): this was previously the one branch with no
-        // error handling at all — a caller's `errorWidget` (the raster
-        // path already honours it) was silently dropped for an SVG that
-        // 404s (a stale PUBLIC_UPLOADS_URL host, a deleted demo asset,
-        // ...), showing flutter_svg's own default error rendering instead
-        // of whatever empty/error state the caller actually asked for.
-        errorBuilder: errorWidget != null ? (context, error, stackTrace) => errorWidget!(context, imageUrl, error) : null,
+        placeholderBuilder: (context) =>
+            effectivePlaceholder(context, imageUrl),
+        errorBuilder: (context, error, stackTrace) =>
+            effectiveError(context, imageUrl, error),
       );
     }
 
@@ -67,8 +75,25 @@ class SokoniNetworkImage extends StatelessWidget {
       fit: fit,
       width: width,
       height: height,
-      placeholder: placeholder,
-      errorWidget: errorWidget,
+      placeholder: effectivePlaceholder,
+      errorWidget: effectiveError,
+    );
+  }
+
+  static Widget _defaultPlaceholder(BuildContext context, String url) {
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+    );
+  }
+
+  static Widget _defaultError(BuildContext context, String url, Object error) {
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        color: Theme.of(context).hintColor,
+      ),
     );
   }
 }

@@ -45,7 +45,10 @@
                                 fetchpriority="{{ $index === 0 ? 'high' : 'low' }}"
                                 @click="lightbox = true"
                                 class="h-full w-full cursor-zoom-in object-cover"
+                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
                             >
+                            {{-- Part A (client feedback): never blank on a failed load. --}}
+                            <div class="hidden h-full items-center justify-center text-sokoni-black/20" style="display:none">No photo</div>
                         @endif
                     </div>
                 @empty
@@ -107,7 +110,13 @@
             {{-- Seller card --}}
             <a href="{{ route('web.shop', $seller->handle) }}" class="card mt-24 flex items-center gap-12 p-16">
                 @if ($seller->logo)
-                    <img src="{{ $seller->logo }}" alt="{{ $seller->shop_name }}" class="h-48 w-48 rounded-full object-cover">
+                    <img
+                        src="{{ $seller->logo }}"
+                        alt="{{ $seller->shop_name }}"
+                        class="h-48 w-48 rounded-full object-cover"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
+                    >
+                    <div class="hidden h-48 w-48 items-center justify-center rounded-full bg-sokoni-surface-alt font-bold" style="display:none">{{ strtoupper(substr($seller->shop_name, 0, 1)) }}</div>
                 @else
                     <div class="flex h-48 w-48 items-center justify-center rounded-full bg-sokoni-surface-alt font-bold">{{ strtoupper(substr($seller->shop_name, 0, 1)) }}</div>
                 @endif
