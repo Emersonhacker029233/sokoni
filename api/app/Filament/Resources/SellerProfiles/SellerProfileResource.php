@@ -7,10 +7,7 @@ use App\Filament\Resources\SellerProfiles\Pages\ViewSellerProfile;
 use App\Filament\Resources\SellerProfiles\Schemas\SellerProfileInfolist;
 use App\Filament\Resources\SellerProfiles\Tables\SellerProfilesTable;
 use App\Models\SellerProfile;
-use App\Notifications\SellerVerificationNotification;
-use App\Services\Push\PushNotifier;
-use App\Support\ActivityLogger;
-use App\Support\SafeMail;
+use App\Services\SellerVerificationService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -53,25 +50,7 @@ class SellerProfileResource extends Resource
             ->visible(fn (SellerProfile $record) => $record->status !== 'verified')
             ->requiresConfirmation()
             ->action(function (SellerProfile $record) {
-                $record->forceFill([
-                    'status' => 'verified',
-                    'verified_at' => now(),
-                    'rejection_reason' => null,
-                ])->save();
-                ActivityLogger::record(auth()->user(), 'seller.verified', $record);
-                // B4 (tester feedback): the seller previously learned
-                // nothing at all when approved — same push+email pairing
-                // every other seller-facing event in this codebase already
-                // uses (orders, reviews).
-                app(PushNotifier::class)->notify(
-                    $record->user,
-                    'Shop verified',
-                    "Your shop \"{$record->shop_name}\" is verified and now visible on Sokoni.",
-                    ['seller_id' => $record->id],
-                );
-                if ($record->user->email !== null) {
-                    SafeMail::send($record->user, new SellerVerificationNotification($record));
-                }
+                SellerVerificationService::verify($record, auth()->user());
                 Notification::make()->title('Seller verified')->success()->send();
             });
     }
@@ -87,21 +66,7 @@ class SellerProfileResource extends Resource
                 Textarea::make('reason')->label('Reason')->required(),
             ])
             ->action(function (SellerProfile $record, array $data) {
-                $record->forceFill([
-                    'status' => 'rejected',
-                    'rejection_reason' => $data['reason'],
-                    'verified_at' => null,
-                ])->save();
-                ActivityLogger::record(auth()->user(), 'seller.rejected', $record, $data['reason']);
-                app(PushNotifier::class)->notify(
-                    $record->user,
-                    'Shop registration update',
-                    "Your shop \"{$record->shop_name}\" registration wasn't approved: {$data['reason']}",
-                    ['seller_id' => $record->id],
-                );
-                if ($record->user->email !== null) {
-                    SafeMail::send($record->user, new SellerVerificationNotification($record));
-                }
+                SellerVerificationService::reject($record, auth()->user(), $data['reason']);
                 Notification::make()->title('Seller rejected')->warning()->send();
             });
     }

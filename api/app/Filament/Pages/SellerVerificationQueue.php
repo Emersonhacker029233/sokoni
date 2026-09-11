@@ -3,7 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\SellerProfile;
-use App\Support\ActivityLogger;
+use App\Services\SellerVerificationService;
 use BackedEnum;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -74,13 +74,12 @@ class SellerVerificationQueue extends Page
     {
         $seller = SellerProfile::findOrFail($sellerId);
 
-        $seller->forceFill([
-            'status' => 'verified',
-            'verified_at' => now(),
-            'rejection_reason' => null,
-        ])->save();
-
-        ActivityLogger::record(Auth::user(), 'seller.verified', $seller);
+        // D2 (tester feedback): this used to forceFill+save+log inline,
+        // with no push/email to the seller at all — the B4 notification
+        // pairing only ever made it into SellerProfileResource's own
+        // actions, never here, even though this page (not that resource,
+        // kept off the main nav) is the one every reviewer actually uses.
+        SellerVerificationService::verify($seller, Auth::user());
 
         Notification::make()->title($seller->shop_name.' verified')->success()->send();
     }
@@ -97,13 +96,7 @@ class SellerVerificationQueue extends Page
 
         $seller = SellerProfile::findOrFail($sellerId);
 
-        $seller->forceFill([
-            'status' => 'rejected',
-            'rejection_reason' => $reason,
-            'verified_at' => null,
-        ])->save();
-
-        ActivityLogger::record(Auth::user(), 'seller.rejected', $seller, $reason);
+        SellerVerificationService::reject($seller, Auth::user(), $reason);
 
         unset($this->rejecting[$sellerId], $this->rejectReasons[$sellerId]);
 
