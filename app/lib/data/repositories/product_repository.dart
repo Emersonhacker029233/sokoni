@@ -57,9 +57,10 @@ class ProductRepository {
     String? query,
     String sort = 'nearby',
     int page = 1,
-    // C3 (tester feedback): Cars category-page filters.
+    // C3/C4 (tester feedback): Cars category-page filters.
     String? make,
     String? model,
+    String? year,
   }) async {
     try {
       final json = await _api.products({
@@ -73,6 +74,7 @@ class ProductRepository {
         'page': page,
         'make': ?make,
         'model': ?model,
+        'year': ?year,
       });
       final result = PaginatedResult<Product>.fromJson(
         json as Map<String, dynamic>,
@@ -134,11 +136,12 @@ class ProductRepository {
     required int price,
     required int stock,
     required String condition,
-    // C3 (tester feedback): required together only when categoryId
+    // C3/C4 (tester feedback): required together only when categoryId
     // resolves to Cars — enforced server-side; the form only sends them
     // when its own Cars dropdowns are shown.
     String? make,
     String? model,
+    String? year,
   }) async {
     try {
       final json = await _api.createProduct({
@@ -150,6 +153,7 @@ class ProductRepository {
         'condition': condition,
         'make': ?make,
         'model': ?model,
+        'year': ?year,
       });
       return Product.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {
@@ -168,6 +172,7 @@ class ProductRepository {
     bool? isActive,
     String? make,
     String? model,
+    String? year,
   }) async {
     try {
       final json = await _api.updateProduct(productId, {
@@ -180,6 +185,7 @@ class ProductRepository {
         'is_active': ?isActive,
         'make': ?make,
         'model': ?model,
+        'year': ?year,
       });
       return Product.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {

@@ -47,10 +47,67 @@ class CarsMakeModelTest extends TestCase
             'price' => 18000000,
             'stock' => 1,
             'condition' => 'used',
+            'year' => 2015,
         ]);
 
         $response->assertSessionHasErrors(['make', 'model']);
         $this->assertDatabaseMissing('products', ['title' => 'Toyota Corolla 2015']);
+    }
+
+    /**
+     * C4 (tester feedback): the third Cars dropdown — required exactly
+     * when make/model are (posting into Cars), same as them.
+     */
+    public function test_posting_into_cars_requires_a_year(): void
+    {
+        $cars = $this->carsCategory();
+
+        $response = $this->actingAsWebUser($this->sellerUser())->post(route('web.account.shop.products.store'), [
+            'category_id' => $cars->id,
+            'title' => 'Toyota Corolla, no year given',
+            'price' => 18000000,
+            'stock' => 1,
+            'condition' => 'used',
+            'make' => 'Toyota',
+            'model' => 'Corolla',
+        ]);
+
+        $response->assertSessionHasErrors(['year']);
+        $this->assertDatabaseMissing('products', ['title' => 'Toyota Corolla, no year given']);
+    }
+
+    /**
+     * C4: "1990 to the current year" is an enforced range, not just a
+     * client-side dropdown — the server rejects anything outside it
+     * regardless of what a crafted request sends.
+     */
+    public function test_a_year_outside_1990_to_the_current_year_is_rejected(): void
+    {
+        $cars = $this->carsCategory();
+
+        $tooOld = $this->actingAsWebUser($this->sellerUser())->post(route('web.account.shop.products.store'), [
+            'category_id' => $cars->id,
+            'title' => 'Ancient Corolla',
+            'price' => 5000000,
+            'stock' => 1,
+            'condition' => 'used',
+            'make' => 'Toyota',
+            'model' => 'Corolla',
+            'year' => 1989,
+        ]);
+        $tooOld->assertSessionHasErrors(['year']);
+
+        $tooNew = $this->actingAsWebUser($this->sellerUser())->post(route('web.account.shop.products.store'), [
+            'category_id' => $cars->id,
+            'title' => 'Future Corolla',
+            'price' => 5000000,
+            'stock' => 1,
+            'condition' => 'used',
+            'make' => 'Toyota',
+            'model' => 'Corolla',
+            'year' => (int) date('Y') + 1,
+        ]);
+        $tooNew->assertSessionHasErrors(['year']);
     }
 
     public function test_posting_into_cars_with_a_model_that_does_not_belong_to_the_make_is_rejected(): void
@@ -65,12 +122,13 @@ class CarsMakeModelTest extends TestCase
             'condition' => 'used',
             'make' => 'Toyota',
             'model' => 'Golf', // a Volkswagen model, not a Toyota one
+            'year' => 2018,
         ]);
 
         $response->assertSessionHasErrors(['model']);
     }
 
-    public function test_posting_a_valid_car_stores_make_and_model_as_product_attributes(): void
+    public function test_posting_a_valid_car_stores_make_model_and_year_as_product_attributes(): void
     {
         $cars = $this->carsCategory();
 
@@ -82,12 +140,14 @@ class CarsMakeModelTest extends TestCase
             'condition' => 'used',
             'make' => 'Toyota',
             'model' => 'Corolla',
+            'year' => 2015,
         ]);
 
         $response->assertRedirect();
         $product = Product::where('title', 'Toyota Corolla 2015')->firstOrFail();
         $this->assertSame('Toyota', $product->attributeValue('make'));
         $this->assertSame('Corolla', $product->attributeValue('model'));
+        $this->assertSame('2015', $product->attributeValue('year'));
     }
 
     public function test_posting_into_a_non_cars_category_never_requires_make_or_model(): void
@@ -147,12 +207,34 @@ class CarsMakeModelTest extends TestCase
     }
 
     /**
+     * C4: Year is filterable the same way as make/model — a separate
+     * `product_attributes` key, `whereHas`'d independently in
+     * ProductSearchService (see the isolated dedicated test for whether
+     * it's narrowed by make/model — it deliberately isn't; DECISIONS.md).
+     */
+    public function test_the_cars_category_page_filters_by_year(): void
+    {
+        $cars = $this->carsCategory();
+        $seller = SellerProfile::factory()->verified()->create();
+        $newer = Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $cars->id, 'title' => 'Corolla 2020']);
+        $newer->productAttributes()->create(['key' => 'year', 'value' => '2020']);
+        $older = Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $cars->id, 'title' => 'Corolla 2005']);
+        $older->productAttributes()->create(['key' => 'year', 'value' => '2005']);
+
+        $response = $this->get(route('web.category', ['vehicles-parts', 'cars']).'?year=2020');
+
+        $response->assertOk();
+        $response->assertSee('Corolla 2020');
+        $response->assertDontSee('Corolla 2005');
+    }
+
+    /**
      * The API controller (`Api\ProductController`) has its own, separate
      * `syncVehicleAttributes()` — not shared code with the web controller,
      * even though both reuse the same FormRequests — so it needs its own
      * direct coverage rather than trusting the web test above for it too.
      */
-    public function test_the_api_endpoint_also_persists_make_and_model_as_product_attributes(): void
+    public function test_the_api_endpoint_also_persists_make_model_and_year_as_product_attributes(): void
     {
         $cars = $this->carsCategory();
         $seller = $this->sellerUser();
@@ -165,13 +247,16 @@ class CarsMakeModelTest extends TestCase
             'condition' => 'used',
             'make' => 'Toyota',
             'model' => 'Hilux',
+            'year' => 2019,
         ]);
 
         $response->assertCreated();
         $product = Product::where('title', 'API Toyota Hilux')->firstOrFail();
         $this->assertSame('Toyota', $product->attributeValue('make'));
         $this->assertSame('Hilux', $product->attributeValue('model'));
+        $this->assertSame('2019', $product->attributeValue('year'));
         $this->assertSame('Toyota', $response->json('data.attributes.make'));
+        $this->assertSame('2019', $response->json('data.attributes.year'));
     }
 
     public function test_the_api_endpoint_leaves_attributes_untouched_when_the_update_omits_them(): void
@@ -224,8 +309,10 @@ class CarsMakeModelTest extends TestCase
 
         $carsResponse->assertOk();
         $carsResponse->assertSee('name="make"', false);
+        $carsResponse->assertSee('name="year"', false);
 
         $electronicsResponse->assertOk();
         $electronicsResponse->assertDontSee('name="make"', false);
+        $electronicsResponse->assertDontSee('name="year"', false);
     }
 }

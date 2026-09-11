@@ -30,6 +30,7 @@ class ProductSearchFilters
         // own attribute keys later.
         public readonly ?string $make = null,
         public readonly ?string $model = null,
+        public readonly ?string $year = null,
     ) {}
 
     public function hasLocation(): bool
@@ -56,6 +57,7 @@ class ProductSearchFilters
             sort: $this->sort,
             make: $this->make,
             model: $this->model,
+            year: $this->year,
         );
     }
 }

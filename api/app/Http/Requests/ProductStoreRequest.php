@@ -47,6 +47,13 @@ class ProductStoreRequest extends FormRequest
                     }
                 },
             ],
+            // C4 (tester feedback): Year, the third Cars dropdown — a flat
+            // 1990-to-current range (see DECISIONS.md), not filtered by
+            // make/model, so no cross-field check like model's above.
+            'year' => [
+                Rule::requiredIf(fn () => $this->isCarsCategory()),
+                'nullable', 'integer', 'between:1990,'.date('Y'),
+            ],
         ];
     }
 }

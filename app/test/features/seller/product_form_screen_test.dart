@@ -35,6 +35,7 @@ class _CapturingProductRepository extends ProductRepository {
     required String condition,
     String? make,
     String? model,
+    String? year,
   }) async {
     capturedCategoryId = categoryId;
     return Product(id: 1, title: title, price: price, condition: condition);

@@ -74,4 +74,25 @@ class VehicleMakes
     {
         return in_array($model, self::modelsFor($make), true);
     }
+
+    /**
+     * C4 (tester feedback): the third Cars dropdown, "Years 1990 to the
+     * current year" per the task's own wording — a flat range, not one
+     * filtered by make/model. There's no reliable per-model year-range
+     * data behind the fixed list above, and inventing one would be
+     * guessing at data rather than using it, the exact thing this project
+     * avoids. Newest first, since a used-car lister is far more likely to
+     * be listing something recent than something from 1990.
+     *
+     * @return array<int, int>
+     */
+    public static function years(): array
+    {
+        return range((int) date('Y'), 1990);
+    }
+
+    public static function isValidYear(int $year): bool
+    {
+        return $year >= 1990 && $year <= (int) date('Y');
+    }
 }

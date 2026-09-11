@@ -27,9 +27,10 @@ class SearchFilterInput
             hasVideo: $request->boolean('has_video'),
             sponsoredOnly: $request->boolean('sponsored'),
             sort: $request->string('sort')->toString() ?: 'newest',
-            // C3 (tester feedback): Cars category-page filters.
+            // C3/C4 (tester feedback): Cars category-page filters.
             make: $request->string('make')->toString() ?: null,
             model: $request->string('model')->toString() ?: null,
+            year: $request->string('year')->toString() ?: null,
         );
     }
 }

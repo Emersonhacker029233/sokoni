@@ -88,6 +88,7 @@ final selectedCategoryProvider = Provider<SokoniCategory?>((ref) {
 /// category selection changes away from it (see _CategoryChips).
 final makeFilterProvider = StateProvider<String?>((ref) => null);
 final modelFilterProvider = StateProvider<String?>((ref) => null);
+final yearFilterProvider = StateProvider<String?>((ref) => null);
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
@@ -129,6 +130,7 @@ class DiscoveryFeedController extends AsyncNotifier<DiscoveryFeedState> {
           page: 1,
           make: ref.watch(makeFilterProvider),
           model: ref.watch(modelFilterProvider),
+          year: ref.watch(yearFilterProvider),
         );
     return DiscoveryFeedState(items: result.items, hasMore: result.hasMore, page: result.currentPage);
   }
@@ -159,6 +161,7 @@ class DiscoveryFeedController extends AsyncNotifier<DiscoveryFeedState> {
           page: current.page + 1,
           make: ref.read(makeFilterProvider),
           model: ref.read(modelFilterProvider),
+          year: ref.read(yearFilterProvider),
         );
 
     state = AsyncData(

@@ -5,7 +5,7 @@
     class="space-y-20 rounded-card border border-sokoni-outline p-16"
     x-data="{ make: {{ Illuminate\Support\Js::from(request('make', '')) }}, vehicleMakeModels: {{ Illuminate\Support\Js::from($vehicleMakeModels ?? []) }} }"
 >
-    @foreach (request()->except(['price_min', 'price_max', 'condition', 'region', 'has_video', 'sponsored', 'make', 'model', 'page']) as $key => $value)
+    @foreach (request()->except(['price_min', 'price_max', 'condition', 'region', 'has_video', 'sponsored', 'make', 'model', 'year', 'page']) as $key => $value)
         @if (is_scalar($value))
             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
         @endif
@@ -31,6 +31,18 @@
                 <template x-for="modelName in (vehicleMakeModels[make] || [])" :key="modelName">
                     <option :value="modelName" :selected="modelName === {{ Illuminate\Support\Js::from(request('model', '')) }}" x-text="modelName"></option>
                 </template>
+            </select>
+        </div>
+        {{-- C4 (tester feedback): Year — a flat 1990-current range (see
+             DECISIONS.md), not narrowed by make/model, so it's independent
+             of both and always available once browsing Cars. --}}
+        <div>
+            <h3 class="text-sm font-semibold">Year</h3>
+            <select name="year" class="input-field mt-8 text-sm">
+                <option value="">Any year</option>
+                @foreach ($vehicleYears ?? [] as $yearOption)
+                    <option value="{{ $yearOption }}" @selected((string) request('year') === (string) $yearOption)>{{ $yearOption }}</option>
+                @endforeach
             </select>
         </div>
     @endif

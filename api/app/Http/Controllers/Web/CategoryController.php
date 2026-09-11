@@ -88,6 +88,7 @@ class CategoryController extends Controller
                 'showVehicleFilters' => $active->isCars(),
                 'vehicleMakes' => VehicleMakes::makes(),
                 'vehicleMakeModels' => VehicleMakes::ALL,
+                'vehicleYears' => VehicleMakes::years(),
                 'breadcrumbs' => $breadcrumbs,
                 'title' => $active->name(app()->getLocale()),
                 'description' => "Browse {$active->name('en')} listings on Sokoni — verified sellers, real photos, near you.",

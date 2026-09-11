@@ -54,6 +54,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   /// rather than as a third dependent-dropdown tier.
   String? _make;
   String? _model;
+  int? _year;
   bool _isCarsSelected = false;
 
   Product? _product;
@@ -101,6 +102,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         _isCarsSelected = category?.isCars ?? false;
         _make = product.attributes?['make'];
         _model = product.attributes?['model'];
+        _year = int.tryParse(product.attributes?['year'] ?? '');
       });
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -113,6 +115,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     if (!(_formKey.currentState?.validate() ?? false) || _effectiveCategoryId == null) return;
     if (_isCarsSelected && (_make == null || _model == null)) {
       setState(() => _error = AppLocalizations.of(context).productFormMakeModelRequired);
+      return;
+    }
+    if (_isCarsSelected && _year == null) {
+      setState(() => _error = AppLocalizations.of(context).productFormYearRequired);
       return;
     }
     setState(() {
@@ -134,6 +140,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           condition: _condition,
           make: _isCarsSelected ? _make : null,
           model: _isCarsSelected ? _model : null,
+          year: _isCarsSelected ? _year?.toString() : null,
         );
       } else {
         saved = await repo.updateProduct(
@@ -146,6 +153,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           condition: _condition,
           make: _isCarsSelected ? _make : null,
           model: _isCarsSelected ? _model : null,
+          year: _isCarsSelected ? _year?.toString() : null,
         );
       }
       setState(() => _product = saved);
@@ -346,6 +354,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                               _isCarsSelected = false;
                               _make = null;
                               _model = null;
+                              _year = null;
                             }),
                           ),
                         );
@@ -379,6 +388,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                     if (!_isCarsSelected) {
                                       _make = null;
                                       _model = null;
+                                      _year = null;
                                     }
                                   }),
                                 ),
@@ -402,6 +412,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         onChanged: (value) => setState(() {
                           _make = value;
                           _model = null;
+                          _year = null;
                         }),
                         validator: (value) => value == null ? l10n.productFormMakeModelRequired : null,
                       ),
@@ -416,8 +427,29 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                               for (final model in VehicleMakes.modelsFor(_make))
                                 DropdownMenuItem(value: model, child: Text(model)),
                             ],
-                            onChanged: (value) => setState(() => _model = value),
+                            onChanged: (value) => setState(() {
+                              _model = value;
+                              _year = null;
+                            }),
                             validator: (value) => value == null ? l10n.productFormMakeModelRequired : null,
+                          ),
+                        ),
+                      // C4 (tester feedback): Year, the third dependent
+                      // step — revealed once a model is picked, though its
+                      // own options are a flat 1990-current range rather
+                      // than one narrowed by the model (see DECISIONS.md).
+                      if (_model != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: SokoniDimens.space16),
+                          child: DropdownButtonFormField<int>(
+                            initialValue: _year,
+                            decoration: InputDecoration(labelText: l10n.productFormYear),
+                            items: [
+                              for (final year in VehicleMakes.years)
+                                DropdownMenuItem(value: year, child: Text(year.toString())),
+                            ],
+                            onChanged: (value) => setState(() => _year = value),
+                            validator: (value) => value == null ? l10n.productFormYearRequired : null,
                           ),
                         ),
                     ],

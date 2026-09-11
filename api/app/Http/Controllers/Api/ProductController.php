@@ -35,6 +35,7 @@ class ProductController extends Controller
             // same product_attributes match the website's category page uses.
             make: $request->string('make')->toString() ?: null,
             model: $request->string('model')->toString() ?: null,
+            year: $request->string('year')->toString() ?: null,
         );
 
         $paginated = $this->search->search($filters, page: (int) ($request->integer('page') ?: 1), perPage: self::PER_PAGE);
@@ -80,7 +81,7 @@ class ProductController extends Controller
         // existed — see User::isSeller().
         $seller = $request->user()->sellerProfile()->firstOrFail();
         $data = $request->validated();
-        $product = $seller->products()->create(collect($data)->except(['make', 'model'])->all());
+        $product = $seller->products()->create(collect($data)->except(['make', 'model', 'year'])->all());
         $this->syncVehicleAttributes($product, $data);
         $product->load(['category', 'seller', 'media', 'productAttributes']);
 
@@ -90,7 +91,7 @@ class ProductController extends Controller
     public function update(ProductUpdateRequest $request, Product $product): ProductResource
     {
         $data = $request->validated();
-        $product->update(collect($data)->except(['make', 'model'])->all());
+        $product->update(collect($data)->except(['make', 'model', 'year'])->all());
         $this->syncVehicleAttributes($product, $data);
         $product->load(['category', 'seller', 'media', 'productAttributes']);
 
@@ -106,9 +107,9 @@ class ProductController extends Controller
      */
     private function syncVehicleAttributes(Product $product, array $data): void
     {
-        foreach (['make', 'model'] as $key) {
+        foreach (['make', 'model', 'year'] as $key) {
             if (array_key_exists($key, $data)) {
-                $product->productAttributes()->updateOrCreate(['key' => $key], ['value' => $data[$key]]);
+                $product->productAttributes()->updateOrCreate(['key' => $key], ['value' => (string) $data[$key]]);
             }
         }
     }

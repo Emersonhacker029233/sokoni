@@ -134,6 +134,10 @@ class ProductSearchService
             $query->whereHas('productAttributes', fn (Builder $q) => $q->where('key', 'model')->where('value', $filters->model));
         }
 
+        if ($filters->year) {
+            $query->whereHas('productAttributes', fn (Builder $q) => $q->where('key', 'year')->where('value', $filters->year));
+        }
+
         return $query;
     }
 

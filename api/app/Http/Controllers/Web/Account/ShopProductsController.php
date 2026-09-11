@@ -52,7 +52,7 @@ class ShopProductsController extends Controller
     {
         $seller = $request->user()->sellerProfile()->firstOrFail();
         $data = $request->validated();
-        $product = $seller->products()->create(collect($data)->except(['make', 'model'])->all());
+        $product = $seller->products()->create(collect($data)->except(['make', 'model', 'year'])->all());
         $this->syncVehicleAttributes($product, $data);
 
         return redirect()->route('web.account.shop.products.edit', $product)
@@ -74,7 +74,7 @@ class ShopProductsController extends Controller
     public function update(ProductUpdateRequest $request, Product $product): RedirectResponse
     {
         $data = $request->validated();
-        $product->update(collect($data)->except(['make', 'model'])->all());
+        $product->update(collect($data)->except(['make', 'model', 'year'])->all());
         $this->syncVehicleAttributes($product, $data);
 
         return redirect()->route('web.account.shop.products')->with('status', 'Product updated.');
@@ -88,9 +88,9 @@ class ShopProductsController extends Controller
      */
     private function syncVehicleAttributes(Product $product, array $data): void
     {
-        foreach (['make', 'model'] as $key) {
+        foreach (['make', 'model', 'year'] as $key) {
             if (array_key_exists($key, $data)) {
-                $product->productAttributes()->updateOrCreate(['key' => $key], ['value' => $data[$key]]);
+                $product->productAttributes()->updateOrCreate(['key' => $key], ['value' => (string) $data[$key]]);
             }
         }
     }
@@ -121,6 +121,7 @@ class ShopProductsController extends Controller
 
         return compact('categories', 'subcategoriesByParent', 'carsCategoryId') + [
             'vehicleMakeModels' => VehicleMakes::ALL,
+            'vehicleYears' => VehicleMakes::years(),
         ];
     }
 }

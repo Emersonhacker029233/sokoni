@@ -41,6 +41,7 @@
                 vehicleMakeModels: {{ Illuminate\Support\Js::from($vehicleMakeModels) }},
                 make: {{ Illuminate\Support\Js::from(old('make', $product?->attributeValue('make')) ?: '') }},
                 model: {{ Illuminate\Support\Js::from(old('model', $product?->attributeValue('model')) ?: '') }},
+                year: {{ Illuminate\Support\Js::from(old('year', $product?->attributeValue('year')) ?: '') }},
                 get isCars() { return String(this.childId) === String(this.carsCategoryId); },
             }"
             class="space-y-16"
@@ -90,6 +91,21 @@
                         </template>
                     </select>
                     @error('model') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
+                </div>
+                {{-- C4 (tester feedback): Year, the third dependent step —
+                     revealed once a model is picked, matching the
+                     Make -> Model -> Year build-up, even though its own
+                     option list is a flat 1990-current range rather than
+                     one narrowed by the chosen model (see DECISIONS.md). --}}
+                <div x-show="model">
+                    <label for="year" class="text-sm font-medium">Year</label>
+                    <select id="year" name="year" x-model="year" :required="isCars" class="input-field mt-4">
+                        <option value="">Select a year</option>
+                        @foreach ($vehicleYears as $yearOption)
+                            <option value="{{ $yearOption }}">{{ $yearOption }}</option>
+                        @endforeach
+                    </select>
+                    @error('year') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
                 </div>
             </div>
         </div>

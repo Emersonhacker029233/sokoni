@@ -38,6 +38,7 @@ class _CarsFilterContentState extends ConsumerState<_CarsFilterContent> {
   late bool _carsOnly = ref.read(selectedCategoryProvider)?.isCars ?? false;
   late String? _make = ref.read(makeFilterProvider);
   late String? _model = ref.read(modelFilterProvider);
+  late String? _year = ref.read(yearFilterProvider);
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +66,7 @@ class _CarsFilterContentState extends ConsumerState<_CarsFilterContent> {
                 if (!value) {
                   _make = null;
                   _model = null;
+                  _year = null;
                 }
               }),
             );
@@ -82,6 +84,7 @@ class _CarsFilterContentState extends ConsumerState<_CarsFilterContent> {
             onChanged: (value) => setState(() {
               _make = value;
               _model = null;
+              _year = null;
             }),
           ),
           if (_make != null) ...[
@@ -97,6 +100,22 @@ class _CarsFilterContentState extends ConsumerState<_CarsFilterContent> {
               onChanged: (value) => setState(() => _model = value),
             ),
           ],
+          // C4 (tester feedback): Year — a flat 1990-current range, not
+          // narrowed by make/model (see DECISIONS.md), revealed once a
+          // model is picked to match the Make -> Model -> Year build-up.
+          if (_model != null) ...[
+            const SizedBox(height: SokoniDimens.space12),
+            DropdownButtonFormField<String>(
+              initialValue: _year,
+              decoration: InputDecoration(labelText: l10n.productFormYear),
+              items: [
+                DropdownMenuItem(value: null, child: Text(l10n.carsFilterAnyYear)),
+                for (final year in VehicleMakes.years)
+                  DropdownMenuItem(value: year.toString(), child: Text(year.toString())),
+              ],
+              onChanged: (value) => setState(() => _year = value),
+            ),
+          ],
         ],
         const SizedBox(height: SokoniDimens.space24),
         FilledButton(
@@ -108,6 +127,7 @@ class _CarsFilterContentState extends ConsumerState<_CarsFilterContent> {
                 : widget.vehiclesPartsCategoryId;
             ref.read(makeFilterProvider.notifier).state = _carsOnly ? _make : null;
             ref.read(modelFilterProvider.notifier).state = _carsOnly ? _model : null;
+            ref.read(yearFilterProvider.notifier).state = _carsOnly ? _year : null;
             if (context.mounted) Navigator.of(context).pop();
           },
           child: Text(l10n.commonApply),

@@ -140,6 +140,7 @@
   "carsFilterCarsOnly": "Magari pekee",
   "carsFilterAnyMake": "Chapa yoyote",
   "carsFilterAnyModel": "Aina yoyote",
+  "carsFilterAnyYear": "Mwaka wowote",
 
   "feedEmptyTitle": "Hakuna bidhaa karibu bado",
   "feedEmptyBody": "Jaribu umbali mkubwa zaidi au kategoria tofauti.",
@@ -311,6 +312,8 @@
   "productFormMake": "Chapa",
   "productFormModel": "Aina",
   "productFormMakeModelRequired": "Chagua chapa na aina ya gari hili",
+  "productFormYear": "Mwaka",
+  "productFormYearRequired": "Chagua mwaka wa gari hili",
   "productFormSave": "Hifadhi",
   "productFormSavedAddMedia": "Imehifadhiwa — sasa ongeza picha au video.",
   "productFormMediaTitle": "Picha na video",

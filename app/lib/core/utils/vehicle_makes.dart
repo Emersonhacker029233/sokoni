@@ -28,4 +28,12 @@ class VehicleMakes {
   static List<String> get makes => all.keys.toList();
 
   static List<String> modelsFor(String? make) => all[make] ?? const [];
+
+  /// C4 (tester feedback): the third Cars dropdown. Not filtered by
+  /// make/model — there's no reliable per-model year-range data behind
+  /// this app's fixed reference lists above, and the task's own spec
+  /// names a flat range ("1990 to the current year"), not a per-model
+  /// one. Newest first, since a used-car lister is far more likely to be
+  /// listing something recent than something from 1990.
+  static List<int> get years => [for (var y = DateTime.now().year; y >= 1990; y--) y];
 }
