@@ -47,4 +47,29 @@ class ProductCardTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('fetchpriority', false);
     }
+
+    /**
+     * B8 (tester feedback: "tick reads clearly in app but not web"). The
+     * app's Icons.verified_rounded is one filled glyph with no circular
+     * wrapper — the checkmark is a cutout in that same shape, not a second
+     * icon drawn on top of a badge-shaped background. The web's previous
+     * markup used a completely different, checkmark-less outline path
+     * inside a solid circle, so no check ever actually rendered. This
+     * pins the real Material glyph path (verified, rounded, filled) in
+     * place and guards against the old broken path or circle wrapper
+     * silently coming back.
+     */
+    public function test_a_verified_sellers_product_card_shows_the_real_verified_glyph_with_no_circular_wrapper(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id]);
+        ProductMedia::factory()->create(['product_id' => $product->id]);
+
+        $response = $this->get('/search');
+
+        $response->assertOk();
+        $response->assertSee('M438-452-58-57q', false);
+        $response->assertDontSee('M10 1l2.39 1.36L15 2', false);
+        $response->assertDontSee('bg-sokoni-yellow text-white', false);
+    }
 }

@@ -146,17 +146,20 @@
     .chip-active {
         @apply border-transparent bg-sokoni-yellow text-sokoni-black;
     }
-    /* A7 (tester feedback): matches the app's own Icons.verified_rounded
-       exactly — a filled yellow badge with a white check, not black. Black
-       on yellow technically passes contrast, but it read as a plain
-       decorative dot rather than the same trust signal the app shows;
-       white is also what actually renders on the app given how that
-       Material icon's glyph is drawn (the checkmark is a cutout in a
-       single-color shape, showing through to whatever's behind it — always
-       a light card/page background here, so it reads as white on yellow
-       there too, not black). */
+    /* B8 (tester feedback): the app never wraps Icons.verified_rounded in a
+       circular background — every call site (product_card.dart,
+       feed_card.dart, home_screen.dart, product_detail_screen.dart,
+       shop_profile_screen.dart) renders that one Material glyph directly,
+       filled sokoni-yellow, on the page/card background. The glyph's own
+       path is a single compound shape: the scalloped badge outline plus a
+       checkmark cut out of it, so on a light background the check reads as
+       white without needing a separate white layer. The web's earlier
+       version wrapped a DIFFERENT, checkmark-less outline path inside a
+       solid yellow circle — no check ever rendered, which is why this read
+       as unclear/wrong. Fixed to the same single-glyph composition: no
+       circle, no separate white layer, just the icon filled yellow. */
     .badge-verified {
-        @apply inline-flex h-16 w-16 items-center justify-center rounded-full bg-sokoni-yellow text-white;
+        @apply inline-flex items-center justify-center text-sokoni-yellow;
     }
     .badge-sponsored {
         @apply inline-flex items-center rounded-chip bg-sokoni-surface-alt px-8 py-4 text-xs font-medium text-sokoni-black/60;
