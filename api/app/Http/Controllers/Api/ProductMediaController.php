@@ -61,14 +61,7 @@ class ProductMediaController extends Controller
         $this->authorize('update', $product);
         abort_unless($media->product_id === $product->id, 404);
 
-        foreach ([$media->path, $media->thumb_path, $media->card_path] as $url) {
-            if ($url) {
-                $relative = str($url)->after(Storage::disk('public')->url(''));
-                Storage::disk('public')->delete($relative);
-            }
-        }
-
-        $media->delete();
+        $media->deleteWithFiles();
 
         return response()->json(['message' => 'Media deleted.']);
     }

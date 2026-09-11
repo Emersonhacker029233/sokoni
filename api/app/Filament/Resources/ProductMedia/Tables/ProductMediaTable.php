@@ -57,7 +57,11 @@ class ProductMediaTable
                     ->action(function (ProductMedia $record) {
                         $product = $record->product;
                         ActivityLogger::record(Auth::user(), 'media.deleted', $product, "Deleted a {$record->type} from \"{$product?->title}\"");
-                        $record->delete();
+                        // D1 (tester feedback): this used to be a bare
+                        // $record->delete(), leaking the physical file(s)
+                        // on the public disk forever — see
+                        // ProductMedia::deleteWithFiles()'s own docblock.
+                        $record->deleteWithFiles();
                         Notification::make()->title('Media deleted')->success()->send();
                     }),
             ])

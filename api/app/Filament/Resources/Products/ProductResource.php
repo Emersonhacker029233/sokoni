@@ -2,8 +2,12 @@
 
 namespace App\Filament\Resources\Products;
 
+use App\Filament\Resources\Products\Pages\CreateProduct;
+use App\Filament\Resources\Products\Pages\EditProduct;
 use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Resources\Products\Pages\ViewProduct;
+use App\Filament\Resources\Products\RelationManagers\MediaRelationManager;
+use App\Filament\Resources\Products\Schemas\ProductForm;
 use App\Filament\Resources\Products\Schemas\ProductInfolist;
 use App\Filament\Resources\Products\Tables\ProductsTable;
 use App\Models\Product;
@@ -14,11 +18,12 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 /**
- * Catalog browsing/moderation (CLAUDE.md admin rebuild, Section 4). No
- * create/edit pages — products are only ever created/edited by sellers
- * through the app, same reasoning as SellerProfileResource/ReportResource:
- * this is a review-and-moderate surface (hide/unhide/feature, bulk hide,
- * bulk category reassignment — see ProductsTable), not a data-entry form.
+ * Catalog browsing/moderation plus full CRUD (CLAUDE.md admin rebuild,
+ * Section 4; D1 tester feedback explicitly asking for admin create/edit,
+ * superseding this class's earlier "sellers only" design). Moderation
+ * (hide/unhide/feature, bulk hide, bulk category reassignment, soft
+ * delete/restore) stays on ProductsTable; ProductForm/MediaRelationManager
+ * are the new data-entry half.
  */
 class ProductResource extends Resource
 {
@@ -37,6 +42,11 @@ class ProductResource extends Resource
         return ['title', 'seller.shop_name'];
     }
 
+    public static function form(Schema $schema): Schema
+    {
+        return ProductForm::configure($schema);
+    }
+
     public static function infolist(Schema $schema): Schema
     {
         return ProductInfolist::configure($schema);
@@ -50,7 +60,7 @@ class ProductResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            MediaRelationManager::class,
         ];
     }
 
@@ -58,7 +68,9 @@ class ProductResource extends Resource
     {
         return [
             'index' => ListProducts::route('/'),
+            'create' => CreateProduct::route('/create'),
             'view' => ViewProduct::route('/{record}'),
+            'edit' => EditProduct::route('/{record}/edit'),
         ];
     }
 }
