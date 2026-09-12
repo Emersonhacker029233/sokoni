@@ -22,7 +22,9 @@ class CategorySeeder extends Seeder
         ['name_en' => 'Fashion', 'name_sw' => 'Mitindo', 'icon' => 'checkroom'],
         ['name_en' => 'Real Estate', 'name_sw' => 'Nyumba na Viwanja', 'icon' => 'home_work'],
         ['name_en' => 'Kids', 'name_sw' => 'Watoto', 'icon' => 'child_care'],
-        ['name_en' => 'Food & Groceries', 'name_sw' => 'Chakula na Vyakula', 'icon' => 'restaurant'],
+        // C1 (client feedback): "Food & Groceries" -> "Restaurant" — the icon
+        // was already 'restaurant' before this rename, unchanged here.
+        ['name_en' => 'Restaurant', 'name_sw' => 'Mkahawa', 'icon' => 'restaurant'],
         ['name_en' => 'Home & Furniture', 'name_sw' => 'Nyumbani na Samani', 'icon' => 'chair'],
         ['name_en' => 'Beauty & Health', 'name_sw' => 'Urembo na Afya', 'icon' => 'spa'],
         ['name_en' => 'Phones & Accessories', 'name_sw' => 'Simu na Vifaa', 'icon' => 'smartphone'],
@@ -75,7 +77,7 @@ class CategorySeeder extends Seeder
             ['name_en' => 'Baby Gear', 'name_sw' => 'Vifaa vya Watoto Wachanga'],
             ['name_en' => 'Kids Shoes', 'name_sw' => 'Viatu vya Watoto'],
         ],
-        'Food & Groceries' => [
+        'Restaurant' => [
             ['name_en' => 'Fresh Produce', 'name_sw' => 'Mazao Mabichi'],
             ['name_en' => 'Rice & Grains', 'name_sw' => 'Mchele na Nafaka'],
             ['name_en' => 'Cooking Oil', 'name_sw' => 'Mafuta ya Kupikia'],

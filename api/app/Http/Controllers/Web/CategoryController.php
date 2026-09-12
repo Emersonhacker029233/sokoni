@@ -27,6 +27,8 @@ class CategoryController extends Controller
     private const SLUG_REDIRECTS = [
         'agriculture' => 'cereal-legume',
         'construction-hardware' => 'hardware',
+        // C1 (client feedback): Food & Groceries -> Restaurant.
+        'food-groceries' => 'restaurant',
     ];
 
     public function __invoke(

@@ -50,7 +50,7 @@ class CategoryPageAllSeededCategoriesTest extends TestCase
         $this->seed(CategorySeeder::class);
         $catalog = app(CategoryCatalogService::class);
 
-        $parent = Category::where('name_en', 'Food & Groceries')->firstOrFail();
+        $parent = Category::where('name_en', 'Restaurant')->firstOrFail();
         $child = Category::create([
             'parent_id' => $parent->id,
             'name_en' => 'Fresh Produce',
@@ -73,7 +73,7 @@ class CategoryPageAllSeededCategoriesTest extends TestCase
         $this->seed(CategorySeeder::class);
         $catalog = app(CategoryCatalogService::class);
 
-        $category = Category::where('name_en', 'Food & Groceries')->firstOrFail();
+        $category = Category::where('name_en', 'Restaurant')->firstOrFail();
         $seller = SellerProfile::factory()->verified()->create();
         Product::factory()->create([
             'seller_id' => $seller->id,

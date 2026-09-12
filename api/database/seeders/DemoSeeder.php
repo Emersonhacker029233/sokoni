@@ -83,7 +83,7 @@ class DemoSeeder extends Seeder
         [
             'handle' => 'sinza_grocers',
             'shop_name' => 'Sinza Fresh Grocers',
-            'category' => 'Food & Groceries',
+            'category' => 'Restaurant', // C1 (client feedback): was "Food & Groceries".
             'district' => 'Sinza',
             'lat' => -6.7735, 'lng' => 39.2478,
             'address' => 'Sinza Mori, near Shekilango Road',

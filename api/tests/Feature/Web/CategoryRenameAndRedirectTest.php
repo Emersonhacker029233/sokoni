@@ -92,4 +92,30 @@ class CategoryRenameAndRedirectTest extends TestCase
 
         $this->assertSame(0, $missing, 'Every top-level category must have a Swahili name.');
     }
+
+    /** C1 (client feedback): "Food & Groceries" -> "Restaurant", same in-place-rename + slug-redirect pattern as the 2026-09-03 renames above. */
+    public function test_food_groceries_is_renamed_to_restaurant_in_both_languages(): void
+    {
+        (new CategorySeeder)->run();
+
+        $this->assertDatabaseHas('categories', ['name_en' => 'Restaurant', 'name_sw' => 'Mkahawa']);
+        $this->assertDatabaseMissing('categories', ['name_en' => 'Food & Groceries']);
+    }
+
+    public function test_the_old_food_groceries_slug_redirects_permanently_to_restaurant(): void
+    {
+        (new CategorySeeder)->run();
+
+        $response = $this->get('/c/food-groceries');
+
+        $response->assertRedirect('/c/restaurant');
+        $response->assertStatus(301);
+    }
+
+    public function test_the_new_restaurant_slug_resolves_directly(): void
+    {
+        (new CategorySeeder)->run();
+
+        $this->get('/c/restaurant')->assertOk();
+    }
 }
