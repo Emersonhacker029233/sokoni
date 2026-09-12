@@ -285,6 +285,8 @@
 
   "searchHint": "Search products and shops",
   "@searchHint": {},
+  "searchFiltersAction": "Filters",
+  "@searchFiltersAction": {},
 
   "productWhatsapp": "WhatsApp",
   "@productWhatsapp": {},

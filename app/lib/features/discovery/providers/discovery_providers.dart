@@ -90,6 +90,17 @@ final makeFilterProvider = StateProvider<String?>((ref) => null);
 final modelFilterProvider = StateProvider<String?>((ref) => null);
 final yearFilterProvider = StateProvider<String?>((ref) => null);
 
+/// C2 (client feedback): "the website has subcategories, the app doesn't
+/// show them" — the website's own `/c/{category}/{child}` page is exactly
+/// this: pick a subcategory to narrow the same category-page query down
+/// to it. A separate provider from [selectedCategoryIdProvider] rather
+/// than overloading it with sometimes-parent/sometimes-child id — the
+/// chip row above needs to keep knowing which *top-level* category is
+/// active regardless of which of its children is picked underneath it.
+/// null = "All" subcategory chip (the whole parent's products). Reset
+/// whenever the top-level category selection changes (see _CategoryChips).
+final selectedSubcategoryIdProvider = StateProvider<int?>((ref) => null);
+
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
 enum FeedSort { nearby, trending, newest }
@@ -120,7 +131,7 @@ class DiscoveryFeedController extends AsyncNotifier<DiscoveryFeedState> {
           lat: location.coords?.lat,
           lng: location.coords?.lng,
           radiusKm: ref.watch(radiusPresetProvider).km,
-          categoryId: ref.watch(selectedCategoryIdProvider),
+          categoryId: ref.watch(selectedSubcategoryIdProvider) ?? ref.watch(selectedCategoryIdProvider),
           query: ref.watch(searchQueryProvider),
           sort: switch (ref.watch(feedSortProvider)) {
             FeedSort.nearby => 'nearby',
@@ -151,7 +162,7 @@ class DiscoveryFeedController extends AsyncNotifier<DiscoveryFeedState> {
           lat: location.coords?.lat,
           lng: location.coords?.lng,
           radiusKm: ref.read(radiusPresetProvider).km,
-          categoryId: ref.read(selectedCategoryIdProvider),
+          categoryId: ref.read(selectedSubcategoryIdProvider) ?? ref.read(selectedCategoryIdProvider),
           query: ref.read(searchQueryProvider),
           sort: switch (ref.read(feedSortProvider)) {
             FeedSort.nearby => 'nearby',

@@ -348,6 +348,7 @@ class _ShopsTabBodyState extends ConsumerState<_ShopsTabBody> {
                           pinned: true,
                           delegate: StickyCategoryHeaderDelegate(child: _CategoryChips()),
                         ),
+                        const SliverToBoxAdapter(child: _SubcategoryChips()),
                         const SliverToBoxAdapter(
                           child: Padding(padding: EdgeInsets.only(top: SokoniDimens.space12), child: OffersRow()),
                         ),
@@ -540,10 +541,57 @@ class _CategoryChips extends ConsumerWidget {
             // Switching top-level categories leaves any Cars-specific
             // filter meaningless (and, worse, silently zeroing out an
             // unrelated category's results) — clear it here rather than
-            // only when the Cars sheet itself is dismissed.
+            // only when the Cars sheet itself is dismissed. Same reasoning
+            // for the subcategory pick — it belongs to whichever parent
+            // was previously selected, not the new one.
             ref.read(makeFilterProvider.notifier).state = null;
             ref.read(modelFilterProvider.notifier).state = null;
+            ref.read(yearFilterProvider.notifier).state = null;
+            ref.read(selectedSubcategoryIdProvider.notifier).state = null;
           },
+        );
+      },
+    );
+  }
+}
+
+/// C2 (client feedback): "the website has subcategories, the app doesn't
+/// show them" — this is the app's equivalent of the website category
+/// page's subcategory sidebar, adapted to the app's own flat top-level
+/// chip idiom rather than a sidebar (there's no room for one on a phone).
+/// Collapses to nothing both when no top-level category is selected and
+/// when the selected one has no children — never an empty row.
+class _SubcategoryChips extends ConsumerWidget {
+  const _SubcategoryChips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final parent = ref.watch(selectedCategoryProvider);
+    if (parent == null) return const SizedBox.shrink();
+
+    final subcategoriesAsync = ref.watch(subcategoriesProvider(parent.id));
+    final locale = Localizations.localeOf(context).languageCode;
+
+    return subcategoriesAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (error, _) => const SizedBox.shrink(),
+      data: (subcategories) {
+        if (subcategories.isEmpty) return const SizedBox.shrink();
+
+        final selected = ref.watch(selectedSubcategoryIdProvider);
+        final labels = [l10n.categoryAll, ...subcategories.map((c) => c.name(locale))];
+        final selectedIndex = selected == null ? 0 : subcategories.indexWhere((c) => c.id == selected) + 1;
+
+        return Padding(
+          padding: const EdgeInsets.only(top: SokoniDimens.space4),
+          child: AnimatedChipRow(
+            labels: labels,
+            selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+            onSelected: (index) {
+              ref.read(selectedSubcategoryIdProvider.notifier).state = index == 0 ? null : subcategories[index - 1].id;
+            },
+          ),
         );
       },
     );
