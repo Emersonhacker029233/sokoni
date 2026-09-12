@@ -48,4 +48,17 @@ class CategoryIconsTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('totally_unknown_icon_name');
     }
+
+    /** C4 (client feedback): "noon.com style" — a larger icon in a soft circular tile, up from the previous h-28/h-48 pair. */
+    public function test_the_homepage_category_icon_renders_at_the_larger_noon_style_size(): void
+    {
+        $this->seed(CategorySeeder::class);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('h-64 w-64', false);
+        $response->assertSee('h-32 w-32', false);
+        $response->assertDontSee('h-28 w-28', false);
+    }
 }

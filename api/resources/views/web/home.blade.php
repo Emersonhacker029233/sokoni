@@ -66,8 +66,19 @@
                     {{-- No product count here on purpose (tester feedback) — a category
                          with zero currently-visible products is filtered out of this
                          list entirely by HomeController rather than shown as "...  0". --}}
+                    {{-- C4 (client feedback): "noon.com style" — larger icon
+                         in a soft circular tile, using the existing inline
+                         SVG set rather than adding a per-category uploadable
+                         image. A photographic icon per category would need a
+                         new admin field, storage, and a real compression
+                         pipeline for something that's fundamentally a glyph,
+                         not a photo — the existing SVGs already cost nothing
+                         extra to load (inlined with the page, no request at
+                         all) and already draw the same shapes the Flutter app
+                         resolves from its own bundled icon font, so the two
+                         surfaces stay visually consistent for free. --}}
                     <a href="{{ route('web.category', app(\App\Services\Catalog\CategoryCatalogService::class)->slug($category)) }}" class="card flex flex-col items-center gap-8 p-16 text-center transition hover:shadow-md">
-                        <span class="flex h-48 w-48 items-center justify-center rounded-full bg-sokoni-yellow/20 text-sokoni-black">
+                        <span class="flex h-64 w-64 items-center justify-center rounded-full bg-sokoni-yellow/20 text-sokoni-black">
                             <x-category-icon :icon="$category->icon" />
                         </span>
                         <span class="text-sm font-semibold">{{ $category->name(app()->getLocale()) }}</span>

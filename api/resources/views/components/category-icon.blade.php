@@ -15,7 +15,12 @@
 --}}
 {{-- Path data lives in App\Support\CategoryIcons, shared with the product placeholder-image generator so both surfaces draw the same glyph. --}}
 <svg
-    {{ $attributes->merge(['class' => 'h-28 w-28']) }}
+    {{-- C4 (client feedback): "noon.com style" larger icon in a soft
+         circular tile — was h-28 w-28, this component's only current call
+         site (the homepage category strip) is the one asking for the
+         larger size, and nothing else in the codebase calls this
+         component with a different expected default. --}}
+    {{ $attributes->merge(['class' => 'h-32 w-32']) }}
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     fill="none"
