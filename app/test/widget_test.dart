@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:sokoni/core/motion/splash_transition.dart';
 import 'package:sokoni/core/network/dio_client.dart';
 import 'package:sokoni/core/providers.dart';
 import 'package:sokoni/main.dart';
@@ -43,12 +44,15 @@ void main() {
       ),
     );
 
-    // Splash plays first (D5: ~1.8s brand moment); pump it to completion
-    // explicitly rather than pumpAndSettle — the home tab's shimmer
-    // skeleton animates continuously while its network request is
+    // Splash plays first (D-round 2: ~3s brand moment); pump it to
+    // completion explicitly rather than pumpAndSettle — the home tab's
+    // shimmer skeleton animates continuously while its network request is
     // pending, so pumpAndSettle would never find a quiet frame even with
-    // the fail-fast adapter above.
-    await tester.pump(const Duration(milliseconds: 1800));
+    // the fail-fast adapter above. Reads the same constant SplashScreen's
+    // own navigation timer targets, so this can't silently drift out of
+    // sync with a future splash-duration change the way a hardcoded
+    // number would.
+    await tester.pump(SokoniSplashTransition.duration);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 

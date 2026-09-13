@@ -18,6 +18,15 @@ void main() {
     );
   }
 
+  test('runs roughly the 3-second brand moment the client asked for', () {
+    // D-round 2 (client feedback): "they want more movement and a longer
+    // sequence" — this pins the actual number so a future edit can't
+    // silently shrink it back toward the old 1.8s cut without a test
+    // noticing. SplashScreen's own navigation timer reads this same
+    // constant, so pinning it here also protects that contract.
+    expect(SokoniSplashTransition.duration, const Duration(milliseconds: 3000));
+  });
+
   testWidgets('calls onComplete exactly once after its full duration', (tester) async {
     var completeCount = 0;
     await tester.pumpWidget(wrap(SokoniSplashTransition(onComplete: () => completeCount++)));
