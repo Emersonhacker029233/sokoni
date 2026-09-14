@@ -217,6 +217,38 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, $product->media()->count(), 'must not create a duplicate media row for the same product');
     }
 
+    /**
+     * Part 3 (client feedback): "the seeder is already self-healing for
+     * missing files, extend that to replace invalid ones." The concrete
+     * case this catches: a placeholder SVG whose content has drifted from
+     * what the generator would produce today (e.g. the 2026-09-03
+     * category rename left old placeholder files on disk still labelled
+     * with a category's previous name) — the old existence-only check had
+     * no way to notice that and would leave it wrong forever. Corrupts
+     * the file in place (proving the fix isn't specific to stale labels —
+     * any mismatch is replaced) rather than deleting it, since deletion
+     * was already covered by the test above.
+     */
+    public function test_it_replaces_a_product_image_file_whose_content_has_gone_stale_or_invalid_even_though_it_exists(): void
+    {
+        Storage::fake('public');
+        $this->artisan('demo:seed');
+
+        $product = Product::where('title', 'iPhone 12 Pro 256GB')->firstOrFail();
+        $media = $product->media()->firstOrFail();
+        $relativePath = (string) str($media->path)->after(Storage::disk('public')->url(''));
+
+        Storage::disk('public')->assertExists($relativePath);
+        Storage::disk('public')->put($relativePath, 'not a valid svg at all');
+
+        $this->artisan('demo:seed');
+
+        $repaired = Storage::disk('public')->get($relativePath);
+        $this->assertNotSame('not a valid svg at all', $repaired);
+        $this->assertStringContainsString('<svg', $repaired);
+        $this->assertSame(1, $product->media()->count(), 'must not create a duplicate media row for the same product');
+    }
+
     /** Same self-healing guarantee as products, for Update's image file. */
     public function test_it_regenerates_an_update_image_file_that_is_missing_even_though_its_row_still_exists(): void
     {

@@ -636,21 +636,30 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * Writes $content (lazily built — the closure never runs unless
-     * actually needed) to $path only if nothing real is already there on
-     * the public disk. This is what makes the seeder self-healing rather
-     * than merely idempotent: a database row surviving while the file it
-     * points to doesn't — a storage move/reset, or (before this fix) a
-     * guard that checked "does a media row exist" instead of "does the
-     * file it points to actually exist" — previously left the file never
-     * rewritten. Every path passed in here is deterministic (derived from
-     * the seller/product's own stable identity), so it's safe to recompute
-     * and check on every run regardless of whether the owning row is new.
+     * Writes $content to $path unless the file already there matches it
+     * exactly. This is what makes the seeder self-healing rather than
+     * merely idempotent, in two distinct ways: a database row surviving
+     * while the file it points to doesn't — a storage move/reset, or
+     * (before an earlier fix) a guard that checked "does a media row
+     * exist" instead of "does the file it points to actually exist" — no
+     * longer leaves the file never rewritten; and (Part 3, client
+     * feedback) a file that exists but is stale or invalid — this
+     * project's own 2026-09-03 category rename left demo placeholder
+     * SVGs on disk still labelled with the category's old name, since the
+     * previous existence-only check had no way to notice content had
+     * drifted — is now replaced too, since every path passed in here is
+     * deterministic (derived from the seller/product's own stable
+     * identity plus its current category/label), so comparing against a
+     * fresh computation on every run is always safe and correct
+     * regardless of whether the owning row is new.
      */
     private function ensureFileExists(string $path, Closure $content): void
     {
-        if (! Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->put($path, $content());
+        $disk = Storage::disk('public');
+        $expected = $content();
+
+        if (! $disk->exists($path) || $disk->get($path) !== $expected) {
+            $disk->put($path, $expected);
         }
     }
 
