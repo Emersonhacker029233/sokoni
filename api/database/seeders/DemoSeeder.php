@@ -83,7 +83,12 @@ class DemoSeeder extends Seeder
         [
             'handle' => 'sinza_grocers',
             'shop_name' => 'Sinza Fresh Grocers',
-            'category' => 'Restaurant', // C1 (client feedback): was "Food & Groceries".
+            // Part 2 (client feedback): reverted — this shop sells rice,
+            // cooking oil, sugar and flour, which is a grocer, not a
+            // restaurant. C1's rename mistakenly relabelled the whole
+            // top-level category instead of adding Restaurant as its own
+            // subcategory; this is exactly the evidence that caught it.
+            'category' => 'Food & Groceries',
             'district' => 'Sinza',
             'lat' => -6.7735, 'lng' => 39.2478,
             'address' => 'Sinza Mori, near Shekilango Road',

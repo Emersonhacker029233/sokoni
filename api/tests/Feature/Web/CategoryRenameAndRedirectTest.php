@@ -93,29 +93,75 @@ class CategoryRenameAndRedirectTest extends TestCase
         $this->assertSame(0, $missing, 'Every top-level category must have a Swahili name.');
     }
 
-    /** C1 (client feedback): "Food & Groceries" -> "Restaurant", same in-place-rename + slug-redirect pattern as the 2026-09-03 renames above. */
-    public function test_food_groceries_is_renamed_to_restaurant_in_both_languages(): void
+    /**
+     * Part 2 (client feedback): C1's "Food & Groceries" -> "Restaurant"
+     * top-level rename was reverted — Food & Groceries is restored as its
+     * own top-level category, and Restaurant is a subcategory of it.
+     */
+    public function test_food_groceries_is_restored_as_a_top_level_category_in_both_languages(): void
     {
         (new CategorySeeder)->run();
 
-        $this->assertDatabaseHas('categories', ['name_en' => 'Restaurant', 'name_sw' => 'Mkahawa']);
-        $this->assertDatabaseMissing('categories', ['name_en' => 'Food & Groceries']);
+        $this->assertDatabaseHas('categories', [
+            'name_en' => 'Food & Groceries',
+            'name_sw' => 'Chakula na Vyakula',
+            'parent_id' => null,
+        ]);
     }
 
-    public function test_the_old_food_groceries_slug_redirects_permanently_to_restaurant(): void
+    public function test_restaurant_exists_only_as_a_subcategory_of_food_groceries(): void
     {
         (new CategorySeeder)->run();
 
-        $response = $this->get('/c/food-groceries');
+        $foodGroceries = Category::where('name_en', 'Food & Groceries')->whereNull('parent_id')->firstOrFail();
 
-        $response->assertRedirect('/c/restaurant');
+        $this->assertDatabaseHas('categories', [
+            'name_en' => 'Restaurant',
+            'name_sw' => 'Mkahawa',
+            'parent_id' => $foodGroceries->id,
+        ]);
+        $this->assertDatabaseMissing('categories', ['name_en' => 'Restaurant', 'parent_id' => null]);
+    }
+
+    public function test_the_old_top_level_restaurant_slug_redirects_permanently_to_food_groceries(): void
+    {
+        (new CategorySeeder)->run();
+
+        $response = $this->get('/c/restaurant');
+
+        $response->assertRedirect('/c/food-groceries');
         $response->assertStatus(301);
     }
 
-    public function test_the_new_restaurant_slug_resolves_directly(): void
+    /**
+     * During the brief window the bad rename was live, the category's
+     * existing grocery subcategories (Fresh Produce, Rice & Grains, ...)
+     * stayed attached to it the whole time — so a link into one of them
+     * as /restaurant/{child} needs to keep resolving too, at the same
+     * child slug, once /restaurant itself redirects back to
+     * /food-groceries.
+     */
+    public function test_the_old_restaurant_slug_redirect_preserves_a_grocery_child_segment(): void
     {
         (new CategorySeeder)->run();
 
-        $this->get('/c/restaurant')->assertOk();
+        $response = $this->get('/c/restaurant/rice-grains');
+
+        $response->assertRedirect('/c/food-groceries/rice-grains');
+        $response->assertStatus(301);
+    }
+
+    public function test_the_new_food_groceries_slug_resolves_directly(): void
+    {
+        (new CategorySeeder)->run();
+
+        $this->get('/c/food-groceries')->assertOk();
+    }
+
+    public function test_the_restaurant_subcategory_resolves_under_food_groceries(): void
+    {
+        (new CategorySeeder)->run();
+
+        $this->get('/c/food-groceries/restaurant')->assertOk();
     }
 }

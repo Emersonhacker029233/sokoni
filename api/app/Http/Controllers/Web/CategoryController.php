@@ -27,8 +27,15 @@ class CategoryController extends Controller
     private const SLUG_REDIRECTS = [
         'agriculture' => 'cereal-legume',
         'construction-hardware' => 'hardware',
-        // C1 (client feedback): Food & Groceries -> Restaurant.
-        'food-groceries' => 'restaurant',
+        // Part 2 (client feedback): C1's "Food & Groceries" -> "Restaurant"
+        // top-level rename was reverted — Restaurant is now a subcategory
+        // of the restored Food & Groceries instead. Anyone who bookmarked
+        // or shared a link from that window — /restaurant itself, or one
+        // of its then-children like /restaurant/rice-grains, since the
+        // in-place rename kept the original grocery subcategories
+        // attached the whole time — still resolves, at the same child
+        // slug, under the restored parent.
+        'restaurant' => 'food-groceries',
     ];
 
     public function __invoke(

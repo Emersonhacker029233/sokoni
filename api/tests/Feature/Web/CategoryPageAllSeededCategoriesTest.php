@@ -50,15 +50,10 @@ class CategoryPageAllSeededCategoriesTest extends TestCase
         $this->seed(CategorySeeder::class);
         $catalog = app(CategoryCatalogService::class);
 
-        $parent = Category::where('name_en', 'Restaurant')->firstOrFail();
-        $child = Category::create([
-            'parent_id' => $parent->id,
-            'name_en' => 'Fresh Produce',
-            'name_sw' => 'Mazao Mabichi',
-            'icon' => 'grocery',
-            'sort_order' => 0,
-            'is_active' => true,
-        ]);
+        // Food & Groceries's own real "Restaurant" subcategory (Part 2,
+        // client feedback) — no need to fabricate one.
+        $parent = Category::where('name_en', 'Food & Groceries')->whereNull('parent_id')->firstOrFail();
+        $child = Category::where('parent_id', $parent->id)->where('name_en', 'Restaurant')->firstOrFail();
 
         $seller = SellerProfile::factory()->verified()->create();
         Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $child->id]);
@@ -73,7 +68,7 @@ class CategoryPageAllSeededCategoriesTest extends TestCase
         $this->seed(CategorySeeder::class);
         $catalog = app(CategoryCatalogService::class);
 
-        $category = Category::where('name_en', 'Restaurant')->firstOrFail();
+        $category = Category::where('name_en', 'Food & Groceries')->whereNull('parent_id')->firstOrFail();
         $seller = SellerProfile::factory()->verified()->create();
         Product::factory()->create([
             'seller_id' => $seller->id,
