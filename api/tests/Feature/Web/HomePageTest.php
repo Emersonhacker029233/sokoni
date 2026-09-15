@@ -140,7 +140,15 @@ class HomePageTest extends TestCase
         ]);
     }
 
-    public function test_a_category_with_zero_visible_products_is_hidden_from_the_browse_categories_section(): void
+    /**
+     * Part 3 (client feedback) supersedes the old rule this test used to
+     * guard ("a category with zero visible products is hidden from the
+     * Browse-categories section"): "The categories are exactly those in
+     * the navigation bar — same set, same order, not a different list."
+     * A zero-count category (Agriculture here) must now still appear,
+     * exactly like it always has in the nav bar's own mega menu.
+     */
+    public function test_a_category_with_zero_visible_products_still_appears_matching_the_nav_bar(): void
     {
         $categoryWithNoProducts = Category::factory()->create(['name_en' => 'Agriculture']);
         $categoryWithProducts = Category::factory()->create(['name_en' => 'Electronics']);
@@ -150,10 +158,8 @@ class HomePageTest extends TestCase
         $response = $this->get('/');
 
         $response->assertOk();
-        $categories = $response->viewData('categories');
-
-        $this->assertTrue($categories->contains('id', $categoryWithProducts->id));
-        $this->assertFalse($categories->contains('id', $categoryWithNoProducts->id));
+        $response->assertSee(route('web.category', 'electronics'), false);
+        $response->assertSee(route('web.category', 'agriculture'), false);
     }
 
     /**
@@ -179,8 +185,7 @@ class HomePageTest extends TestCase
         $response = $this->get('/');
 
         $response->assertOk();
-        $categories = $response->viewData('categories');
-        $this->assertTrue($categories->contains('id', $services->id));
+        $response->assertSee(route('web.category', 'services'), false);
     }
 
     public function test_the_browse_categories_section_never_shows_a_raw_product_count(): void

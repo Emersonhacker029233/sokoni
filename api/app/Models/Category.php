@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 
-#[Fillable(['parent_id', 'name_en', 'name_sw', 'icon', 'sort_order', 'is_active'])]
+#[Fillable(['parent_id', 'name_en', 'name_sw', 'icon', 'image', 'sort_order', 'is_active'])]
 class Category extends Model
 {
     use HasFactory;

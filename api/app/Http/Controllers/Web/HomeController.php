@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Offer;
 use App\Models\Product;
 use App\Models\SellerProfile;
-use App\Services\Catalog\CategoryCatalogService;
 use App\Support\DarEsSalaam;
 use Illuminate\View\View;
 
@@ -21,7 +20,7 @@ use Illuminate\View\View;
  */
 class HomeController extends Controller
 {
-    public function __invoke(CategoryCatalogService $categories): View
+    public function __invoke(): View
     {
         $data = [
             'nearYou' => $this->nearYou(),
@@ -58,26 +57,6 @@ class HomeController extends Controller
 
         return view('web.home', [
             ...$data,
-            // Browse-categories grid only — a category with zero currently-
-            // visible products would show "Agriculture 0", which reads as
-            // "this marketplace is empty" rather than useful information
-            // (tester feedback), so it's dropped from this section entirely
-            // rather than shown with a count. CategoryCatalogService's own
-            // withCounts() is left untouched: the header nav and direct
-            // category-page links (/c/{category}) still need to resolve a
-            // temporarily-empty category correctly, just not advertise it
-            // as a browsing option on the home page.
-            //
-            // B6 (tester feedback): "Other" is exempt from that rule — it's
-            // a permanent catch-all bucket, not a signal of how much
-            // content exists, so a temporarily-empty "Other" reads
-            // completely differently from a temporarily-empty real
-            // category and shouldn't disappear the same way. sort_order
-            // already places it last (CategorySeeder), so simply not
-            // filtering it out is enough to get "last" for free.
-            'categories' => $categories->withCounts()
-                ->filter(fn ($category) => $category->products_count > 0 || $category->name_en === 'Other')
-                ->values(),
             'title' => null,
             'description' => __('site.home_hero_subtitle'),
         ]);

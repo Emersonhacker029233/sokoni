@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Categories\Schemas;
 
 use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -12,6 +13,10 @@ class CategoryInfolist
     {
         return $schema
             ->components([
+                ImageEntry::make('image')
+                    ->label('Photo')
+                    ->circular()
+                    ->placeholder('No photo — falls back to the icon.'),
                 TextEntry::make('parent.id')
                     ->label('Parent')
                     ->placeholder('-'),

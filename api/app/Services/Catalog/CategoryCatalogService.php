@@ -82,7 +82,7 @@ class CategoryCatalogService
      * TTL is a ceiling on staleness after a cache-store hiccup, not the
      * normal invalidation path).
      *
-     * @return list<array{id: int, name_en: string, name_sw: string, slug: string, children: list<array{id: int, name_en: string, name_sw: string, slug: string}>}>
+     * @return list<array{id: int, name_en: string, name_sw: string, slug: string, icon: ?string, image: ?string, children: list<array{id: int, name_en: string, name_sw: string, slug: string}>}>
      */
     public function megaMenuTree(): array
     {
@@ -98,6 +98,14 @@ class CategoryCatalogService
                     'name_en' => $parent->name_en,
                     'name_sw' => $parent->name_sw,
                     'slug' => $this->slug($parent),
+                    // Part 3 (client feedback): the homepage's noon.com-style
+                    // category tiles use this exact same list (same set,
+                    // same order as the nav bar) — icon/image are only
+                    // needed here, not by the nav bar itself, but adding
+                    // them to the one shared, cached call is simpler than
+                    // a second near-identical query.
+                    'icon' => $parent->icon,
+                    'image' => $parent->image,
                     'children' => $parent->children->map(fn (Category $child) => [
                         'id' => $child->id,
                         'name_en' => $child->name_en,

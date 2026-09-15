@@ -49,16 +49,21 @@ class CategoryIconsTest extends TestCase
         $response->assertDontSee('totally_unknown_icon_name');
     }
 
-    /** C4 (client feedback): "noon.com style" — a larger icon in a soft circular tile, up from the previous h-28/h-48 pair. */
-    public function test_the_homepage_category_icon_renders_at_the_larger_noon_style_size(): void
+    /**
+     * Part 3 (client feedback): noon.com-style photo tiles — every seeded
+     * category has no `image` set, so every tile on a fresh seed falls
+     * back to the icon-on-yellow-tile treatment, at the tile size the
+     * photo tiles also use (so a photographed and an unphotographed
+     * category sit at the same size in the same row).
+     */
+    public function test_the_homepage_category_icon_fallback_renders_at_the_photo_tile_size(): void
     {
         $this->seed(CategorySeeder::class);
 
         $response = $this->get('/');
 
         $response->assertOk();
-        $response->assertSee('h-64 w-64', false);
+        $response->assertSee('h-80 w-80', false);
         $response->assertSee('h-32 w-32', false);
-        $response->assertDontSee('h-28 w-28', false);
     }
 }

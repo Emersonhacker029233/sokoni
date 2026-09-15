@@ -110,15 +110,14 @@ class MegaMenuTest extends TestCase
     }
 
     /**
-     * B3 (tester feedback): "Other" reportedly wasn't last in the home
-     * page's own Browse-categories grid, unlike the top menu. Both
-     * actually read the identical `CategoryCatalogService::withCounts()`
-     * query (same `orderBy('sort_order')`, "Other" seeded/migrated to the
-     * highest sort_order — see CategorySeeder and the rename migration),
-     * so this proves the two surfaces already agree rather than assuming
-     * a fix is needed without checking first.
+     * B3 (tester feedback), still true after Part 3's tile rebuild:
+     * "Other" reportedly wasn't last in the home page's own
+     * Browse-categories row, unlike the top menu. Both now read the
+     * exact same megaMenuTree() call (Part 3, client feedback: "exactly
+     * those in the navigation bar — same set, same order"), so this
+     * proves the two surfaces agree by construction, not by coincidence.
      */
-    public function test_the_home_pages_category_grid_lists_other_last_matching_the_mega_menu(): void
+    public function test_the_home_pages_category_row_lists_other_last_matching_the_mega_menu(): void
     {
         (new CategorySeeder)->run();
         $topLevel = Category::whereNull('parent_id')->where('is_active', true)->get();
@@ -131,36 +130,32 @@ class MegaMenuTest extends TestCase
         $html = $response->getContent();
 
         $otherPosition = strpos($html, route('web.category', 'other'));
-        $this->assertNotFalse($otherPosition, 'Other should appear in the Browse-categories grid.');
+        $this->assertNotFalse($otherPosition, 'Other should appear in the Browse-categories row.');
 
         foreach ($topLevel as $category) {
             if ($category->name_en === 'Other') {
                 continue;
             }
             $position = strpos($html, route('web.category', app(CategoryCatalogService::class)->slug($category)));
-            $this->assertNotFalse($position, "{$category->name_en} should appear in the Browse-categories grid.");
-            $this->assertGreaterThan($position, $otherPosition, "Other should come after {$category->name_en} in the Browse-categories grid.");
+            $this->assertNotFalse($position, "{$category->name_en} should appear in the Browse-categories row.");
+            $this->assertGreaterThan($position, $otherPosition, "Other should come after {$category->name_en} in the Browse-categories row.");
         }
     }
 
     /**
-     * B6 (tester feedback): "The homepage's yellow category icon row is
-     * missing 'Other'." Root cause: the grid drops any category with zero
-     * currently-visible products (so "Agriculture 0" never reads as "this
-     * marketplace is empty") — a sensible rule for a real category, but
-     * "Other" is a permanent catch-all with no products of its own most
-     * of the time by definition, so the exact same rule silently erased
-     * it from the row entirely. The earlier "Other last" test above never
-     * caught this because it happened to give every category, "Other"
-     * included, at least one product — this seeds zero for "Other"
-     * specifically, the actual real-world case.
+     * Part 3 (client feedback): "The categories are exactly those in the
+     * navigation bar — same set, same order, not a different list." This
+     * supersedes B6's old rule (a category with zero currently-visible
+     * products used to be dropped from this one section) — that rule is
+     * exactly what made this section a *different* list from the nav bar,
+     * which the client was explicit must not happen. A category with zero
+     * products, Electronics here, must still appear.
      */
-    public function test_other_appears_on_the_homepage_even_with_zero_products_but_a_genuinely_empty_real_category_still_hides(): void
+    public function test_a_category_with_zero_products_still_appears_matching_the_nav_bars_own_list(): void
     {
         (new CategorySeeder)->run();
         $electronics = Category::whereNull('parent_id')->where('name_en', 'Electronics')->firstOrFail();
-        $other = Category::whereNull('parent_id')->where('name_en', 'Other')->firstOrFail();
-        // A product in some other category so the grid isn't just empty outright.
+        // A product in some other category so the row isn't just testing an edge case with nothing seeded at all.
         Product::factory()->for(SellerProfile::factory()->verified(), 'seller')->create([
             'category_id' => Category::whereNull('parent_id')->where('name_en', 'Fashion')->firstOrFail()->id,
         ]);
@@ -170,18 +165,14 @@ class MegaMenuTest extends TestCase
         $response->assertOk();
         $html = $response->getContent();
 
-        // Electronics' own link legitimately still exists elsewhere on the
-        // page (the header's mega menu shows every category regardless of
-        // count — a deliberate, different rule from this one section), so
-        // a plain page-wide assertDontSee would be testing the wrong
-        // thing. Isolate just the "Browse categories" <section>...</section>
-        // block and assert within that slice only.
+        // Isolate just the "Browse categories" <section>...</section>
+        // block, the same way the mega menu's own copy of this link is
+        // excluded from this specific assertion.
         $this->assertMatchesRegularExpression('#<section[^>]*>.*?Browse categories.*?</section>#s', $html);
         preg_match('#<section[^>]*>.*?Browse categories.*?</section>#s', $html, $matches);
         $browseCategoriesHtml = $matches[0];
 
-        $this->assertStringContainsString(route('web.category', app(CategoryCatalogService::class)->slug($other)), $browseCategoriesHtml);
-        $this->assertStringNotContainsString(route('web.category', app(CategoryCatalogService::class)->slug($electronics)), $browseCategoriesHtml);
+        $this->assertStringContainsString(route('web.category', app(CategoryCatalogService::class)->slug($electronics)), $browseCategoriesHtml);
     }
 
     public function test_the_swahili_locale_shows_swahili_names(): void
