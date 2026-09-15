@@ -249,6 +249,40 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, $product->media()->count(), 'must not create a duplicate media row for the same product');
     }
 
+    /**
+     * Part 2 (client feedback, second round): "provide a way to
+     * force-regenerate every existing file, not only mismatched ones" —
+     * for exactly this situation: the content-comparison fix above
+     * already replaces anything that's actually stale on disk, but a
+     * *cached* copy (uploads serve with a 7-day Cache-Control) can keep
+     * showing an old version even after the underlying file is fixed.
+     * --force-media bypasses the comparison entirely and rewrites every
+     * file regardless, which at minimum bumps its Last-Modified — proven
+     * here by asserting the file's mtime advances even though its
+     * content, byte for byte, does not change at all.
+     */
+    public function test_force_media_option_rewrites_every_file_unconditionally_even_when_content_already_matches(): void
+    {
+        Storage::fake('public');
+        $this->artisan('demo:seed');
+
+        $product = Product::where('title', 'iPhone 12 Pro 256GB')->firstOrFail();
+        $media = $product->media()->firstOrFail();
+        $relativePath = (string) str($media->path)->after(Storage::disk('public')->url(''));
+
+        $beforeContent = Storage::disk('public')->get($relativePath);
+        $beforeModifiedAt = Storage::disk('public')->lastModified($relativePath);
+
+        sleep(1);
+        $this->artisan('demo:seed', ['--force-media' => true]);
+
+        $afterContent = Storage::disk('public')->get($relativePath);
+        $afterModifiedAt = Storage::disk('public')->lastModified($relativePath);
+
+        $this->assertSame($beforeContent, $afterContent, 'content should be identical -- proves the rewrite happened even though nothing had actually drifted');
+        $this->assertGreaterThan($beforeModifiedAt, $afterModifiedAt, '--force-media must rewrite the file (bumping its modified time) even when a plain re-seed would have left it alone');
+    }
+
     /** Same self-healing guarantee as products, for Update's image file. */
     public function test_it_regenerates_an_update_image_file_that_is_missing_even_though_its_row_still_exists(): void
     {

@@ -348,6 +348,19 @@ class DemoSeeder extends Seeder
         'Tunauza jumla na rejareja, karibu dukani.',
     ];
 
+    /**
+     * Part 2 (client feedback): "provide a way to force-regenerate every
+     * existing file, not only mismatched ones" — set by
+     * Console\Commands\SeedDemoContent's `--force-media` (or setup.php's
+     * `demo-seed&force-media=1`) before this seeder runs. Bypasses
+     * ensureFileExists()'s own content comparison entirely, so every
+     * placeholder is rewritten unconditionally — useful when a stale
+     * *cached* copy (uploads serve with a 7-day Cache-Control) is
+     * suspected rather than a stale file on disk, since a rewrite bumps
+     * Last-Modified even when the bytes end up identical.
+     */
+    public static bool $forceMediaRegen = false;
+
     /** The exact set of handles --fresh cleanup deletes by — see Console\Commands\SeedDemoContent. */
     public static function demoHandles(): array
     {
@@ -658,7 +671,7 @@ class DemoSeeder extends Seeder
         $disk = Storage::disk('public');
         $expected = $content();
 
-        if (! $disk->exists($path) || $disk->get($path) !== $expected) {
+        if (self::$forceMediaRegen || ! $disk->exists($path) || $disk->get($path) !== $expected) {
             $disk->put($path, $expected);
         }
     }

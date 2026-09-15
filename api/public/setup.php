@@ -3,10 +3,10 @@
  * Sokoni one-time setup runner (v2).
  *
  * Upload to the actual live public docroot so it's reachable by URL —
- * currently /home/sokoftsn/beta.sokoni.co.tz/setup.php (not the app
- * root's own public/ folder some earlier notes named; this file must
- * sit wherever a browser GET request can actually reach it).
- * DELETE THIS FILE as soon as setup is finished.
+ * currently /home/sokoftsn/public_html/setup.php (moved from the beta
+ * subdomain; not the app root's own public/ folder some earlier notes
+ * named; this file must sit wherever a browser GET request can actually
+ * reach it). DELETE THIS FILE as soon as setup is finished.
  */
 
 $TOKEN = 'dXfoxo0Eu6jcYMm8egb3D4wHu1WnuSzo';
@@ -112,8 +112,21 @@ try {
                 echo "Cleared {$removedShops} prior demo shop(s) and {$removedBuyers} prior demo buyer(s).\n\n";
             }
 
+            // Part 2 (client feedback): "provide a way to force-regenerate
+            // every existing file, not only mismatched ones" — a plain
+            // re-seed already replaces anything whose content has
+            // drifted from what the generator currently produces (see
+            // DemoSeeder::ensureFileExists); &force-media=1 bypasses that
+            // comparison entirely, for when a stale *cached* copy (the
+            // uploads disk serves with a 7-day Cache-Control) is
+            // suspected rather than a stale file on disk.
+            Database\Seeders\DemoSeeder::$forceMediaRegen = ($_GET['force-media'] ?? '') === '1';
+
             Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\DemoSeeder', '--force' => true]);
             echo Artisan::output();
+
+            Database\Seeders\DemoSeeder::$forceMediaRegen = false;
+
             echo "\nDone.\n";
             break;
 
@@ -270,6 +283,127 @@ try {
             } else {
                 echo "\nDone. {$totalMatched} row(s) matched and were rewritten.\n";
             }
+            break;
+
+        case 'diagnose-assets':
+            // Part 1 (client feedback, urgent): "the site renders
+            // unstyled for first-time visitors" — Laravel's @vite
+            // directive builds asset URLs from manifest.json under
+            // public_path('build') (the APP ROOT's own public/ folder,
+            // wherever this PHP process actually boots Laravel from),
+            // but the browser fetches those URLs from wherever THIS
+            // file physically sits — the real docroot, a separate
+            // physical folder on this shared host. If a deploy ever
+            // updates one copy of build/ without the other, the manifest
+            // keeps generating a filename that simply doesn't exist
+            // where the browser looks. This is that exact check, one
+            // request instead of a guessing game — and __DIR__ below is
+            // used rather than a hardcoded docroot path specifically
+            // because that path has already moved once (beta.sokoni.co.tz
+            // -> public_html); this keeps working regardless of where
+            // setup.php itself is uploaded.
+            $manifestPath = public_path('build/manifest.json');
+
+            if (! is_file($manifestPath)) {
+                echo "!! manifest.json NOT FOUND at {$manifestPath}\n";
+                echo "The app root's own public/build/ is missing or was never deployed there.\n";
+                break;
+            }
+
+            $manifest = json_decode((string) file_get_contents($manifestPath), true);
+            if (! is_array($manifest)) {
+                echo "!! manifest.json exists but failed to parse as JSON: {$manifestPath}\n";
+                break;
+            }
+
+            echo "App root manifest:                {$manifestPath}\n";
+            echo "Docroot (this file's own folder):  " . __DIR__ . "\n\n";
+
+            $referenced = [];
+            foreach ($manifest as $entry) {
+                if (isset($entry['file'])) {
+                    $referenced[] = $entry['file'];
+                }
+                foreach (($entry['css'] ?? []) as $cssFile) {
+                    $referenced[] = $cssFile;
+                }
+            }
+            $referenced = array_unique($referenced);
+            sort($referenced);
+
+            $mismatches = 0;
+            foreach ($referenced as $file) {
+                $appRootPath = public_path('build/' . $file);
+                $docrootPath = __DIR__ . '/build/' . $file;
+                $inAppRoot = is_file($appRootPath);
+                $inDocroot = is_file($docrootPath);
+                $ok = $inAppRoot && $inDocroot;
+                if (! $ok) {
+                    $mismatches++;
+                }
+
+                echo ($ok ? 'OK       ' : 'MISMATCH ') . $file . "\n";
+                echo '  app root: ' . ($inAppRoot ? 'present' : 'MISSING') . "  -- {$appRootPath}\n";
+                echo '  docroot:  ' . ($inDocroot ? 'present' : 'MISSING') . "  -- {$docrootPath}\n";
+            }
+
+            echo "\n--- What's actually sitting in each build/assets/ folder ---\n";
+            echo "App root (" . public_path('build/assets') . "):\n";
+            foreach (glob(public_path('build/assets') . '/*') ?: [] as $f) {
+                echo '  ' . basename($f) . "\n";
+            }
+            echo "Docroot (" . __DIR__ . '/build/assets' . "):\n";
+            foreach (glob(__DIR__ . '/build/assets/*') ?: [] as $f) {
+                echo '  ' . basename($f) . "\n";
+            }
+
+            // Second named hypothesis: a malformed generated URL (a
+            // recent bug had PUBLIC_UPLOADS_URL containing a duplicated
+            // "https:" prefix -- "https:https://...").
+            echo "\n--- URL sanity (APP_URL / ASSET_URL / PUBLIC_UPLOADS_URL) ---\n";
+            $urlSettings = [
+                'APP_URL' => config('app.url'),
+                'ASSET_URL' => config('app.asset_url'),
+                'PUBLIC_UPLOADS_URL (filesystems.disks.public.url)' => config('filesystems.disks.public.url'),
+            ];
+            foreach ($urlSettings as $name => $value) {
+                $issues = [];
+                if ($value === null || $value === '') {
+                    // ASSET_URL is genuinely optional (Laravel falls back
+                    // to APP_URL) — only flag emptiness as a real problem
+                    // for the setting that actually has to be set.
+                    if (str_starts_with($name, 'APP_URL')) {
+                        $issues[] = 'empty';
+                    }
+                } else {
+                    if (preg_match('#https?://.*https?://#', (string) $value)) {
+                        $issues[] = 'DUPLICATED SCHEME';
+                    }
+                    if (str_ends_with((string) $value, '/')) {
+                        $issues[] = 'trailing slash';
+                    }
+                    if ($value !== trim((string) $value)) {
+                        $issues[] = 'leading/trailing whitespace';
+                    }
+                }
+                $suffix = $issues === [] ? '  OK' : '  !! ' . implode(', ', $issues);
+                if ($value === null && $name === 'ASSET_URL') {
+                    $suffix = '  (not set — defaults to APP_URL, fine)';
+                }
+                echo "{$name}: " . var_export($value, true) . $suffix . "\n";
+            }
+
+            // A real, live-generated Vite URL, checked the same way —
+            // catches a malformed ASSET_URL even if the raw config value
+            // alone looks clean but the concatenation Vite performs
+            // doesn't.
+            $sampleUrl = (string) \Illuminate\Support\Facades\Vite::asset('resources/css/app.css');
+            $sampleIssue = preg_match('#https?://.*https?://#', $sampleUrl) ? '  !! DUPLICATED SCHEME' : '  OK';
+            echo "\nLive Vite::asset('resources/css/app.css') URL: {$sampleUrl}{$sampleIssue}\n";
+
+            echo "\n" . ($mismatches === 0
+                ? 'RESULT: every manifest-referenced asset is present in BOTH build/ folders. The unstyled-page symptom is not currently reproducible from disk state.'
+                : "RESULT: {$mismatches} asset(s) referenced by the manifest are MISSING from at least one of the two build/ folders — this is exactly the unstyled-page symptom. Re-deploy this round's public-docroot zip (or the app-root zip) so both folders agree.") . "\n";
             break;
 
         case 'diagnose-media':
@@ -499,8 +633,9 @@ try {
             break;
 
         default:
-            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, diagnose-media, test-mail, admin, tables, cache, clear\n";
-            echo "demo-seed accepts &fresh=1 to clear previously seeded demo shops/buyers first.\n";
+            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, diagnose-assets, diagnose-media, test-mail, admin, tables, cache, clear\n";
+            echo "diagnose-assets compares manifest.json's referenced asset filenames against what's actually on disk in both the app root's and the docroot's own build/ folders, and checks APP_URL/ASSET_URL/PUBLIC_UPLOADS_URL for a duplicated scheme or other malformation.\n";
+            echo "demo-seed accepts &fresh=1 to clear previously seeded demo shops/buyers first, and &force-media=1 to regenerate every placeholder image file unconditionally (not just ones whose content has drifted).\n";
             echo "cleanup-original-seed is a dry run by default; add &confirm=1 to actually delete.\n";
             echo "rewrite-media-host needs &from=&to= (URL-encoded); dry run by default, add &confirm=1 to rewrite.\n";
             echo "diagnose-media accepts &sample=N (default 50, max 200) -- prints stored URL, resolved disk path, file size, extension, upload date and source (seeded vs user-uploaded) for each, against both known upload folders, then groups the results by each of those axes.\n";

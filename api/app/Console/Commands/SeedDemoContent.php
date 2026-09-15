@@ -17,7 +17,9 @@ use Illuminate\Console\Command;
  */
 class SeedDemoContent extends Command
 {
-    protected $signature = 'demo:seed {--fresh : Remove any previously seeded demo shops and buyers first}';
+    protected $signature = 'demo:seed
+        {--fresh : Remove any previously seeded demo shops and buyers first}
+        {--force-media : Regenerate every demo placeholder image file unconditionally, even if its content already matches what the generator produces}';
 
     protected $description = 'Seed realistic Tanzanian demo content (shops, products, orders, reviews) for client demos.';
 
@@ -27,7 +29,17 @@ class SeedDemoContent extends Command
             $this->clearPriorDemoData();
         }
 
+        // Part 2 (client feedback): "provide a way to force-regenerate
+        // every existing file, not only mismatched ones" — a plain
+        // re-seed already replaces anything whose content has drifted
+        // (see DemoSeeder::ensureFileExists); this bypasses that
+        // comparison entirely, for when a stale *cached* copy is
+        // suspected rather than a stale file on disk.
+        DemoSeeder::$forceMediaRegen = (bool) $this->option('force-media');
+
         $this->call('db:seed', ['--class' => DemoSeeder::class, '--force' => true]);
+
+        DemoSeeder::$forceMediaRegen = false;
 
         return self::SUCCESS;
     }
