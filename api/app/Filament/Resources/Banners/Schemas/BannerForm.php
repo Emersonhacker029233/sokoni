@@ -44,7 +44,8 @@ class BannerForm
                         .'Sidebar: 300×600px. Search background: 1600×400px, keep the important '
                         .'artwork within the outer thirds — the centre third is dimmed for the '
                         .'search field. Category strip side: 200×200px square. Near you side: '
-                        .'300×250px. Max 2MB — larger images are resized automatically.'
+                        .'300×250px. In Focus poster: 600×800px portrait (3:4). Max 2MB — larger '
+                        .'images are resized automatically.'
                     )
                     // The website reads image_path as a full public URL —
                     // same convention as product photos and seller logos —
@@ -78,6 +79,8 @@ class BannerForm
                         'search_background' => 'Home — search bar background',
                         'category_strip_side' => 'Home — beside the category strip',
                         'near_you_side' => 'Home — beside "Near you"',
+                        // Part 4 (client feedback): "In Focus" advertising band.
+                        'in_focus' => 'Home — In Focus poster',
                     ])
                     ->required(),
                 TextInput::make('sort_order')

@@ -19,6 +19,8 @@ return [
     'home_near_you_fallback' => 'Popular in Dar es Salaam',
     'home_offers' => 'Live offers',
     'home_offers_see_all' => 'See all offers',
+    // Part 4 (client feedback): "In Focus" advertising band, noon.com style.
+    'home_in_focus' => 'In Focus',
     'see_all' => 'See all',
     'home_featured_shops' => 'Featured shops',
     'home_latest' => 'Latest listings',

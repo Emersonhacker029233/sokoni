@@ -19,6 +19,8 @@ return [
     'home_near_you_fallback' => 'Maarufu Dar es Salaam',
     'home_offers' => 'Punguzo za sasa',
     'home_offers_see_all' => 'Ona punguzo zote',
+    // Part 4 (client feedback): "In Focus" advertising band, noon.com style.
+    'home_in_focus' => 'Yanayoangaziwa',
     'see_all' => 'Ona zote',
     'home_featured_shops' => 'Maduka yaliyoangaziwa',
     'home_latest' => 'Bidhaa mpya',

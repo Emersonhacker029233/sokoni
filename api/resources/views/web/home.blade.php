@@ -12,10 +12,74 @@
          scrim over the centre (where the search card sits) instead of a
          flat overlay across the whole image, so it never fights the
          input's own legibility. Falls back to exactly today's plain
-         pattern+gradient backdrop when no such banner is active. --}}
-    @php($searchBg = \App\Models\Banner::live()->forPosition('search_background')->first())
-    <section class="relative overflow-hidden border-b border-sokoni-outline bg-sokoni-black">
-        @if ($searchBg)
+         pattern+gradient backdrop when no such banner is active.
+
+         Part 5 (client feedback): with more than one active banner in
+         this position, rotate between them — crossfade, 7s per banner,
+         pause on hover, respect prefers-reduced-motion (first image
+         only, no rotation at all). With exactly one, this renders
+         identically to before (no Alpine, no transition markup) — "with
+         a single banner, behave exactly as now." Every banner that will
+         ever be shown during this page view gets its impression counted
+         right here, server-side, at render time — rotation happens
+         entirely client-side afterwards with no further requests, so
+         this is the one place "shown" can be measured at all (see
+         Banner::recordImpression()'s own docblock on why this is a
+         render-time count, not client-side pixel tracking). --}}
+    @php($searchBgBanners = \App\Models\Banner::live()->forPosition('search_background')->get())
+    <section
+        class="relative overflow-hidden border-b border-sokoni-outline bg-sokoni-black"
+        @if ($searchBgBanners->count() > 1)
+            {{-- Attached to the whole section, not just the image stack —
+                 the search form itself sits on top of it (its own opaque
+                 card blocks pointer events from reaching anything
+                 beneath), so "pause on hover" needs to fire from
+                 wherever the visitor's mouse actually is, including
+                 while they're reading/typing in the form. --}}
+            x-data="{
+                active: 0,
+                total: {{ $searchBgBanners->count() }},
+                paused: false,
+                reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+                init() {
+                    if (this.reduceMotion) return;
+                    setInterval(() => {
+                        if (! this.paused) this.active = (this.active + 1) % this.total;
+                    }, 7000);
+                },
+            }"
+            @mouseenter="paused = true"
+            @mouseleave="paused = false"
+        @endif
+    >
+        @if ($searchBgBanners->count() > 1)
+            @foreach ($searchBgBanners as $banner)
+                @php($banner->recordImpression())
+            @endforeach
+            <div class="absolute inset-0">
+                @foreach ($searchBgBanners as $index => $banner)
+                    <a
+                        href="{{ route('web.banners.click', $banner) }}"
+                        class="absolute inset-0 block transition-opacity duration-1000 ease-in-out"
+                        aria-label="{{ $banner->title }}"
+                        :class="active === {{ $index }} ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+                        {{ $index > 0 ? 'aria-hidden="true"' : '' }}
+                    >
+                        <img src="{{ $banner->image_path }}" alt="" class="h-full w-full object-cover">
+                    </a>
+                @endforeach
+            </div>
+            {{-- One shared scrim above every rotating layer — the search
+                 field must stay readable over whichever banner is
+                 currently showing, and this dims all of them identically
+                 without needing to duplicate it per image. --}}
+            <div
+                class="absolute inset-0"
+                style="background: linear-gradient(to right, transparent 0%, rgba(10,10,10,.88) 32%, rgba(10,10,10,.88) 68%, transparent 100%)"
+                aria-hidden="true"
+            ></div>
+        @elseif ($searchBgBanners->isNotEmpty())
+            @php($searchBg = $searchBgBanners->first())
             @php($searchBg->recordImpression())
             <a href="{{ route('web.banners.click', $searchBg) }}" class="absolute inset-0 block" aria-label="{{ $searchBg->title }}">
                 <img src="{{ $searchBg->image_path }}" alt="" class="h-full w-full object-cover">
@@ -54,40 +118,78 @@
 
     <x-banner-slot position="home_hero" />
 
-    {{-- Category grid. B2 (client feedback): a narrow side slot next to the
-         icon row, noon.com-style — desktop-only (a vertical/square ad has
-         nowhere good to go once this collapses to a 2-column mobile grid),
-         and collapses to nothing on its own when no banner is active. --}}
+    {{-- Category tiles, noon.com style (Part 3, client feedback) — replaces
+         the old icon-chip grid entirely. Exactly the nav bar's own
+         category list, same set and same order: megaMenuTree() is the
+         same cached call partials.header already uses for the mega menu,
+         not HomeController's old product-count-filtered list, which the
+         client was explicit must NOT be used here. Each tile is a
+         photograph the admin uploaded (CategoryForm's new `image` field);
+         a category with none set falls back to the existing inline SVG
+         icon set on a brand-yellow tile rather than an empty box. B2
+         (client feedback): a narrow side slot next to the row,
+         desktop-only, collapsing to nothing on its own when no banner is
+         active. --}}
+    @php($homeCategoryTiles = app(\App\Services\Catalog\CategoryCatalogService::class)->megaMenuTree())
     <section class="mx-auto max-w-7xl px-16 py-32 lg:px-24">
         <h2 class="text-h2 fade-in-section">{{ __('site.home_categories') }}</h2>
-        <div class="mt-16 flex flex-col gap-16 lg:flex-row">
-            <div class="grid flex-1 grid-cols-2 gap-16 lg:gap-24 sm:grid-cols-3 md:grid-cols-5">
-                @foreach ($categories as $category)
-                    {{-- No product count here on purpose (tester feedback) — a category
-                         with zero currently-visible products is filtered out of this
-                         list entirely by HomeController rather than shown as "...  0". --}}
-                    {{-- C4 (client feedback): "noon.com style" — larger icon
-                         in a soft circular tile, using the existing inline
-                         SVG set rather than adding a per-category uploadable
-                         image. A photographic icon per category would need a
-                         new admin field, storage, and a real compression
-                         pipeline for something that's fundamentally a glyph,
-                         not a photo — the existing SVGs already cost nothing
-                         extra to load (inlined with the page, no request at
-                         all) and already draw the same shapes the Flutter app
-                         resolves from its own bundled icon font, so the two
-                         surfaces stay visually consistent for free. --}}
-                    <a href="{{ route('web.category', app(\App\Services\Catalog\CategoryCatalogService::class)->slug($category)) }}" class="card flex flex-col items-center gap-8 p-16 text-center transition hover:shadow-md">
-                        <span class="flex h-64 w-64 items-center justify-center rounded-full bg-sokoni-yellow/20 text-sokoni-black">
-                            <x-category-icon :icon="$category->icon" />
+        <div class="mt-16 flex gap-16 lg:gap-24">
+            {{-- Horizontally scrollable with no visible scrollbar on
+                 mobile, a plain grid from sm up — same mechanism as the
+                 "Near you" row below. --}}
+            <div class="no-scrollbar flex flex-1 gap-16 overflow-x-auto pb-8 sm:grid sm:grid-cols-4 sm:overflow-visible sm:gap-24 md:grid-cols-6 lg:grid-cols-8">
+                @foreach ($homeCategoryTiles as $category)
+                    <a
+                        href="{{ route('web.category', $category['slug']) }}"
+                        class="flex w-96 shrink-0 flex-col items-center gap-8 text-center sm:w-auto"
+                    >
+                        @if ($category['image'])
+                            <img
+                                src="{{ $category['image'] }}"
+                                alt=""
+                                loading="lazy"
+                                class="h-80 w-80 rounded-full object-cover"
+                            >
+                        @else
+                            <span class="flex h-80 w-80 items-center justify-center rounded-full bg-sokoni-yellow text-sokoni-black">
+                                <x-category-icon :icon="$category['icon']" />
+                            </span>
+                        @endif
+                        <span class="w-full truncate text-sm font-semibold">
+                            {{ app()->getLocale() === 'sw' ? $category['name_sw'] : $category['name_en'] }}
                         </span>
-                        <span class="text-sm font-semibold">{{ $category->name(app()->getLocale()) }}</span>
                     </a>
                 @endforeach
             </div>
             <x-banner-slot position="category_strip_side" variant="side" class="hidden lg:block" />
         </div>
     </section>
+
+    {{-- "In Focus" advertising band, noon.com style (Part 4, client
+         feedback). Built on the same Banner model/position mechanism as
+         every other ad slot, but genuinely different from
+         <x-banner-slot>: this shows every active banner in the position
+         at once, as its own poster (2-4, per the design brief — capped
+         at 4 so an admin activating more than that doesn't turn "a row of
+         posters" into an unbounded strip), not just one. Collapses to
+         nothing — not even the heading — when none are active. --}}
+    @php($inFocusBanners = \App\Models\Banner::live()->forPosition('in_focus')->limit(4)->get())
+    @if ($inFocusBanners->isNotEmpty())
+        <section class="mx-auto max-w-7xl px-16 py-32 lg:px-24">
+            <h2 class="text-h2 fade-in-section">{{ __('site.home_in_focus') }}</h2>
+            <div class="no-scrollbar mt-16 flex gap-16 overflow-x-auto pb-8 lg:gap-24">
+                @foreach ($inFocusBanners as $banner)
+                    @php($banner->recordImpression())
+                    <a
+                        href="{{ route('web.banners.click', $banner) }}"
+                        class="block w-[220px] shrink-0 overflow-hidden rounded-card border border-sokoni-outline transition hover:shadow-md"
+                    >
+                        <img src="{{ $banner->image_path }}" alt="{{ $banner->title }}" loading="lazy" class="aspect-[3/4] w-full object-cover">
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     {{-- Near you. B3 (client feedback): a side slot to the right of the
          row, same collapsing rules as the category strip's side slot. --}}

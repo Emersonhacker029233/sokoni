@@ -59,6 +59,8 @@ class BannersTable
                         'search_background' => 'Home — search background',
                         'category_strip_side' => 'Home — category strip side',
                         'near_you_side' => 'Home — Near you side',
+                        // Part 4 (client feedback): "In Focus" advertising band.
+                        'in_focus' => 'Home — In Focus poster',
                     ]),
                 TernaryFilter::make('is_active'),
             ])

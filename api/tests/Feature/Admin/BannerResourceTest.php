@@ -84,6 +84,29 @@ class BannerResourceTest extends TestCase
         $this->assertSame('search_background', $banner->position);
     }
 
+    /** Part 4 (client feedback): "In Focus" advertising band — managed through the same Filament Marketing group as every other position. */
+    public function test_an_admin_can_create_a_banner_in_the_in_focus_position(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->admin()->create();
+
+        Livewire::actingAs($admin)
+            ->test(CreateBanner::class)
+            ->fillForm([
+                'title' => 'In Focus launch poster',
+                'image_path' => UploadedFile::fake()->image('poster.jpg'),
+                'link_url' => 'https://sokoni.co.tz/search',
+                'position' => 'in_focus',
+                'sort_order' => 0,
+                'is_active' => true,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $banner = Banner::where('title', 'In Focus launch poster')->firstOrFail();
+        $this->assertSame('in_focus', $banner->position);
+    }
+
     public function test_an_admin_can_deactivate_a_banner(): void
     {
         $admin = User::factory()->admin()->create();
