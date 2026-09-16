@@ -111,4 +111,33 @@ class ChatTest extends TestCase
         // "chat/xxx.jpg" store() would otherwise return.
         $this->assertStringStartsWith('/storage/', $response->json('data.attachment'));
     }
+
+    /**
+     * Part 4 (client feedback): "tapping a document opens or downloads
+     * it appropriately" — impossible to ever exercise before this,
+     * since StoreMessageRequest only ever accepted `image`. Widened to
+     * also accept the common document formats a buyer/seller would
+     * realistically share.
+     */
+    public function test_a_pdf_attachment_is_now_accepted_and_stored(): void
+    {
+        Storage::fake('public');
+        $conversation = Conversation::factory()->create();
+
+        $response = $this->actingAs($conversation->buyer)->post("/api/conversations/{$conversation->id}/messages", [
+            'attachment' => UploadedFile::fake()->create('invoice.pdf', 200, 'application/pdf'),
+        ])->assertCreated();
+
+        $this->assertStringContainsString('.pdf', $response->json('data.attachment'));
+    }
+
+    public function test_an_unsupported_attachment_type_is_still_rejected(): void
+    {
+        Storage::fake('public');
+        $conversation = Conversation::factory()->create();
+
+        $this->actingAs($conversation->buyer)->post("/api/conversations/{$conversation->id}/messages", [
+            'attachment' => UploadedFile::fake()->create('script.exe', 200, 'application/x-msdownload'),
+        ])->assertUnprocessable();
+    }
 }

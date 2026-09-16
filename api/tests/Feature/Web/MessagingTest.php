@@ -123,6 +123,46 @@ class MessagingTest extends TestCase
         $poll->assertJsonFragment(['body' => 'Is this still available?']);
     }
 
+    /** Part 4 (client feedback): "tapping a document opens or downloads it appropriately" — widened from image-only, same shared StoreMessageRequest the API uses. */
+    public function test_a_buyer_can_send_a_pdf_attachment_from_the_website(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $buyer = $this->onboardedBuyer();
+        $conversation = Conversation::factory()->create(['buyer_id' => $buyer->id]);
+
+        $this->actingAsWebUser($buyer)
+            ->post(route('web.account.messages.store', $conversation), [
+                'attachment' => \Illuminate\Http\UploadedFile::fake()->create('receipt.pdf', 200, 'application/pdf'),
+            ])
+            ->assertRedirect(route('web.account.messages.show', $conversation));
+
+        $message = \App\Models\Message::where('conversation_id', $conversation->id)->firstOrFail();
+        $this->assertStringContainsString('.pdf', $message->attachment);
+    }
+
+    /**
+     * Part 4 (client feedback): "tapping a sent image does nothing...
+     * where several images exist, allow swiping between them." The
+     * lightbox/document-link markup and its Alpine isImage()/images
+     * getter are what make that possible — checked as literal markers
+     * rather than trying to drive real Alpine reactivity from a PHPUnit
+     * request.
+     */
+    public function test_the_thread_page_ships_the_lightbox_and_document_link_markup(): void
+    {
+        $buyer = $this->onboardedBuyer();
+        $conversation = Conversation::factory()->create(['buyer_id' => $buyer->id]);
+
+        $response = $this->actingAsWebUser($buyer)->get(route('web.account.messages.show', $conversation));
+
+        $response->assertOk();
+        $response->assertSee('lightboxOpen', false);
+        $response->assertSee('isImage(message.attachment)', false);
+        $response->assertSee('fileName(message.attachment)', false);
+        // The file input must accept documents now, not just images.
+        $response->assertSee('accept="image/*,.pdf,.doc,.docx"', false);
+    }
+
     /**
      * A4 (tester feedback): "no new-message notification on desktop" — the
      * unread badge existed only in the mobile bottom nav's own markup,

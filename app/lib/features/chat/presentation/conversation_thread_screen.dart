@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/network/api_exception.dart';
@@ -19,6 +20,7 @@ import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/report_sheet.dart';
 import '../providers/chat_providers.dart';
 import '../../../shared/widgets/sokoni_network_image.dart';
+import 'chat_image_viewer_screen.dart';
 
 /// The message thread — pinned product/order context, polling + read
 /// receipts, typing indicator, image attachments (CLAUDE.md feature 5).
@@ -106,6 +108,15 @@ class _ConversationThreadScreenState extends ConsumerState<ConversationThreadScr
                     _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
                   }
                 });
+                // Part 4 (client feedback): "where several images exist
+                // in a conversation, allow swiping between them" — every
+                // image attachment currently loaded in this thread, in
+                // order, so the full-screen viewer can page across all
+                // of them starting from whichever one was tapped.
+                final imageUrls = [
+                  for (final m in state.messages)
+                    if (m.isImageAttachment) m.attachment!,
+                ];
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(SokoniDimens.space16),
@@ -120,7 +131,8 @@ class _ConversationThreadScreenState extends ConsumerState<ConversationThreadScr
                         ),
                       );
                     }
-                    return _MessageBubble(message: state.messages[index]);
+                    final message = state.messages[index];
+                    return _MessageBubble(message: message, imageUrls: imageUrls);
                   },
                 );
               },
@@ -209,9 +221,13 @@ class _PinnedProductContext extends StatelessWidget {
 }
 
 class _MessageBubble extends ConsumerWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, required this.imageUrls});
 
   final ChatMessage message;
+
+  /// Every image attachment currently loaded in this thread, in order —
+  /// used to seed the full-screen viewer's swipe-between-images paging.
+  final List<String> imageUrls;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -240,14 +256,41 @@ class _MessageBubble extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (message.attachment != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                      child: SokoniNetworkImage(
-                        imageUrl: message.attachment!,
-                        width: 180,
-                        fit: BoxFit.cover,
+                  if (message.isImageAttachment)
+                    GestureDetector(
+                      // Part 4 (client feedback): "tapping a sent image
+                      // does nothing — it stays a thumbnail." Opens the
+                      // full-screen viewer at this image's position
+                      // among every image currently loaded in the
+                      // thread — see ChatImageViewerScreen's own
+                      // docblock on why the URL is unconstrained there
+                      // (full resolution) versus capped at 180 here
+                      // (thumbnail).
+                      onTap: () {
+                        final index = imageUrls.indexOf(message.attachment!);
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ChatImageViewerScreen(
+                              imageUrls: imageUrls,
+                              initialIndex: index >= 0 ? index : 0,
+                            ),
+                          ),
+                        );
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
+                        child: SokoniNetworkImage(
+                          imageUrl: message.attachment!,
+                          width: 180,
+                          fit: BoxFit.cover,
+                        ),
                       ),
+                    )
+                  else if (message.isDocumentAttachment)
+                    _DocumentAttachmentChip(
+                      url: message.attachment!,
+                      fileName: message.attachmentFileName ?? 'Document',
+                      isMine: message.isMine,
                     ),
                   if (message.body != null && message.body!.isNotEmpty)
                     Text(
@@ -286,6 +329,47 @@ class _MessageBubble extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Part 4 (client feedback): "tapping a document opens or downloads it
+/// appropriately." `url_launcher`'s default external mode hands the URL
+/// to whatever the OS considers the right handler for it — the device's
+/// own PDF/document viewer, or a browser download, exactly
+/// "appropriately" rather than this app trying to render document
+/// formats itself.
+class _DocumentAttachmentChip extends StatelessWidget {
+  const _DocumentAttachmentChip({required this.url, required this.fileName, required this.isMine});
+
+  final String url;
+  final String fileName;
+  final bool isMine;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = isMine ? SokoniColors.onYellow : Theme.of(context).colorScheme.onSurface;
+    return InkWell(
+      borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
+      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: SokoniDimens.space4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.description_outlined, size: 20, color: foreground),
+            const SizedBox(width: SokoniDimens.space8),
+            Flexible(
+              child: Text(
+                fileName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: foreground, decoration: TextDecoration.underline),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
