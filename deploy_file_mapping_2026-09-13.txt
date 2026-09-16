@@ -1,0 +1,69 @@
+=== sokoni-api-2026-09-13-app-root.zip -> /home/sokoftsn/sokoni-api ===
+[modified] C:\Projects\sokoni\api\app\Filament\Resources\Banners\Schemas\BannerForm.php
+  -> /home/sokoftsn/sokoni-api/app/Filament/Resources/Banners/Schemas/BannerForm.php
+[modified] C:\Projects\sokoni\api\app\Filament\Resources\Banners\Tables\BannersTable.php
+  -> /home/sokoftsn/sokoni-api/app/Filament/Resources/Banners/Tables/BannersTable.php
+[modified] C:\Projects\sokoni\api\app\Http\Controllers\Web\CategoryController.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Controllers/Web/CategoryController.php
+[NEW] C:\Projects\sokoni\api\database\migrations\2026_09_12_090000_add_new_positions_to_banners_table.php
+  -> /home/sokoftsn/sokoni-api/database/migrations/2026_09_12_090000_add_new_positions_to_banners_table.php
+[NEW] C:\Projects\sokoni\api\database\migrations\2026_09_12_100000_rename_food_groceries_to_restaurant.php
+  -> /home/sokoftsn/sokoni-api/database/migrations/2026_09_12_100000_rename_food_groceries_to_restaurant.php
+[modified] C:\Projects\sokoni\api\database\seeders\CategorySeeder.php
+  -> /home/sokoftsn/sokoni-api/database/seeders/CategorySeeder.php
+[modified] C:\Projects\sokoni\api\database\seeders\DemoSeeder.php
+  -> /home/sokoftsn/sokoni-api/database/seeders/DemoSeeder.php
+[modified] C:\Projects\sokoni\api\resources\views\components\banner-slot.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/components/banner-slot.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\components\category-icon.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/components/category-icon.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\components\product-card.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/components/product-card.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\components\shop-card.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/components/shop-card.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\web\home.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/web/home.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\web\product.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/web/product.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\web\shop.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/web/shop.blade.php
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\app-BHJB51MT.js
+  -> /home/sokoftsn/sokoni-api/public/build/assets/app-BHJB51MT.js
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\app-COQjiFbc.css
+  -> /home/sokoftsn/sokoni-api/public/build/assets/app-COQjiFbc.css
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Bold-C5aszj9T.ttf
+  -> /home/sokoftsn/sokoni-api/public/build/assets/PlusJakartaSans-Bold-C5aszj9T.ttf
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Medium-C2x3RLjU.ttf
+  -> /home/sokoftsn/sokoni-api/public/build/assets/PlusJakartaSans-Medium-C2x3RLjU.ttf
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Regular-C2UfmnDu.ttf
+  -> /home/sokoftsn/sokoni-api/public/build/assets/PlusJakartaSans-Regular-C2UfmnDu.ttf
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-SemiBold-BAz3r7B9.ttf
+  -> /home/sokoftsn/sokoni-api/public/build/assets/PlusJakartaSans-SemiBold-BAz3r7B9.ttf
+[manifest.json - OVERWRITE, not hashed] C:\Projects\sokoni\api\public\build\manifest.json
+  -> /home/sokoftsn/sokoni-api/public/build/manifest.json
+
+=== sokoni-api-2026-09-13-public-docroot.zip -> /home/sokoftsn/beta.sokoni.co.tz ===
+[modified] C:\Projects\sokoni\api\public\favicon.ico
+  -> /home/sokoftsn/beta.sokoni.co.tz/favicon.ico
+[modified] C:\Projects\sokoni\api\public\images\brand\apple-touch-icon-180.png
+  -> /home/sokoftsn/beta.sokoni.co.tz/images/brand/apple-touch-icon-180.png
+[modified] C:\Projects\sokoni\api\public\images\brand\favicon-32.png
+  -> /home/sokoftsn/beta.sokoni.co.tz/images/brand/favicon-32.png
+[modified] C:\Projects\sokoni\api\public\images\brand\icon-512.png
+  -> /home/sokoftsn/beta.sokoni.co.tz/images/brand/icon-512.png
+[modified] C:\Projects\sokoni\api\public\setup.php
+  -> /home/sokoftsn/beta.sokoni.co.tz/setup.php
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\app-BHJB51MT.js
+  -> /home/sokoftsn/beta.sokoni.co.tz/build/assets/app-BHJB51MT.js
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\app-COQjiFbc.css
+  -> /home/sokoftsn/beta.sokoni.co.tz/build/assets/app-COQjiFbc.css
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Bold-C5aszj9T.ttf
+  -> /home/sokoftsn/beta.sokoni.co.tz/build/assets/PlusJakartaSans-Bold-C5aszj9T.ttf
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Medium-C2x3RLjU.ttf
+  -> /home/sokoftsn/beta.sokoni.co.tz/build/assets/PlusJakartaSans-Medium-C2x3RLjU.ttf
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Regular-C2UfmnDu.ttf
+  -> /home/sokoftsn/beta.sokoni.co.tz/build/assets/PlusJakartaSans-Regular-C2UfmnDu.ttf
+[rebuilt asset (new hash, safe to extract)] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-SemiBold-BAz3r7B9.ttf
+  -> /home/sokoftsn/beta.sokoni.co.tz/build/assets/PlusJakartaSans-SemiBold-BAz3r7B9.ttf
+[manifest.json - OVERWRITE, not hashed] C:\Projects\sokoni\api\public\build\manifest.json
+  -> /home/sokoftsn/beta.sokoni.co.tz/build/manifest.json

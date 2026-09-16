@@ -1,0 +1,79 @@
+=== sokoni-api-2026-09-16-app-root.zip -> /home/sokoftsn/sokoni-api ===
+[modified] C:\Projects\sokoni\api\app\Filament\Resources\Banners\Tables\BannersTable.php
+  -> /home/sokoftsn/sokoni-api/app/Filament/Resources/Banners/Tables/BannersTable.php
+[modified] C:\Projects\sokoni\api\app\Http\Controllers\Api\AuthController.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Controllers/Api/AuthController.php
+[modified] C:\Projects\sokoni\api\app\Http\Controllers\Api\DeviceController.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Controllers/Api/DeviceController.php
+[NEW] C:\Projects\sokoni\api\app\Http\Controllers\Web\Account\AccountSwitchController.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Controllers/Web/Account/AccountSwitchController.php
+[modified] C:\Projects\sokoni\api\app\Http\Controllers\Web\Auth\GoogleAuthController.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Controllers/Web/Auth/GoogleAuthController.php
+[modified] C:\Projects\sokoni\api\app\Http\Controllers\Web\Auth\OtpAuthController.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Controllers/Web/Auth/OtpAuthController.php
+[modified] C:\Projects\sokoni\api\app\Http\Requests\RequestOtpRequest.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Requests/RequestOtpRequest.php
+[modified] C:\Projects\sokoni\api\app\Http\Requests\StoreMessageRequest.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Requests/StoreMessageRequest.php
+[modified] C:\Projects\sokoni\api\app\Http\Requests\VerifyOtpRequest.php
+  -> /home/sokoftsn/sokoni-api/app/Http/Requests/VerifyOtpRequest.php
+[modified] C:\Projects\sokoni\api\app\Models\Banner.php
+  -> /home/sokoftsn/sokoni-api/app/Models/Banner.php
+[NEW] C:\Projects\sokoni\api\app\Services\Auth\WebAccountSwitcher.php
+  -> /home/sokoftsn/sokoni-api/app/Services/Auth/WebAccountSwitcher.php
+[modified] C:\Projects\sokoni\api\app\Services\Otp\PhoneOtpService.php
+  -> /home/sokoftsn/sokoni-api/app/Services/Otp/PhoneOtpService.php
+[modified] C:\Projects\sokoni\api\bootstrap\app.php
+  -> /home/sokoftsn/sokoni-api/bootstrap/app.php
+[NEW - run php artisan migrate after upload] C:\Projects\sokoni\api\database\migrations\2026_09_16_090000_make_fcm_token_unique_on_devices_table.php
+  -> /home/sokoftsn/sokoni-api/database/migrations/2026_09_16_090000_make_fcm_token_unique_on_devices_table.php
+[modified] C:\Projects\sokoni\api\lang\en\site.php
+  -> /home/sokoftsn/sokoni-api/lang/en/site.php
+[modified] C:\Projects\sokoni\api\lang\sw\site.php
+  -> /home/sokoftsn/sokoni-api/lang/sw/site.php
+[modified] C:\Projects\sokoni\api\resources\js\app.js
+  -> /home/sokoftsn/sokoni-api/resources/js/app.js
+[modified] C:\Projects\sokoni\api\resources\views\web\account\message-thread.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/web/account/message-thread.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\web\account\nav.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/web/account/nav.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\web\auth\login.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/web/auth/login.blade.php
+[modified] C:\Projects\sokoni\api\resources\views\web\home.blade.php
+  -> /home/sokoftsn/sokoni-api/resources/views/web/home.blade.php
+[modified] C:\Projects\sokoni\api\routes\web.php
+  -> /home/sokoftsn/sokoni-api/routes/web.php
+[NEW HASH this round - rebuilt, must be extracted] C:\Projects\sokoni\api\public\build\assets\app-Djl7cLkR.js
+  -> /home/sokoftsn/sokoni-api/public/build/assets/app-Djl7cLkR.js
+[NEW HASH this round - rebuilt, must be extracted] C:\Projects\sokoni\api\public\build\assets\app-w_DhbKBp.css
+  -> /home/sokoftsn/sokoni-api/public/build/assets/app-w_DhbKBp.css
+[unchanged since 2026-09-13] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Bold-C5aszj9T.ttf
+  -> /home/sokoftsn/sokoni-api/public/build/assets/PlusJakartaSans-Bold-C5aszj9T.ttf
+[unchanged since 2026-09-13] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Medium-C2x3RLjU.ttf
+  -> /home/sokoftsn/sokoni-api/public/build/assets/PlusJakartaSans-Medium-C2x3RLjU.ttf
+[unchanged since 2026-09-13] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Regular-C2UfmnDu.ttf
+  -> /home/sokoftsn/sokoni-api/public/build/assets/PlusJakartaSans-Regular-C2UfmnDu.ttf
+[unchanged since 2026-09-13] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-SemiBold-BAz3r7B9.ttf
+  -> /home/sokoftsn/sokoni-api/public/build/assets/PlusJakartaSans-SemiBold-BAz3r7B9.ttf
+[manifest.json - OVERWRITE, not hashed] C:\Projects\sokoni\api\public\build\manifest.json
+  -> /home/sokoftsn/sokoni-api/public/build/manifest.json
+
+=== sokoni-api-2026-09-16-public-docroot.zip -> /home/sokoftsn/public_html ===
+[modified] C:\Projects\sokoni\api\public\setup.php
+  -> /home/sokoftsn/public_html/setup.php
+[NEW] C:\Projects\sokoni\api\public\.user.ini
+  -> /home/sokoftsn/public_html/.user.ini
+[NEW HASH this round - rebuilt, must be extracted] C:\Projects\sokoni\api\public\build\assets\app-Djl7cLkR.js
+  -> /home/sokoftsn/public_html/build/assets/app-Djl7cLkR.js
+[NEW HASH this round - rebuilt, must be extracted] C:\Projects\sokoni\api\public\build\assets\app-w_DhbKBp.css
+  -> /home/sokoftsn/public_html/build/assets/app-w_DhbKBp.css
+[unchanged since 2026-09-13] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Bold-C5aszj9T.ttf
+  -> /home/sokoftsn/public_html/build/assets/PlusJakartaSans-Bold-C5aszj9T.ttf
+[unchanged since 2026-09-13] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Medium-C2x3RLjU.ttf
+  -> /home/sokoftsn/public_html/build/assets/PlusJakartaSans-Medium-C2x3RLjU.ttf
+[unchanged since 2026-09-13] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-Regular-C2UfmnDu.ttf
+  -> /home/sokoftsn/public_html/build/assets/PlusJakartaSans-Regular-C2UfmnDu.ttf
+[unchanged since 2026-09-13] C:\Projects\sokoni\api\public\build\assets\PlusJakartaSans-SemiBold-BAz3r7B9.ttf
+  -> /home/sokoftsn/public_html/build/assets/PlusJakartaSans-SemiBold-BAz3r7B9.ttf
+[manifest.json - OVERWRITE, not hashed] C:\Projects\sokoni\api\public\build\manifest.json
+  -> /home/sokoftsn/public_html/build/manifest.json
