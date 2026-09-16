@@ -64,16 +64,29 @@ class HomeCategoryTilesTest extends TestCase
         );
     }
 
-    public function test_the_section_is_horizontally_scrollable_with_no_visible_scrollbar_on_mobile(): void
+    /**
+     * Part 6 (client feedback): "should sit on one line, matching the
+     * navigation bar's category strip... horizontally scrollable rather
+     * than wrapping onto multiple rows" — supersedes the earlier
+     * sm:grid/wrapping behaviour, which is exactly the "wraps onto
+     * multiple rows on wider screens" bug being fixed here.
+     */
+    public function test_the_section_is_one_horizontally_scrollable_line_at_every_breakpoint(): void
     {
         (new CategorySeeder)->run();
 
         $response = $this->get('/');
 
         $response->assertOk();
-        // Same utility class every other mobile-scroll/desktop-grid row on
-        // this page already uses (Near you, Offers) — see resources/css/app.css.
-        $response->assertSee('no-scrollbar flex flex-1 gap-16 overflow-x-auto', false);
-        $response->assertSee('sm:grid sm:grid-cols-4', false);
+        // The exact class list this section's own row now uses — no
+        // sm:grid/wrapping switch at wider widths at all, unlike the
+        // other rows on this page (Near you, Offers) that legitimately
+        // still wrap into a grid from sm up, so this is checked as one
+        // literal string rather than separate assertDontSee calls that
+        // could false-fail against those other sections' own classes.
+        $response->assertSee(
+            '<div class="no-scrollbar flex flex-1 gap-16 overflow-x-auto pb-8 lg:gap-24">',
+            false
+        );
     }
 }

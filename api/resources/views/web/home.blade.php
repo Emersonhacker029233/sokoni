@@ -134,14 +134,16 @@
     <section class="mx-auto max-w-7xl px-16 py-32 lg:px-24">
         <h2 class="text-h2 fade-in-section">{{ __('site.home_categories') }}</h2>
         <div class="mt-16 flex gap-16 lg:gap-24">
-            {{-- Horizontally scrollable with no visible scrollbar on
-                 mobile, a plain grid from sm up — same mechanism as the
-                 "Near you" row below. --}}
-            <div class="no-scrollbar flex flex-1 gap-16 overflow-x-auto pb-8 sm:grid sm:grid-cols-4 sm:overflow-visible sm:gap-24 md:grid-cols-6 lg:grid-cols-8">
+            {{-- Part 6 (client feedback): one line at every breakpoint,
+                 matching the nav bar's own category strip — no
+                 sm:grid/wrapping switch at wider widths, just the same
+                 no-scrollbar horizontal strip the nav bar itself uses
+                 (partials/header.blade.php). --}}
+            <div class="no-scrollbar flex flex-1 gap-16 overflow-x-auto pb-8 lg:gap-24">
                 @foreach ($homeCategoryTiles as $category)
                     <a
                         href="{{ route('web.category', $category['slug']) }}"
-                        class="flex w-96 shrink-0 flex-col items-center gap-8 text-center sm:w-auto"
+                        class="flex w-96 shrink-0 flex-col items-center gap-8 text-center"
                     >
                         @if ($category['image'])
                             <img
