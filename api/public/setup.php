@@ -406,6 +406,101 @@ try {
                 : "RESULT: {$mismatches} asset(s) referenced by the manifest are MISSING from at least one of the two build/ folders — this is exactly the unstyled-page symptom. Re-deploy this round's public-docroot zip (or the app-root zip) so both folders agree.") . "\n";
             break;
 
+        case 'diagnose-banners':
+            // Part 1 (client feedback, urgent): "an uploaded banner never
+            // appears — still shows loading, 24+ hours later." One
+            // request answering every question the task lists rather
+            // than guessing: is the file on disk, is it a display
+            // problem or an upload problem, is the banner actually just
+            // scheduled/inactive without the admin UI saying so, and
+            // does this host's own upload_max_filesize/post_max_size
+            // leave any room for what the admin form's own maxSize()
+            // allows through client-side.
+            // PHP's own ini shorthand (e.g. "2M", "512K", "1G", or a bare
+            // byte count) — parsed properly rather than guessed at, since
+            // getting this wrong would make the one check that matters
+            // here unreliable.
+            $parseIniBytes = function (string $value): int {
+                $value = trim($value);
+                if ($value === '') {
+                    return 0;
+                }
+                $unit = strtolower(substr($value, -1));
+                $number = (int) $value;
+
+                return match ($unit) {
+                    'g' => $number * 1073741824,
+                    'm' => $number * 1048576,
+                    'k' => $number * 1024,
+                    default => (int) $value,
+                };
+            };
+
+            $uploadMax = ini_get('upload_max_filesize');
+            $postMax = ini_get('post_max_size');
+            $memoryLimit = ini_get('memory_limit');
+            echo "PHP upload_max_filesize: {$uploadMax}\n";
+            echo "PHP post_max_size:       {$postMax}\n";
+            echo "PHP memory_limit:        {$memoryLimit}\n";
+            echo "Filament form's own client-side cap (BannerForm::maxSize): 2048 KB (2MB)\n";
+
+            $uploadMaxBytes = $parseIniBytes((string) $uploadMax);
+            $postMaxBytes = $parseIniBytes((string) $postMax);
+            $formCapBytes = 2048 * 1024;
+            // <= , not just < — multipart encoding overhead (field
+            // boundaries, the rest of the form's own fields in the same
+            // POST body) means a file just under the form's own 2MB cap
+            // can still push the total request over an ini limit set to
+            // exactly the same number.
+            if ($uploadMaxBytes > 0 && $uploadMaxBytes <= $formCapBytes) {
+                echo "!! upload_max_filesize ({$uploadMax}) leaves little to no headroom over the form's own 2MB cap — multipart overhead alone can push a borderline upload over this limit, and PHP rejects it before Laravel ever sees the request. This alone would explain \"stuck on loading, nothing ever saves.\"\n";
+            }
+            if ($postMaxBytes > 0 && $postMaxBytes <= $formCapBytes) {
+                echo "!! post_max_size ({$postMax}) leaves little to no headroom over the form's own 2MB cap — same failure mode as above, just the other ini setting.\n";
+            }
+            echo "\n";
+
+            $disk = config('filesystems.disks.public.root');
+            $diskUrl = rtrim((string) config('filesystems.disks.public.url'), '/');
+            echo "PUBLIC_UPLOADS_ROOT: {$disk}\n";
+            echo "PUBLIC_UPLOADS_URL:  {$diskUrl}\n\n";
+
+            $banners = DB::table('banners')->orderByDesc('id')->get();
+            if ($banners->isEmpty()) {
+                echo "No banners exist at all.\n";
+                break;
+            }
+
+            $now = now();
+            foreach ($banners as $banner) {
+                $relative = str_starts_with($banner->image_path, $diskUrl)
+                    ? ltrim(substr($banner->image_path, strlen($diskUrl)), '/')
+                    : null;
+                $path = $relative ? rtrim((string) $disk, '/') . '/' . $relative : null;
+                $exists = $path && is_file($path);
+                $size = $exists ? filesize($path) : null;
+
+                $scheduleNotes = [];
+                if (! $banner->is_active) {
+                    $scheduleNotes[] = 'is_active = false (hidden regardless of everything else)';
+                }
+                if ($banner->starts_at && \Illuminate\Support\Carbon::parse($banner->starts_at)->isFuture()) {
+                    $scheduleNotes[] = "starts_at is in the future ({$banner->starts_at}) — not live yet";
+                }
+                if ($banner->ends_at && \Illuminate\Support\Carbon::parse($banner->ends_at)->isPast()) {
+                    $scheduleNotes[] = "ends_at is in the past ({$banner->ends_at}) — expired";
+                }
+                $live = $scheduleNotes === [];
+
+                echo "#{$banner->id}  \"{$banner->title}\"  position={$banner->position}\n";
+                echo "  stored path:  {$banner->image_path}\n";
+                echo '  resolved disk path: ' . ($path ?? '(could not resolve — stored URL does not start with the configured PUBLIC_UPLOADS_URL)') . "\n";
+                echo '  file exists:  ' . ($exists ? "YES ({$size} bytes)" : 'NO — the upload never reached disk, or was moved/deleted since') . "\n";
+                echo '  scheduling:   ' . ($live ? 'live now (is_active=true, within any start/end window)' : implode('; ', $scheduleNotes)) . "\n";
+                echo "\n";
+            }
+            break;
+
         case 'diagnose-media':
             // B1 (tester feedback): "diagnose before changing code" — this
             // answers, for a real sample of product_media rows, the exact
@@ -633,8 +728,9 @@ try {
             break;
 
         default:
-            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, diagnose-assets, diagnose-media, test-mail, admin, tables, cache, clear\n";
+            echo "Unknown step. Use: check, fresh, migrate, seed, seed-categories, demo-seed, cleanup-original-seed, rewrite-media-host, diagnose-assets, diagnose-banners, diagnose-media, test-mail, admin, tables, cache, clear\n";
             echo "diagnose-assets compares manifest.json's referenced asset filenames against what's actually on disk in both the app root's and the docroot's own build/ folders, and checks APP_URL/ASSET_URL/PUBLIC_UPLOADS_URL for a duplicated scheme or other malformation.\n";
+            echo "diagnose-banners lists every banner with its stored path, whether the file exists on disk and its size, its active/scheduled state, and this host's own upload_max_filesize/post_max_size against the admin form's 2MB client-side cap.\n";
             echo "demo-seed accepts &fresh=1 to clear previously seeded demo shops/buyers first, and &force-media=1 to regenerate every placeholder image file unconditionally (not just ones whose content has drifted).\n";
             echo "cleanup-original-seed is a dry run by default; add &confirm=1 to actually delete.\n";
             echo "rewrite-media-host needs &from=&to= (URL-encoded); dry run by default, add &confirm=1 to rewrite.\n";

@@ -120,4 +120,38 @@ class BannerResourceTest extends TestCase
 
         $this->assertFalse($banner->fresh()->is_active);
     }
+
+    /**
+     * Part 1 (client feedback, urgent): "an uploaded banner never
+     * appears... the admin must never show a permanently 'loading'
+     * state — a failed upload needs a clear error." Confirms the one
+     * half of that this application's own code can actually guarantee:
+     * a file Filament's own client-side validation rejects produces a
+     * real, visible form error rather than silently hanging. The other
+     * half — a raw server-level rejection below Laravel entirely — is
+     * what diagnose-banners' upload_max_filesize/post_max_size check and
+     * the new .user.ini exist to prevent from ever happening in the
+     * first place; that half can't be exercised from a PHPUnit request.
+     */
+    public function test_an_oversized_upload_produces_a_clear_form_error_not_a_silent_hang(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->admin()->create();
+
+        Livewire::actingAs($admin)
+            ->test(CreateBanner::class)
+            ->fillForm([
+                'title' => 'Oversized poster',
+                // BannerForm::maxSize(2048) is in kilobytes; well over it.
+                'image_path' => UploadedFile::fake()->image('huge.jpg')->size(3000),
+                'link_url' => 'https://sokoni.co.tz/search',
+                'position' => 'home_hero',
+                'sort_order' => 0,
+                'is_active' => true,
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['image_path']);
+
+        $this->assertDatabaseMissing('banners', ['title' => 'Oversized poster']);
+    }
 }

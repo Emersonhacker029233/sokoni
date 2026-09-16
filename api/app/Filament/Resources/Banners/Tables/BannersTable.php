@@ -2,11 +2,11 @@
 
 namespace App\Filament\Resources\Banners\Tables;
 
+use App\Models\Banner;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\ImageColumn;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -37,8 +37,24 @@ class BannersTable
                     ->dateTime()
                     ->placeholder('No end date')
                     ->sortable(),
-                IconColumn::make('is_active')
-                    ->boolean(),
+                // Part 1 (client feedback, urgent): "an uploaded banner
+                // never appears" — a plain is_active icon didn't say
+                // *why* a banner isn't showing (inactive vs. not
+                // scheduled yet vs. expired), which read as identical to
+                // a genuinely broken upload. One glance now says which.
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->state(fn (Banner $record) => $record->liveStatusLabel())
+                    ->badge()
+                    ->color(function (Banner $record) {
+                        $label = $record->liveStatusLabel();
+
+                        return match (true) {
+                            $label === 'Live now' => 'success',
+                            str_starts_with($label, 'Scheduled') => 'warning',
+                            default => 'gray',
+                        };
+                    }),
                 TextColumn::make('impressions_count')
                     ->label('Impressions')
                     ->numeric()
