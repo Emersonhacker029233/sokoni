@@ -129,6 +129,11 @@ return [
     'auth_send_code' => 'Tuma msimbo',
     'auth_code_label' => 'Msimbo wa uthibitisho',
     'auth_verify' => 'Thibitisha na uendelee',
+    // Part 3 (client feedback): resend code, on the same screen.
+    'auth_resend_in' => 'Tuma tena baada ya',
+    'auth_resend_code' => 'Tuma msimbo tena',
+    'auth_code_resent' => 'Msimbo mpya umetumwa.',
+    'auth_code_expires_at' => 'Msimbo unaisha muda wake saa :time.',
     'auth_name_label' => 'Jina kamili',
     'auth_marketing_consent' => 'Ningependa kupokea ofa na taarifa za mara kwa mara kutoka Sokoni.',
     'auth_or' => 'au',

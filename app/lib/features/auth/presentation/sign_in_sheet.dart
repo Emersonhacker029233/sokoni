@@ -8,6 +8,7 @@ import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
+import '../../../shared/widgets/resend_code_button.dart';
 import '../providers/auth_providers.dart';
 import 'post_sign_in.dart';
 
@@ -49,6 +50,7 @@ class _SignInSheetContentState extends ConsumerState<_SignInSheetContent> {
 
   _Step _step = _Step.phone;
   String? _e164Phone;
+  DateTime? _codeExpiresAt;
   bool _isSubmitting = false;
   String? _errorText;
 
@@ -68,11 +70,12 @@ class _SignInSheetContentState extends ConsumerState<_SignInSheetContent> {
       _errorText = null;
     });
     try {
-      final isNewAccount = await ref.read(authRepositoryProvider).requestOtp(e164);
+      final result = await ref.read(authRepositoryProvider).requestOtp(e164);
       if (!mounted) return;
       setState(() {
         _e164Phone = e164;
-        _step = isNewAccount ? _Step.newNumber : _Step.code;
+        _codeExpiresAt = result.expiresAt;
+        _step = result.isNewAccount ? _Step.newNumber : _Step.code;
       });
     } on ApiException catch (e) {
       setState(() => _errorText = e.message);
@@ -209,6 +212,17 @@ class _SignInSheetContentState extends ConsumerState<_SignInSheetContent> {
           decoration: InputDecoration(labelText: l10n.phoneSignInCodeLabel),
           validator: SokoniValidators.otpCode,
         ),
+        // Part 3 (client feedback): "Add a Resend code action... a
+        // countdown... a tappable Resend code that requests a fresh one
+        // without leaving the screen."
+        if (_codeExpiresAt != null)
+          ResendCodeButton(
+            codeExpiresAt: _codeExpiresAt!,
+            onResend: () async {
+              final result = await ref.read(authRepositoryProvider).requestOtp(_e164Phone!);
+              return result.expiresAt;
+            },
+          ),
         TextButton(onPressed: _tryAnotherNumber, child: Text(l10n.signInTryAnotherNumber)),
       ],
     );

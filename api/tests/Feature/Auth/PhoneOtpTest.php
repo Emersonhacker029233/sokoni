@@ -157,6 +157,25 @@ class PhoneOtpTest extends TestCase
             ->assertJsonPath('is_new_account', false);
     }
 
+    /**
+     * Part 3 (client feedback): "show when the current code expires, so
+     * the user understands why it stopped working" — a real server
+     * timestamp matching PhoneOtpService's own actual TTL, not a
+     * duration the client would have to guess and could drift from it.
+     */
+    public function test_otp_request_reports_the_codes_real_expiry_time(): void
+    {
+        $response = $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])->assertOk();
+
+        $expiresAt = \Illuminate\Support\Carbon::parse($response->json('expires_at'));
+        $this->assertEqualsWithDelta(
+            now()->addSeconds(\App\Services\Otp\PhoneOtpService::TTL_SECONDS)->timestamp,
+            $expiresAt->timestamp,
+            2,
+            'expires_at should match PhoneOtpService\'s own TTL, within a couple of seconds of test execution time.'
+        );
+    }
+
     public function test_verifying_a_brand_new_number_reports_is_new_account_true(): void
     {
         $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE]);

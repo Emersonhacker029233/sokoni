@@ -467,6 +467,13 @@
   "createAccountResendCode": "Resend code",
   "@createAccountResendCode": {},
 
+  "otpResendIn": "Resend code in {seconds}s",
+  "@otpResendIn": {"description": "Part 3 (client feedback): the resend countdown, shown while the cooldown is still active.", "placeholders": {"seconds": {"type": "int"}}},
+  "otpCodeExpiresAt": "Code expires at {time}",
+  "@otpCodeExpiresAt": {"description": "Part 3 (client feedback): tells the user when/why the code will stop working.", "placeholders": {"time": {"type": "String"}}},
+  "otpCodeResent": "A new code has been sent.",
+  "@otpCodeResent": {"description": "Part 3 (client feedback): clear feedback after a successful resend."},
+
   "accountIntentTitle": "Welcome to Sokoni",
   "@accountIntentTitle": {},
   "accountIntentSubtitle": "What brings you here?",

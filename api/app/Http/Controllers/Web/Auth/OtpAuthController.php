@@ -49,6 +49,10 @@ class OtpAuthController extends Controller
             'step' => $request->session()->get('otp_phone') ? 'code' : 'phone',
             'phone' => $request->session()->get('otp_phone'),
             'isNewAccount' => $request->session()->get('otp_is_new_account', false),
+            // Part 3 (client feedback): "show when the current code
+            // expires" / "clear feedback that a new code has been sent".
+            'otpExpiresAt' => $request->session()->get('otp_expires_at'),
+            'otpJustResent' => $request->session()->pull('otp_just_resent', false),
             // C1 (tester feedback): this used to check only `client_id`,
             // but `GoogleAuthController::redirect()` 404s unless
             // client_id + client_secret + redirect are ALL set — a config
@@ -71,15 +75,31 @@ class OtpAuthController extends Controller
     public function requestOtp(RequestOtpRequest $request): RedirectResponse
     {
         $phone = $request->string('phone')->toString();
+        // Distinguish "resending to the same number already on the code
+        // step" from "starting fresh from the phone step" purely from
+        // session state already there before this request touches it —
+        // this endpoint is the exact same one the code step's own Resend
+        // button posts back to, deliberately (see login.blade.php),
+        // rather than a separate resend-only route.
+        $isResend = $request->session()->get('otp_phone') === $phone;
+
         // Unlike the API, the website already has a real, reliable locale
         // for this request (SetWebLocale, the EN/SW toggle) — use it,
         // rather than the API's own "trust the client to say" fallback.
-        $this->otp->requestCode($phone, app()->getLocale());
+        $expiresAt = $this->otp->requestCode($phone, app()->getLocale());
 
         $isNewAccount = ! User::query()->where('phone', $phone)->exists();
 
         $request->session()->put('otp_phone', $phone);
         $request->session()->put('otp_is_new_account', $isNewAccount);
+        // Stored as a plain ISO8601 string, not the Carbon instance
+        // itself — avoids relying on session-driver-specific object
+        // serialization for something that's only ever read back as a
+        // string to hand to the view/Alpine anyway.
+        $request->session()->put('otp_expires_at', $expiresAt->toIso8601String());
+        if ($isResend) {
+            $request->session()->flash('otp_just_resent', true);
+        }
 
         return redirect()->route('web.login');
     }
@@ -106,7 +126,7 @@ class OtpAuthController extends Controller
             throw ValidationException::withMessages(['code' => 'This account has been suspended.']);
         }
 
-        $request->session()->forget(['otp_phone', 'otp_is_new_account']);
+        $request->session()->forget(['otp_phone', 'otp_is_new_account', 'otp_expires_at']);
 
         Auth::login($user, remember: true);
         $request->session()->regenerate();

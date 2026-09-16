@@ -135,7 +135,15 @@ ApiException _mapResponse(Response? response) {
       final firstFieldError = errors.values.firstOrNull?.firstOrNull;
       return ValidationException(firstFieldError ?? message ?? 'Please check the form and try again.', errors);
     case 429:
-      return const RateLimitedException();
+      // Part 3 (client feedback): "say so clearly when the limit is
+      // reached" — Laravel's throttle middleware always sends a real
+      // Retry-After header on a 429, so this is the server's own actual
+      // remaining lockout, not a client guess.
+      final retryAfter = response?.headers.value('retry-after');
+      return RateLimitedException(
+        message ?? 'Too many requests — try again shortly.',
+        retryAfter != null ? int.tryParse(retryAfter) : null,
+      );
     default:
       return ServerException(message ?? 'Server error${status != null ? ' ($status)' : ''}. Please try again.');
   }

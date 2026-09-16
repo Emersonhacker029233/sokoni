@@ -39,6 +39,9 @@
             <button type="submit" class="btn-primary w-full py-12">{{ __('site.auth_send_code') }}</button>
         </form>
     @else
+        @if ($otpJustResent)
+            <p class="mt-16 rounded-chip bg-sokoni-success/10 p-8 text-xs text-sokoni-success">{{ __('site.auth_code_resent') }}</p>
+        @endif
         <form action="{{ route('web.auth.otp.verify') }}" method="post" class="mt-24 space-y-16">
             @csrf
             <input type="hidden" name="phone" value="{{ $phone }}">
@@ -49,6 +52,15 @@
             <div>
                 <label for="code" class="text-sm font-medium">{{ __('site.auth_code_label') }}</label>
                 <input type="text" id="code" name="code" maxlength="6" required class="input-field mt-4">
+                {{-- Part 3 (client feedback): "show when the current code
+                     expires, so the user understands why it stopped
+                     working." A real server timestamp (PhoneOtpService's
+                     own TTL), not a guessed duration. --}}
+                @if ($otpExpiresAt)
+                    <p class="mt-4 text-xs text-sokoni-black/40">
+                        {{ __('site.auth_code_expires_at', ['time' => \Illuminate\Support\Carbon::parse($otpExpiresAt)->format('H:i')]) }}
+                    </p>
+                @endif
             </div>
             @if ($isNewAccount)
                 <div>
@@ -62,6 +74,27 @@
             @endif
             <button type="submit" class="btn-primary w-full py-12">{{ __('site.auth_verify') }}</button>
         </form>
+
+        {{-- Part 3 (client feedback): "Resend code" — a countdown before
+             it becomes available, then a real resend without leaving
+             this screen. Posts to the exact same web.auth.otp.request
+             route the phone step's own form uses:
+             OtpAuthController::requestOtp() tells a resend apart from a
+             fresh request by comparing against the phone already in
+             session, and redirects straight back to this same code
+             step either way. --}}
+        <div
+            x-data="{ remaining: 60 }"
+            x-init="setInterval(() => { if (remaining > 0) remaining--; }, 1000)"
+            class="mt-16 text-center text-sm text-sokoni-black/60"
+        >
+            <span x-show="remaining > 0" x-text="'{{ __('site.auth_resend_in') }} ' + remaining + 's'"></span>
+            <form x-show="remaining === 0" x-cloak action="{{ route('web.auth.otp.request') }}" method="post">
+                @csrf
+                <input type="hidden" name="phone" value="{{ $phone }}">
+                <button type="submit" class="font-medium text-sokoni-black underline">{{ __('site.auth_resend_code') }}</button>
+            </form>
+        </div>
     @endif
 
     @if ($googleConfigured)

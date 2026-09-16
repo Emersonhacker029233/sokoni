@@ -15,13 +15,19 @@ class AuthRepository {
   final AuthApi _api;
   final SokoniSecureStorage _storage;
 
-  /// True if this phone number has never signed in before — lets the UI
-  /// say plainly, right when the code is sent, that a new account is
-  /// about to be created (CLAUDE.md Part 2 item 1).
-  Future<bool> requestOtp(String phoneE164) async {
+  /// [isNewAccount]: true if this phone number has never signed in
+  /// before — lets the UI say plainly, right when the code is sent,
+  /// that a new account is about to be created (CLAUDE.md Part 2 item
+  /// 1). [expiresAt]: Part 3 (client feedback) — the server's own real
+  /// expiry instant for this code, not a client-guessed duration, so
+  /// the resend screen can show exactly when/why it stops working.
+  Future<({bool isNewAccount, DateTime expiresAt})> requestOtp(String phoneE164) async {
     try {
       final json = await _api.requestOtp({'phone': phoneE164});
-      return json['is_new_account'] as bool? ?? false;
+      return (
+        isNewAccount: json['is_new_account'] as bool? ?? false,
+        expiresAt: DateTime.parse(json['expires_at'] as String),
+      );
     } catch (e) {
       throw mapDioError(e);
     }

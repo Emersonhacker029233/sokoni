@@ -250,6 +250,10 @@
   "createAccountVerifyAction": "Fungua akaunti",
   "createAccountResendCode": "Tuma tena msimbo",
 
+  "otpResendIn": "Tuma tena baada ya sekunde {seconds}",
+  "otpCodeExpiresAt": "Msimbo unaisha muda wake saa {time}",
+  "otpCodeResent": "Msimbo mpya umetumwa.",
+
   "accountIntentTitle": "Karibu Sokoni",
   "accountIntentSubtitle": "Umekuja kufanya nini?",
   "accountIntentBuyTitle": "Nipo kununua",

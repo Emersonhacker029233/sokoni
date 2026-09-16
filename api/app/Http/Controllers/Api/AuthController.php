@@ -39,11 +39,19 @@ class AuthController extends Controller
      */
     public function requestOtp(RequestOtpRequest $request): JsonResponse
     {
-        $this->otp->requestCode($request->string('phone'), $request->string('locale', 'en'));
+        $expiresAt = $this->otp->requestCode($request->string('phone'), $request->string('locale', 'en'));
 
         $isNewAccount = ! User::query()->where('phone', $request->string('phone'))->exists();
 
-        return response()->json(['message' => 'OTP sent.', 'is_new_account' => $isNewAccount]);
+        // Part 3 (client feedback): "show when the current code expires,
+        // so the user understands why it stopped working" — a real
+        // server timestamp, not a client-guessed duration that could
+        // drift from PhoneOtpService's own actual TTL.
+        return response()->json([
+            'message' => 'OTP sent.',
+            'is_new_account' => $isNewAccount,
+            'expires_at' => $expiresAt->toIso8601String(),
+        ]);
     }
 
     /** Verify the OTP and issue a Sanctum token, creating the user on first sign-in. */

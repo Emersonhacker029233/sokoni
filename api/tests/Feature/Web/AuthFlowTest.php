@@ -44,6 +44,67 @@ class AuthFlowTest extends TestCase
         $response->assertSessionHasErrors(['phone' => 'Enter a valid Tanzanian mobile number, e.g. 712 345 678 or 0712 345 678.']);
     }
 
+    /**
+     * Part 3 (client feedback): "Resend code... requests a fresh one
+     * without leaving the screen" and "clear feedback that a new code
+     * has been sent." Resending posts to the exact same
+     * web.auth.otp.request route the phone step's own form uses —
+     * OtpAuthController::requestOtp() tells the two apart by comparing
+     * against the phone already in session.
+     */
+    public function test_resending_the_code_generates_a_fresh_one_and_flashes_confirmation(): void
+    {
+        $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+        $firstCode = Cache::get('otp:'.self::PHONE);
+        $this->assertNotNull($firstCode);
+
+        $resend = $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+        $resend->assertRedirect('/login');
+
+        $secondCode = Cache::get('otp:'.self::PHONE);
+        $this->assertNotNull($secondCode);
+
+        $codeStep = $this->get('/login');
+        $codeStep->assertOk();
+        $codeStep->assertSee(__('site.auth_code_resent'));
+    }
+
+    /** Part 3 (client feedback): "show when the current code expires, so the user understands why it stopped working." */
+    public function test_the_code_step_shows_a_resend_action_and_the_codes_expiry_time(): void
+    {
+        $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $response->assertSee(__('site.auth_resend_code'));
+        $expiresAt = \Illuminate\Support\Carbon::parse(session('otp_expires_at'));
+        $response->assertSee($expiresAt->format('H:i'));
+    }
+
+    /**
+     * Part 3 (client feedback): "respect the existing server-side rate
+     * limit of 3 requests per number per 15 minutes, and say so clearly
+     * when the limit is reached rather than failing silently." Without
+     * bootstrap/app.php's custom render for ThrottleRequestsException,
+     * this fell through to Laravel's generic 429 error page — a dead
+     * end, not a message on the login screen the visitor can act on.
+     */
+    public function test_exceeding_the_otp_rate_limit_redirects_back_with_a_clear_message(): void
+    {
+        $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+        $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+        $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+
+        // The 4th request within 15 minutes is over RateLimiter::for('otp')'s limit.
+        $response = $this->post('/auth/otp/request', ['phone' => self::PHONE]);
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('phone');
+        $message = strtolower(session('errors')->first('phone'));
+        $this->assertStringContainsString('too many codes', $message);
+    }
+
     public function test_a_new_visitor_can_register_and_is_walked_through_terms_and_intent(): void
     {
         $this->post('/auth/otp/request', ['phone' => self::PHONE])->assertRedirect('/login');

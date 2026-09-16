@@ -215,10 +215,14 @@ class CreateAccountController extends AsyncNotifier<CreateAccountDraft> {
     return ref.read(sellerRepositoryProvider).checkHandleAvailable(handle);
   }
 
-  /// Step 4 — sends the code to the phone number collected back at Step 2.
-  Future<void> sendVerificationCode() async {
+  /// Step 4 — sends the code to the phone number collected back at Step
+  /// 2. Returns the code's real expiry instant (Part 3, client
+  /// feedback) so the verify step can show it and drive its own resend
+  /// countdown/cooldown reset.
+  Future<DateTime> sendVerificationCode() async {
     final phone = (state.value ?? const CreateAccountDraft()).phone;
-    await ref.read(authRepositoryProvider).requestOtp(phone);
+    final result = await ref.read(authRepositoryProvider).requestOtp(phone);
+    return result.expiresAt;
   }
 
   /// Step 4 on success — verifies the code and creates the account (and,

@@ -33,4 +33,27 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Part 3 (client feedback): "respect the existing server-side
+        // rate limit... and say so clearly when the limit is reached
+        // rather than failing silently." Without this, a throttled
+        // web request (the `throttle:otp` middleware on
+        // web.auth.otp.request) fell through to Laravel's generic 429
+        // error page — a dead end with no way back to the form, and no
+        // explanation a visitor could act on. The API side needs no
+        // equivalent: shouldRenderJsonWhen above already gives it a
+        // proper JSON 429 Laravel builds correctly on its own.
+        $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $e, Request $request) {
+            if (! $request->routeIs('web.auth.otp.request')) {
+                return null;
+            }
+
+            $retryAfterSeconds = (int) ($e->getHeaders()['Retry-After'] ?? 0);
+            $minutes = $retryAfterSeconds > 0 ? (int) ceil($retryAfterSeconds / 60) : null;
+            $message = $minutes
+                ? "You've requested too many codes. Please try again in {$minutes} minute".($minutes === 1 ? '' : 's').'.'
+                : "You've requested too many codes. Please try again shortly.";
+
+            return redirect()->route('web.login')->withErrors(['phone' => $message]);
+        });
     })->create();

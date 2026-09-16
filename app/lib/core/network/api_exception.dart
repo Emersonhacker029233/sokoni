@@ -72,9 +72,15 @@ final class ValidationException extends ApiException {
   String? fieldError(String field) => errors[field]?.firstOrNull;
 }
 
-/// 429 — rate limited.
+/// 429 — rate limited. [retryAfterSeconds], when the server sent a
+/// `Retry-After` header, is Part 3's (client feedback) way of saying
+/// "respect the existing server-side rate limit... and say so clearly
+/// when the limit is reached" precisely — the real remaining lockout
+/// rather than a client-guessed one.
 final class RateLimitedException extends ApiException {
-  const RateLimitedException([super.message = 'Too many requests — try again shortly.']);
+  const RateLimitedException([super.message = 'Too many requests — try again shortly.', this.retryAfterSeconds]);
+
+  final int? retryAfterSeconds;
 }
 
 /// 5xx or an unrecognised response shape from an otherwise-reached server.

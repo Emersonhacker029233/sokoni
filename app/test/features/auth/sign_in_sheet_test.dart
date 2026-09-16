@@ -38,7 +38,11 @@ class _ScriptedAuthAdapter implements HttpClientAdapter {
     if (options.path.endsWith('/auth/otp/request')) {
       final phone = (options.data as Map)['phone'] as String;
       final isNew = newNumbers.contains(phone);
-      return _json({'message': 'OTP sent.', 'is_new_account': isNew});
+      return _json({
+        'message': 'OTP sent.',
+        'is_new_account': isNew,
+        'expires_at': DateTime.now().add(const Duration(minutes: 5)).toIso8601String(),
+      });
     }
     if (options.path.endsWith('/auth/otp/verify')) {
       return _json({
@@ -238,5 +242,43 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Welcome back'), findsOneWidget);
+  });
+
+  /// Part 3 (client feedback): "A countdown showing when resending
+  /// becomes available... After that, a tappable 'Resend code' that
+  /// requests a fresh one without leaving the screen... Clear feedback
+  /// that a new code has been sent."
+  testWidgets('the resend button is disabled during the countdown, then works once it elapses', (tester) async {
+    await _pump(tester, newNumbers: {});
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.enterText(find.byType(TextFormField).first, '0754123456');
+    await tester.tap(find.text('Send code'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Still counting down — no bare "Resend code" text yet, only the countdown.
+    expect(find.textContaining('Resend code in'), findsOneWidget);
+    expect(find.text('Resend code'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 60));
+
+    expect(find.text('Resend code'), findsOneWidget);
+
+    await tester.tap(find.text('Resend code'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('A new code has been sent.'), findsOneWidget);
+    // The countdown restarted from the fresh send.
+    expect(find.textContaining('Resend code in'), findsOneWidget);
   });
 }

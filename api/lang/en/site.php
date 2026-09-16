@@ -129,6 +129,11 @@ return [
     'auth_send_code' => 'Send code',
     'auth_code_label' => 'Verification code',
     'auth_verify' => 'Verify & continue',
+    // Part 3 (client feedback): resend code, on the same screen.
+    'auth_resend_in' => 'Resend code in',
+    'auth_resend_code' => 'Resend code',
+    'auth_code_resent' => 'A new code has been sent.',
+    'auth_code_expires_at' => 'Code expires at :time.',
     'auth_name_label' => 'Full name',
     'auth_marketing_consent' => "I'd like to receive occasional offers and updates from Sokoni.",
     'auth_or' => 'or',

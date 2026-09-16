@@ -6,6 +6,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../shared/widgets/resend_code_button.dart';
 import '../../presentation/post_sign_in.dart';
 import '../../providers/create_account_providers.dart';
 
@@ -36,6 +37,7 @@ class _CreateAccountStep4VerifyState extends ConsumerState<CreateAccountStep4Ver
   bool _submitting = false;
   String? _error;
   bool _codeSent = false;
+  DateTime? _codeExpiresAt;
 
   @override
   void initState() {
@@ -55,8 +57,13 @@ class _CreateAccountStep4VerifyState extends ConsumerState<CreateAccountStep4Ver
       _error = null;
     });
     try {
-      await ref.read(createAccountProvider.notifier).sendVerificationCode();
-      if (mounted) setState(() => _codeSent = true);
+      final expiresAt = await ref.read(createAccountProvider.notifier).sendVerificationCode();
+      if (mounted) {
+        setState(() {
+          _codeSent = true;
+          _codeExpiresAt = expiresAt;
+        });
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -109,10 +116,16 @@ class _CreateAccountStep4VerifyState extends ConsumerState<CreateAccountStep4Ver
               decoration: InputDecoration(labelText: l10n.phoneSignInCodeLabel),
               validator: SokoniValidators.otpCode,
             ),
-            TextButton(
-              onPressed: _sending ? null : _sendCode,
-              child: Text(l10n.createAccountResendCode),
-            ),
+            // Part 3 (client feedback): "Add a Resend code action... a
+            // countdown... a tappable Resend code that requests a fresh
+            // one without leaving the screen." Only shown once the
+            // initial send has actually succeeded — resending before
+            // that would just be _sendCode() racing itself.
+            if (_codeExpiresAt != null)
+              ResendCodeButton(
+                codeExpiresAt: _codeExpiresAt!,
+                onResend: () => ref.read(createAccountProvider.notifier).sendVerificationCode(),
+              ),
             if (_error != null) ...[
               const SizedBox(height: SokoniDimens.space8),
               Text(_error!, style: const TextStyle(color: Colors.red)),

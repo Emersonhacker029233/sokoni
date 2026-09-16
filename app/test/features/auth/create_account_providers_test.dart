@@ -37,7 +37,8 @@ class _ScriptedAuthRepository extends AuthRepository {
   }
 
   @override
-  Future<bool> requestOtp(String phoneE164) async => false;
+  Future<({bool isNewAccount, DateTime expiresAt})> requestOtp(String phoneE164) async =>
+      (isNewAccount: false, expiresAt: DateTime.now().add(const Duration(minutes: 5)));
 
   @override
   Future<AuthResponse> register({
