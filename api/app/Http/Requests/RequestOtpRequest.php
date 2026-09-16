@@ -24,4 +24,19 @@ class RequestOtpRequest extends FormRequest
             'locale' => ['nullable', 'string', Rule::in(['en', 'sw'])],
         ];
     }
+
+    /**
+     * Part 2 (client feedback): "update the validation message so it
+     * describes the local format the user is actually entering" — both
+     * clients compose the full +255... value from a fixed prefix plus
+     * whatever the visitor typed, so describe the LOCAL digits (what a
+     * validation failure would actually mean to them), not the E.164
+     * shape they never see or type themselves.
+     */
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'Enter a valid Tanzanian mobile number, e.g. 712 345 678 or 0712 345 678.',
+        ];
+    }
 }

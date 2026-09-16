@@ -18,6 +18,32 @@ class AuthFlowTest extends TestCase
         $this->get('/login')->assertOk();
     }
 
+    /**
+     * Part 2 (client feedback): "+255 shown as static text, not editable
+     * and not deletable" — a fixed prefix segment plus a hidden `phone`
+     * input Alpine composes the full E.164 value into, not an editable
+     * `+255...` example baked into the visible field itself.
+     */
+    public function test_the_login_page_shows_a_fixed_255_prefix_not_an_editable_one(): void
+    {
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $response->assertSee('>+255<', false);
+        $response->assertSee('id="phone_local"', false);
+        $response->assertSee('type="hidden" name="phone"', false);
+        // The old markup let the visitor type the full +255... themselves.
+        $response->assertDontSee('placeholder="+255754123456"', false);
+    }
+
+    /** Part 2 (client feedback): "update the validation message so it describes the local format the user is actually entering." */
+    public function test_an_invalid_phone_shows_a_message_describing_the_local_format(): void
+    {
+        $response = $this->post('/auth/otp/request', ['phone' => '+255123456789']);
+
+        $response->assertSessionHasErrors(['phone' => 'Enter a valid Tanzanian mobile number, e.g. 712 345 678 or 0712 345 678.']);
+    }
+
     public function test_a_new_visitor_can_register_and_is_walked_through_terms_and_intent(): void
     {
         $this->post('/auth/otp/request', ['phone' => self::PHONE])->assertRedirect('/login');

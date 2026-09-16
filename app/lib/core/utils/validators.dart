@@ -11,7 +11,12 @@ abstract final class SokoniValidators {
   static String? phone(String? value) {
     if (value == null || value.trim().isEmpty) return 'Phone number is required';
     if (SokoniFormat.phoneToE164(value) == null) {
-      return 'Enter a valid Tanzanian phone number';
+      // Part 2 (client feedback): "describe the local format the user
+      // is actually entering" — the field itself now shows a fixed
+      // +255 prefix (SokoniPhoneField), so the user only ever types the
+      // local part; the error should describe that, not the E.164 shape
+      // they never see or type.
+      return 'Enter a valid 9-digit number, e.g. 712 345 678 or 0712 345 678';
     }
     return null;
   }

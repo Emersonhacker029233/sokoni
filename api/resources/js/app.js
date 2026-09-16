@@ -508,6 +508,35 @@ Alpine.data('productMediaManager', (productId, maxItems, initialMedia) => ({
     },
 }));
 
+/**
+ * Part 2 (client feedback): "+255 must show as a fixed, non-editable
+ * prefix — the user types only their own number." The visible input
+ * only ever holds the local digits; this composes the full E.164 value
+ * into a hidden `phone` field right before it's needed, so
+ * RequestOtpRequest/VerifyOtpRequest's own validation (still a plain
+ * `regex:/^\+255[67]\d{8}$/` against `phone`) needs no server-side
+ * change at all — "store and send E.164 as now."
+ *
+ * Mirrors the app's own SokoniFormat.phoneToE164 exactly (same three
+ * shapes accepted: 9-digit local, 10-digit with a leading 0 stripped,
+ * or a 12-digit 255-prefixed paste), so a number that resolves on one
+ * surface resolves identically on the other.
+ */
+Alpine.data('phoneInput', (initialLocal = '') => ({
+    local: initialLocal,
+
+    get e164() {
+        const digits = this.local.replace(/\D/g, '');
+        if (digits.length === 9 && /^[67]/.test(digits)) return `+255${digits}`;
+        if (digits.length === 10 && digits.startsWith('0')) return `+255${digits.slice(1)}`;
+        if (digits.length === 12 && digits.startsWith('255')) return `+${digits}`;
+        // Not yet a plausible number (still typing, or genuinely
+        // invalid) — let the server's own validation be the final
+        // word rather than guessing at a shape here.
+        return `+255${digits}`;
+    },
+}));
+
 Alpine.start();
 
 // Section-heading fade-in-on-scroll (Part 3 motion spec: "300ms fade-in on

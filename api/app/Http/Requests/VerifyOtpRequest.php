@@ -23,4 +23,12 @@ class VerifyOtpRequest extends FormRequest
             'name' => [$isNewUser ? 'required' : 'nullable', 'string', 'max:255'],
         ];
     }
+
+    /** Part 2 (client feedback): see RequestOtpRequest::messages() — same reasoning, same wording. */
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'Enter a valid Tanzanian mobile number, e.g. 712 345 678 or 0712 345 678.',
+        ];
+    }
 }

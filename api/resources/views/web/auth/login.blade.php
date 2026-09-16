@@ -14,9 +14,27 @@
     @if ($step === 'phone')
         <form action="{{ route('web.auth.otp.request') }}" method="post" class="mt-24 space-y-16">
             @csrf
-            <div>
-                <label for="phone" class="text-sm font-medium">{{ __('site.auth_phone_label') }}</label>
-                <input type="tel" id="phone" name="phone" placeholder="+255754123456" required class="input-field mt-4">
+            {{-- Part 2 (client feedback): "+255 shown as a fixed,
+                 non-editable prefix — the user types only their own
+                 number." The visible field only ever holds local digits;
+                 Alpine composes the full E.164 value into the hidden
+                 `phone` field the server actually validates. --}}
+            <div x-data="phoneInput()">
+                <label for="phone_local" class="text-sm font-medium">{{ __('site.auth_phone_label') }}</label>
+                <div class="mt-4 flex items-stretch overflow-hidden rounded-chip border border-sokoni-outline focus-within:ring-2 focus-within:ring-sokoni-yellow">
+                    <span class="flex items-center bg-sokoni-surface-alt px-12 text-sm font-medium text-sokoni-black/70" aria-hidden="true">+255</span>
+                    <input
+                        type="tel"
+                        id="phone_local"
+                        inputmode="numeric"
+                        autocomplete="tel-national"
+                        placeholder="712 345 678"
+                        required
+                        x-model="local"
+                        class="input-field flex-1 rounded-none border-none"
+                    >
+                </div>
+                <input type="hidden" name="phone" :value="e164">
             </div>
             <button type="submit" class="btn-primary w-full py-12">{{ __('site.auth_send_code') }}</button>
         </form>

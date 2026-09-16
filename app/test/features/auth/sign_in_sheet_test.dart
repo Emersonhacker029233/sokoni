@@ -197,4 +197,46 @@ void main() {
     // completeSignIn() closes the sheet for a returning user — back to the host screen.
     expect(find.text('open'), findsOneWidget);
   });
+
+  /// Part 2 (client feedback): "+255 shown as a fixed, non-editable
+  /// prefix — the user types only their own number."
+  testWidgets('the phone field shows a fixed +255 prefix the user cannot edit', (tester) async {
+    await _pump(tester, newNumbers: {});
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // TextFormField itself doesn't expose `decoration` publicly — it
+    // builds a real TextField internally, which does.
+    final textField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(textField.decoration?.prefixText, '+255 ');
+
+    // prefixText is decoration-only — typing local digits never includes
+    // it in the controller's own text, which is exactly what keeps it
+    // "not editable and not deletable".
+    await tester.enterText(find.byType(TextFormField).first, '754123456');
+    expect(textField.controller!.text, '754123456');
+  });
+
+  testWidgets('a number typed without the leading zero resolves just as well as one with it', (tester) async {
+    await _pump(tester, newNumbers: {});
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // No leading 0 this time (contrast with the other tests in this file,
+    // which all type the full "0754123456" local form).
+    await tester.enterText(find.byType(TextFormField).first, '754123456');
+    await tester.tap(find.text('Send code'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Welcome back'), findsOneWidget);
+  });
 }

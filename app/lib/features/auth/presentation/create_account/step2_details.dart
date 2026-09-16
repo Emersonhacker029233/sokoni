@@ -190,6 +190,12 @@ class _CreateAccountStep2DetailsState extends ConsumerState<CreateAccountStep2De
               decoration: InputDecoration(
                 labelText: l10n.phoneSignInPhoneLabel,
                 hintText: l10n.phoneSignInPhoneHint,
+                // Part 2 (client feedback): fixed, non-editable +255
+                // prefix — see sign_in_sheet.dart's own phone field for
+                // the same treatment and why prefixText is the right
+                // mechanism (display-only, never part of the
+                // controller's actual text).
+                prefixText: '+255 ',
                 suffixIcon: _CheckIcon(status: _phoneStatus),
               ),
               validator: SokoniValidators.phone,

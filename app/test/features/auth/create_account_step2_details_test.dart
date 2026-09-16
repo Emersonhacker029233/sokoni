@@ -144,4 +144,14 @@ void main() {
 
     expect(submitted, isFalse, reason: 'a genuinely already-registered number must still block — only broken checks fail open');
   });
+
+  /// Part 2 (client feedback): "+255 shown as a fixed, non-editable prefix" — same treatment as the sign-in sheet's own phone field.
+  testWidgets('the phone field shows a fixed +255 prefix', (tester) async {
+    await _pump(tester, authRepository: _ScriptedAuthRepository(registeredPhone: '+255700000000'), onSubmitted: () {});
+
+    final textField = tester.widget<TextField>(
+      find.descendant(of: find.widgetWithText(TextFormField, 'Phone number'), matching: find.byType(TextField)),
+    );
+    expect(textField.decoration?.prefixText, '+255 ');
+  });
 }

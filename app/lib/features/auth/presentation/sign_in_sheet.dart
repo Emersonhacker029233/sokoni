@@ -159,6 +159,14 @@ class _SignInSheetContentState extends ConsumerState<_SignInSheetContent> {
       decoration: InputDecoration(
         labelText: l10n.phoneSignInPhoneLabel,
         hintText: l10n.phoneSignInPhoneHint,
+        // Part 2 (client feedback): "+255 shown as a fixed, non-editable
+        // country segment — the user types only their own number."
+        // prefixText is display-only (part of the decoration, not the
+        // controller's text), so it can never be selected/deleted by the
+        // user and never ends up in _phoneController.text either —
+        // SokoniFormat.phoneToE164 below still only ever sees the local
+        // digits the user actually typed.
+        prefixText: '+255 ',
       ),
       validator: SokoniValidators.phone,
     );
