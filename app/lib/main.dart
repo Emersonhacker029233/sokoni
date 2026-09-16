@@ -12,6 +12,31 @@ import 'core/theme/app_theme.dart';
 Timer? _globalStartupWatchdog;
 bool _firstFrameConfirmed = false;
 
+/// Part 5 (client feedback): "Switching is instant — swap the active
+/// token, refresh providers, no re-verification." "Refresh providers"
+/// means every provider holding per-account state (the cart, drafts,
+/// unread counts, cached feed data) must reset, not just the auth
+/// state — that's the actual leakage risk the client called out
+/// explicitly. Enumerating and manually resetting each one individually
+/// is exactly the kind of list that quietly goes stale the next time a
+/// new per-user provider is added; recreating the entire ProviderScope
+/// (a fresh [Key] on it forces Flutter to tear down and rebuild that
+/// whole subtree) resets literally all of them in one guaranteed-
+/// complete step instead. Deliberately NOT touched: the startup
+/// watchdog/BootLog sequence above and in [_AppRoot] below stays exactly
+/// as it was — this only wraps the [ProviderScope] that already existed
+/// one layer further out, so the fix for the prior 3-day startup hang
+/// (an animation/navigation coupling, nothing to do with providers) is
+/// untouched by this.
+VoidCallback? _restartAppCallback;
+
+/// Called by [AuthStateController] after switching the active account
+/// (or signing out into a remaining one) — never called mid-navigation
+/// or from anything the app's own independent-timer navigation depends
+/// on, so this can't reintroduce the class of bug that timer exists to
+/// prevent.
+void restartApp() => _restartAppCallback?.call();
+
 void main() {
   // Everything below runs inside a guarded zone, with both Flutter's own
   // widget-build error hook and the root isolate's uncaught-error hook
@@ -58,7 +83,7 @@ void main() {
     _armGlobalStartupWatchdog();
 
     BootLog.step('about to runApp()');
-    runApp(const ProviderScope(child: SokoniApp()));
+    runApp(const _AppRoot());
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _confirmFirstFrame());
   }, (Object error, StackTrace stack) {
@@ -81,6 +106,39 @@ void _confirmFirstFrame() {
   _firstFrameConfirmed = true;
   _globalStartupWatchdog?.cancel();
   BootLog.step('first frame confirmed — global watchdog cancelled');
+}
+
+/// Owns the [ProviderScope]'s key so [restartApp] can force it to
+/// rebuild from scratch — see that function's own docblock for why a
+/// full-scope reset is the right tool for "switching accounts must never
+/// leak per-user state" rather than manually invalidating a hand-picked
+/// list of providers.
+class _AppRoot extends StatefulWidget {
+  const _AppRoot();
+
+  @override
+  State<_AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<_AppRoot> {
+  Key _scopeKey = UniqueKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _restartAppCallback = () => setState(() => _scopeKey = UniqueKey());
+  }
+
+  @override
+  void dispose() {
+    _restartAppCallback = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ProviderScope(key: _scopeKey, child: const SokoniApp());
+  }
 }
 
 class SokoniApp extends ConsumerWidget {
@@ -141,7 +199,7 @@ class _StartupTimeoutApp extends StatelessWidget {
                       FilledButton(
                         onPressed: () {
                           _armGlobalStartupWatchdog();
-                          runApp(const ProviderScope(child: SokoniApp()));
+                          runApp(const _AppRoot());
                           WidgetsBinding.instance.addPostFrameCallback((_) => _confirmFirstFrame());
                         },
                         child: Text(l10n.commonRetry),

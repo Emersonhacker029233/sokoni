@@ -1,11 +1,64 @@
+import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+/// One signed-in account this device remembers — enough to render the
+/// account switcher (avatar, name, handle) and to reattach as the active
+/// bearer token without a network call. Part 5 (client feedback):
+/// "Instagram-style account switching... store credentials for multiple
+/// accounts in secure storage, keyed by user."
+class StoredAccount {
+  const StoredAccount({required this.userId, required this.token, required this.name, this.avatar, this.handle});
+
+  final int userId;
+  final String token;
+  final String name;
+  final String? avatar;
+  final String? handle;
+
+  Map<String, dynamic> toJson() => {
+    'userId': userId,
+    'token': token,
+    'name': name,
+    'avatar': avatar,
+    'handle': handle,
+  };
+
+  factory StoredAccount.fromJson(Map<String, dynamic> json) => StoredAccount(
+    userId: json['userId'] as int,
+    token: json['token'] as String,
+    name: json['name'] as String,
+    avatar: json['avatar'] as String?,
+    handle: json['handle'] as String?,
+  );
+
+  StoredAccount copyWith({String? token, String? name, String? avatar, String? handle}) => StoredAccount(
+    userId: userId,
+    token: token ?? this.token,
+    name: name ?? this.name,
+    avatar: avatar ?? this.avatar,
+    handle: handle ?? this.handle,
+  );
+}
+
 /// Thin wrapper around [FlutterSecureStorage] scoped to the handful of
-/// secrets Sokoni persists on-device: the Sanctum bearer token and the
-/// signed-in user's id (used to key the drift cache per-account).
+/// secrets Sokoni persists on-device: every signed-in account this
+/// device remembers, and which one is currently active.
+///
+/// Part 5 (client feedback): "Instagram-style account switching — a user
+/// signed into one account can switch to another without signing out."
+/// Every account this device has ever signed into stays in
+/// [_accountsKey] (a JSON array — `flutter_secure_storage` only stores
+/// strings, and this is a handful of small records, not a case for a
+/// dynamic per-user key per value) until it's explicitly signed out of;
+/// [_activeUserIdKey] just points at which one is currently active.
+/// `readToken()`/`readUserId()` resolve through that pointer, so
+/// [AuthInterceptor] and [AuthStateController] need no changes at all to
+/// become multi-account-aware — switching is exactly "move the pointer",
+/// nothing more, which is what makes it instant and needs no
+/// re-verification.
 ///
 /// `encryptedSharedPreferences: true` routes storage through AndroidX
 /// Security's `EncryptedSharedPreferences`/`MasterKey` rather than this
@@ -65,24 +118,97 @@ class SokoniSecureStorage {
 
   final FlutterSecureStorage _storage;
 
-  static const _tokenKey = 'sokoni.auth_token';
-  static const _userIdKey = 'sokoni.user_id';
+  static const _accountsKey = 'sokoni.accounts';
+  static const _activeUserIdKey = 'sokoni.active_user_id';
 
-  Future<String?> readToken() => _guardedRead(_tokenKey);
-
-  Future<void> writeToken(String token) => _guardedWrite(_tokenKey, token);
+  /// The active account's bearer token, if any — resolved through
+  /// [_activeUserIdKey], not a separately stored value, so switching
+  /// accounts (just moving that pointer) is all [AuthInterceptor] and
+  /// [AuthStateController] ever need to see.
+  Future<String?> readToken() async {
+    final account = await activeAccount();
+    return account?.token;
+  }
 
   Future<int?> readUserId() async {
-    final raw = await _guardedRead(_userIdKey);
+    final raw = await _guardedRead(_activeUserIdKey);
     return raw == null ? null : int.tryParse(raw);
   }
 
-  Future<void> writeUserId(int id) => _guardedWrite(_userIdKey, '$id');
+  Future<List<StoredAccount>> readAccounts() async {
+    final raw = await _guardedRead(_accountsKey);
+    if (raw == null) return [];
+    try {
+      final list = jsonDecode(raw) as List;
+      return list.map((e) => StoredAccount.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      // A corrupted (not merely absent) accounts blob — same philosophy
+      // as the PlatformException guards below: fail to "no accounts
+      // remembered", never to a crash or a stuck app.
+      developer.log('Secure storage: accounts blob failed to parse — treating as empty.', name: 'SokoniSecureStorage', error: e);
+      return [];
+    }
+  }
 
-  /// Clears the session on logout/401 — does not touch any other secrets.
+  Future<StoredAccount?> activeAccount() async {
+    final activeId = await readUserId();
+    if (activeId == null) return null;
+    final accounts = await readAccounts();
+    for (final account in accounts) {
+      if (account.userId == activeId) return account;
+    }
+    return null;
+  }
+
+  /// Adds a freshly signed-in account (or updates one already
+  /// remembered — a refreshed token for the same user) and makes it the
+  /// active one. Used by every real sign-in path (OTP, social, register)
+  /// and by "Add account" — the two are the same operation from this
+  /// storage layer's point of view.
+  Future<void> addOrUpdateAccount(StoredAccount account) async {
+    final accounts = await readAccounts();
+    final next = [
+      for (final existing in accounts)
+        if (existing.userId != account.userId) existing,
+      account,
+    ];
+    await _writeAccounts(next);
+    await _guardedWrite(_activeUserIdKey, '${account.userId}');
+  }
+
+  /// Part 5 (client feedback): "Switching is instant — swap the active
+  /// token, refresh providers, no re-verification." Purely a pointer
+  /// move — the account must already be remembered on this device.
+  Future<void> switchActiveAccount(int userId) async {
+    final accounts = await readAccounts();
+    if (accounts.any((a) => a.userId == userId)) {
+      await _guardedWrite(_activeUserIdKey, '$userId');
+    }
+  }
+
+  /// Part 5 (client feedback): "Signing out removes only the active
+  /// account and returns to the next one, or to guest if it was the
+  /// last." Also what a 401 (the server rejecting the active token)
+  /// means now — see [AuthInterceptor], unchanged, still just calls
+  /// this on a real rejection.
   Future<void> clearSession() async {
-    await _guardedDelete(_tokenKey);
-    await _guardedDelete(_userIdKey);
+    final activeId = await readUserId();
+    if (activeId == null) return;
+
+    final remaining = (await readAccounts()).where((a) => a.userId != activeId).toList();
+    await _writeAccounts(remaining);
+    await _guardedDelete(_activeUserIdKey);
+    if (remaining.isNotEmpty) {
+      await _guardedWrite(_activeUserIdKey, '${remaining.first.userId}');
+    }
+  }
+
+  Future<void> _writeAccounts(List<StoredAccount> accounts) async {
+    if (accounts.isEmpty) {
+      await _guardedDelete(_accountsKey);
+      return;
+    }
+    await _guardedWrite(_accountsKey, jsonEncode(accounts.map((a) => a.toJson()).toList()));
   }
 
   Future<String?> _guardedRead(String key) async {

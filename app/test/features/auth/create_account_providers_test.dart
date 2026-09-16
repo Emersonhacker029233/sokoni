@@ -71,11 +71,18 @@ class _ScriptedAuthRepository extends AuthRepository {
   }
 }
 
+/// Also used directly as the [secureStorageProvider] override below —
+/// `sellerOnboardingProvider`/`searchHistoryProvider` now read the active
+/// user id to scope their disk cache key (Part 5 (client feedback): "the
+/// cart, drafts, cached feed... must switch with the account"), and the
+/// real [SokoniSecureStorage] would hang this test forever waiting on a
+/// platform channel that doesn't exist outside a real device.
 class _NoopSecureStorage extends SokoniSecureStorage {
   @override
-  Future<void> writeToken(String token) async {}
+  Future<void> addOrUpdateAccount(StoredAccount account) async {}
+
   @override
-  Future<void> writeUserId(int id) async {}
+  Future<int?> readUserId() async => null;
 }
 
 SokoniUser _fakeUser() => SokoniUser.fromJson({
@@ -117,6 +124,7 @@ Future<WidgetRef> _pumpAndCaptureRef(WidgetTester tester) async {
         appDatabaseProvider.overrideWithValue(AppDatabase.forTesting(NativeDatabase.memory())),
         authRepositoryProvider.overrideWithValue(_ScriptedAuthRepository()),
         sellerRepositoryProvider.overrideWithValue(_ScriptedSellerRepository()),
+        secureStorageProvider.overrideWithValue(_NoopSecureStorage()),
       ],
       child: Consumer(
         builder: (context, ref, _) {
@@ -153,6 +161,7 @@ void main() {
           appDatabaseProvider.overrideWithValue(db),
           authRepositoryProvider.overrideWithValue(_ScriptedAuthRepository()),
           sellerRepositoryProvider.overrideWithValue(_ScriptedSellerRepository()),
+          secureStorageProvider.overrideWithValue(_NoopSecureStorage()),
         ],
         child: Consumer(builder: (context, r, _) { ref = r; return const SizedBox.shrink(); }),
       ),

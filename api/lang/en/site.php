@@ -147,8 +147,15 @@ return [
     'auth_intent_sell' => 'I want to sell',
     'auth_intent_later' => 'Decide later',
     'auth_continue_in_app' => 'Continue in the Sokoni app for the best experience.',
+    // Part 5 (client feedback): "Add account" — the same phone-OTP/Google
+    // form, reached while already signed in as someone else.
+    'auth_add_account_title' => 'Add another account',
+    'auth_add_account_body' => "Sign in with a different phone number or Google account — you'll stay signed in to your current one too.",
 
     // Account
+    'account_switch_accounts' => 'Accounts',
+    'account_switch_current' => 'Current',
+    'account_add_account' => 'Add account',
     'account_orders' => 'My orders',
     'account_saved' => 'Saved items',
     'account_messages' => 'Messages',

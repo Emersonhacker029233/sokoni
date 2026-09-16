@@ -111,6 +111,9 @@
   "profileSignOut": "Toka",
   "profileStartSelling": "Anza kuuza",
   "profileSettings": "Mipangilio",
+  "profileAccountsTitle": "Akaunti",
+  "profileAccountCurrent": "Inatumika",
+  "profileAddAccount": "Ongeza akaunti",
 
   "settingsTitle": "Mipangilio",
   "settingsNameLabel": "Jina kamili",

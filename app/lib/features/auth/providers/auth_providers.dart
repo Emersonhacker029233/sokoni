@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../../data/api/auth_api.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -24,4 +25,14 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 final currentUserProvider = FutureProvider.autoDispose<SokoniUser>((ref) {
   ref.watch(authStateProvider);
   return ref.watch(authRepositoryProvider).me();
+});
+
+/// Part 5 (client feedback): "an account switcher in the profile screen
+/// listing signed-in accounts with avatar, name and handle." Re-fetched
+/// whenever [authStateProvider] flips, same as [currentUserProvider] —
+/// after a switch or an "Add account" sign-in, the list must reflect the
+/// newly remembered account without a manual refresh.
+final storedAccountsProvider = FutureProvider.autoDispose<List<StoredAccount>>((ref) {
+  ref.watch(authStateProvider);
+  return ref.watch(authRepositoryProvider).storedAccounts();
 });

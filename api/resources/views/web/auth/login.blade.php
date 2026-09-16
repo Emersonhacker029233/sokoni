@@ -2,8 +2,10 @@
 
 @section('content')
 <div class="mx-auto max-w-md px-16 py-48">
-    <h1 class="text-xl font-bold">{{ __('site.nav_sign_in') }}</h1>
-    <p class="mt-4 text-sm text-sokoni-black/60">Sign in or create an account — it only takes a phone number.</p>
+    <h1 class="text-xl font-bold">{{ $addingAccount ? __('site.auth_add_account_title') : __('site.nav_sign_in') }}</h1>
+    <p class="mt-4 text-sm text-sokoni-black/60">
+        {{ $addingAccount ? __('site.auth_add_account_body') : 'Sign in or create an account — it only takes a phone number.' }}
+    </p>
 
     @if ($errors->any())
         <div class="mt-16 rounded-chip bg-sokoni-danger/10 p-12 text-sm text-sokoni-danger">

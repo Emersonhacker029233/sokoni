@@ -33,13 +33,15 @@ class OnboardingDraft {
 class SellerOnboardingController extends AsyncNotifier<OnboardingDraft> {
   @override
   Future<OnboardingDraft> build() async {
-    final raw = await ref.watch(appDatabaseProvider).getKeyValue(_draftKey);
+    final key = await scopedCacheKey(ref, _draftKey);
+    final raw = await ref.watch(appDatabaseProvider).getKeyValue(key);
     if (raw == null) return const OnboardingDraft();
     return OnboardingDraft.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
   Future<void> _persist(OnboardingDraft draft) async {
-    await ref.read(appDatabaseProvider).setKeyValue(_draftKey, jsonEncode(draft.toJson()));
+    final key = await scopedCacheKey(ref, _draftKey);
+    await ref.read(appDatabaseProvider).setKeyValue(key, jsonEncode(draft.toJson()));
     state = AsyncData(draft);
   }
 
@@ -120,7 +122,8 @@ class SellerOnboardingController extends AsyncNotifier<OnboardingDraft> {
   }
 
   Future<void> complete() async {
-    await ref.read(appDatabaseProvider).setKeyValue(_draftKey, jsonEncode(const OnboardingDraft().toJson()));
+    final key = await scopedCacheKey(ref, _draftKey);
+    await ref.read(appDatabaseProvider).setKeyValue(key, jsonEncode(const OnboardingDraft().toJson()));
     state = const AsyncData(OnboardingDraft());
   }
 }

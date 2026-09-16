@@ -13,7 +13,8 @@ const _maxHistoryEntries = 10;
 class SearchHistoryController extends AsyncNotifier<List<String>> {
   @override
   Future<List<String>> build() async {
-    final raw = await ref.watch(appDatabaseProvider).getKeyValue(_searchHistoryKey);
+    final key = await scopedCacheKey(ref, _searchHistoryKey);
+    final raw = await ref.watch(appDatabaseProvider).getKeyValue(key);
     if (raw == null) return [];
     return (jsonDecode(raw) as List).cast<String>();
   }
@@ -23,12 +24,14 @@ class SearchHistoryController extends AsyncNotifier<List<String>> {
     if (trimmed.isEmpty) return;
     final current = state.value ?? [];
     final updated = [trimmed, ...current.where((t) => t != trimmed)].take(_maxHistoryEntries).toList();
-    await ref.read(appDatabaseProvider).setKeyValue(_searchHistoryKey, jsonEncode(updated));
+    final key = await scopedCacheKey(ref, _searchHistoryKey);
+    await ref.read(appDatabaseProvider).setKeyValue(key, jsonEncode(updated));
     state = AsyncData(updated);
   }
 
   Future<void> clear() async {
-    await ref.read(appDatabaseProvider).setKeyValue(_searchHistoryKey, jsonEncode(<String>[]));
+    final key = await scopedCacheKey(ref, _searchHistoryKey);
+    await ref.read(appDatabaseProvider).setKeyValue(key, jsonEncode(<String>[]));
     state = const AsyncData([]);
   }
 }

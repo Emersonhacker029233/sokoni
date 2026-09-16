@@ -98,12 +98,16 @@ const _seenMarkKeyPrefix = 'updates_seen_';
 /// not synced server-side), backed by `AppDatabase`'s generic key/value
 /// cache table rather than a new drift table.
 class UpdateSeenMarks extends AsyncNotifier<Map<int, DateTime>> {
+  String? _prefix;
+
+  Future<String> _resolvedPrefix() async => _prefix ??= await scopedCacheKey(ref, _seenMarkKeyPrefix);
+
   @override
   Future<Map<int, DateTime>> build() async {
-    final rows = await ref.watch(appDatabaseProvider).getKeyValuesWithPrefix(_seenMarkKeyPrefix);
+    final prefix = await _resolvedPrefix();
+    final rows = await ref.watch(appDatabaseProvider).getKeyValuesWithPrefix(prefix);
     return {
-      for (final entry in rows.entries)
-        int.parse(entry.key.substring(_seenMarkKeyPrefix.length)): DateTime.parse(entry.value),
+      for (final entry in rows.entries) int.parse(entry.key.substring(prefix.length)): DateTime.parse(entry.value),
     };
   }
 
@@ -114,7 +118,8 @@ class UpdateSeenMarks extends AsyncNotifier<Map<int, DateTime>> {
 
   Future<void> markSeen(int sellerId) async {
     final now = DateTime.now();
-    await ref.read(appDatabaseProvider).setKeyValue('$_seenMarkKeyPrefix$sellerId', now.toIso8601String());
+    final prefix = await _resolvedPrefix();
+    await ref.read(appDatabaseProvider).setKeyValue('$prefix$sellerId', now.toIso8601String());
     state = AsyncData({...?state.value, sellerId: now});
   }
 }

@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/api/device_api.dart';
+import '../main.dart' show restartApp;
 import 'location/location_service.dart';
 import 'network/dio_client.dart';
 import 'push/push_service.dart';
@@ -101,10 +102,32 @@ class AuthStateController extends Notifier<AuthState> {
     unawaited(ref.read(pushServiceProvider).registerDevice());
   }
 
+  /// Part 5 (client feedback): "Signing out removes only the active
+  /// account and returns to the next one, or to guest if it was the
+  /// last." `clearSession()` already does the "which account is next"
+  /// part (see SokoniSecureStorage); this only has to make the rest of
+  /// the app agree, which — since ANY leftover per-account provider
+  /// state (the cart, drafts, unread counts) is exactly the leakage
+  /// this feature was built to prevent — means a full restart, not just
+  /// flipping `state`. `restartApp()`'s own fresh AuthStateController
+  /// re-reads storage in `_loadInitial()` and lands on whichever
+  /// outcome is now correct (the next account, or guest) — this method
+  /// never needs to know which itself.
   Future<void> signOut() async {
     await ref.read(secureStorageProvider).clearSession();
     await ref.read(appDatabaseProvider).clearAll();
-    state = const AuthState(AuthStatus.unauthenticated);
+    restartApp();
+  }
+
+  /// Part 5 (client feedback): "Switching is instant — swap the active
+  /// token, refresh providers, no re-verification." Goes straight to
+  /// [secureStorageProvider] rather than through AuthRepository, which
+  /// already depends on this file (core/) — reaching back the other way
+  /// would be a circular import for no real benefit, since this is
+  /// exactly the same storage instance either way.
+  Future<void> switchAccount(int userId) async {
+    await ref.read(secureStorageProvider).switchActiveAccount(userId);
+    restartApp();
   }
 }
 
@@ -118,6 +141,30 @@ final dioProvider = Provider<Dio>((ref) {
     onUnauthenticated: () async => ref.read(authStateProvider.notifier).signOut(),
   );
 });
+
+/// Per-account scoping for [AppDatabase]'s generic key/value cache table.
+///
+/// Part 5 (client feedback): "Be careful with anything holding per-user
+/// state — the cart, drafts, cached feed, unread counts — all of it must
+/// switch with the account rather than leaking between them." The
+/// full-ProviderScope restart in [AuthStateController.switchAccount] wipes
+/// every in-memory provider (the cart included), but does nothing for
+/// state that's persisted to disk under a fixed key — search history,
+/// the seller-onboarding draft, and per-shop "seen" marks all go through
+/// this same key/value table, and without scoping, a freshly-restarted
+/// provider for the newly active account would read the PREVIOUS
+/// account's cached value straight back out.
+///
+/// Falls back to a fixed `'guest'` scope when signed out, matching this
+/// app's browse-without-an-account model (CLAUDE.md feature 4) — a
+/// guest's search history is still meaningfully "theirs" until they sign
+/// in, and reusing one fixed scope for every signed-out visitor is no
+/// worse than this app's pre-Part-5 behaviour (there was only ever one
+/// account at a time before).
+Future<String> scopedCacheKey(Ref ref, String key) async {
+  final userId = await ref.watch(secureStorageProvider).readUserId();
+  return userId == null ? 'guest:$key' : 'u$userId:$key';
+}
 
 final deviceApiProvider = Provider<DeviceApi>((ref) => DeviceApi(ref.watch(dioProvider)));
 

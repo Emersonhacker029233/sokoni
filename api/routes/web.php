@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\Account\AccountSwitchController;
 use App\Http\Controllers\Web\Account\MessagesController;
 use App\Http\Controllers\Web\Account\NotificationsController;
 use App\Http\Controllers\Web\Account\OrdersController;
@@ -86,16 +87,20 @@ Route::get('/sitemap-shops.xml', [SeoController::class, 'sitemapShops'])->name('
 Route::get('/sitemap-categories.xml', [SeoController::class, 'sitemapCategories'])->name('web.sitemap.categories');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('web.robots');
 
-Route::middleware('guest:web')->group(function () {
-    Route::get('/login', [OtpAuthController::class, 'show'])->name('web.login');
-    Route::post('/auth/otp/request', [OtpAuthController::class, 'requestOtp'])->name('web.auth.otp.request')->middleware('throttle:otp');
-    Route::post('/auth/otp/verify', [OtpAuthController::class, 'verifyOtp'])->name('web.auth.otp.verify');
-    Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('web.auth.google.redirect');
-    Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('web.auth.google.callback');
-});
+// Part 5 (client feedback): NOT behind `guest:web` — "Add account" reaches
+// this exact phone-OTP/Google flow while already signed in as someone
+// else, so an already-authenticated visitor must still be able to load
+// and post to these. `OtpAuthController::show()` does the old guest-gate
+// bounce itself for anyone who ISN'T explicitly adding an account.
+Route::get('/login', [OtpAuthController::class, 'show'])->name('web.login');
+Route::post('/auth/otp/request', [OtpAuthController::class, 'requestOtp'])->name('web.auth.otp.request')->middleware('throttle:otp');
+Route::post('/auth/otp/verify', [OtpAuthController::class, 'verifyOtp'])->name('web.auth.otp.verify');
+Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('web.auth.google.redirect');
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('web.auth.google.callback');
 
 Route::middleware(['auth:web', 'web.onboarded'])->group(function () {
     Route::post('/logout', [OtpAuthController::class, 'logout'])->name('web.logout');
+    Route::post('/account/switch/{targetUser}', [AccountSwitchController::class, 'switch'])->name('web.account.switch');
 
     Route::get('/auth/terms', [TermsAcceptanceController::class, 'show'])->name('web.auth.terms');
     Route::post('/auth/terms', [TermsAcceptanceController::class, 'store'])->name('web.auth.terms.store');

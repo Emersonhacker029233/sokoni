@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RequestOtpRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Models\User;
+use App\Services\Auth\WebAccountSwitcher;
 use App\Services\Otp\PhoneOtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,10 @@ use Illuminate\View\View;
  */
 class OtpAuthController extends Controller
 {
-    public function __construct(private readonly PhoneOtpService $otp) {}
+    public function __construct(
+        private readonly PhoneOtpService $otp,
+        private readonly WebAccountSwitcher $switcher,
+    ) {}
 
     /**
      * Only two safe, named destinations are ever accepted here — never a
@@ -39,13 +43,35 @@ class OtpAuthController extends Controller
         'profile' => 'web.account.dashboard',
     ];
 
-    public function show(Request $request): View
+    public function show(Request $request): RedirectResponse|View
     {
+        // Part 5 (client feedback): "Add account" reaches this exact page
+        // while already authenticated — this route is no longer behind
+        // `guest:web` so that can work at all. A visitor who is already
+        // signed in and did NOT arrive via "Add account" gets the same
+        // bounce the old middleware used to give them.
+        // Carried in session, not just the query string, because
+        // `requestOtp()` redirects back here with a bare
+        // `route('web.login')` (no query params) between the phone and
+        // code steps — without this, the code step of an "Add account"
+        // flow would look like a bare, non-adding /login visit and bounce
+        // an already-authenticated visitor straight to the dashboard
+        // before they could ever enter the code.
+        if ($request->has('add_account')) {
+            $request->session()->put('otp_adding_account', $request->boolean('add_account'));
+        }
+        $addingAccount = $request->session()->get('otp_adding_account', false);
+
+        if (Auth::check() && ! $addingAccount) {
+            return redirect()->intended(route('web.account.dashboard'));
+        }
+
         if ($request->filled('redirect') && isset(self::SAFE_REDIRECT_TARGETS[$request->string('redirect')->toString()])) {
             $request->session()->put('url.intended', route(self::SAFE_REDIRECT_TARGETS[$request->string('redirect')->toString()]));
         }
 
         return view('web.auth.login', [
+            'addingAccount' => $addingAccount,
             'step' => $request->session()->get('otp_phone') ? 'code' : 'phone',
             'phone' => $request->session()->get('otp_phone'),
             'isNewAccount' => $request->session()->get('otp_is_new_account', false),
@@ -126,19 +152,21 @@ class OtpAuthController extends Controller
             throw ValidationException::withMessages(['code' => 'This account has been suspended.']);
         }
 
-        $request->session()->forget(['otp_phone', 'otp_is_new_account', 'otp_expires_at']);
+        $request->session()->forget(['otp_phone', 'otp_is_new_account', 'otp_expires_at', 'otp_adding_account']);
 
-        Auth::login($user, remember: true);
-        $request->session()->regenerate();
+        $this->switcher->login($request, $user);
 
         return redirect()->intended(route('web.account.dashboard'));
     }
 
+    /**
+     * Part 5 (client feedback): "Signing out removes only the active
+     * account and returns to the next one, or to guest if it was the
+     * last." See WebAccountSwitcher::signOutActive() for the mechanics.
+     */
     public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->switcher->signOutActive($request);
 
         return redirect()->route('web.home');
     }

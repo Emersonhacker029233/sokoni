@@ -40,8 +40,7 @@ class AuthRepository {
         'code': code,
         'name': name,
       });
-      await _storage.writeToken(response.token);
-      await _storage.writeUserId(response.user.id);
+      await _persistAccount(response);
       return response;
     } catch (e) {
       throw mapDioError(e);
@@ -99,8 +98,7 @@ class AuthRepository {
         'address': ?address,
         'whatsapp': ?whatsappE164,
       });
-      await _storage.writeToken(response.token);
-      await _storage.writeUserId(response.user.id);
+      await _persistAccount(response);
       return response;
     } catch (e) {
       throw mapDioError(e);
@@ -110,12 +108,27 @@ class AuthRepository {
   Future<AuthResponse> socialLogin({required String provider, required String token}) async {
     try {
       final response = await _api.socialLogin({'provider': provider, 'token': token});
-      await _storage.writeToken(response.token);
-      await _storage.writeUserId(response.user.id);
+      await _persistAccount(response);
       return response;
     } catch (e) {
       throw mapDioError(e);
     }
+  }
+
+  /// Part 5 (client feedback): every real sign-in path (OTP, register,
+  /// social) lands here — one place that turns a fresh [AuthResponse]
+  /// into a remembered [StoredAccount] and makes it active, rather than
+  /// three copies of the same two-write sequence that could drift apart.
+  Future<void> _persistAccount(AuthResponse response) {
+    return _storage.addOrUpdateAccount(
+      StoredAccount(
+        userId: response.user.id,
+        token: response.token,
+        name: response.user.name,
+        avatar: response.user.avatar,
+        handle: response.user.sellerHandle,
+      ),
+    );
   }
 
   /// One-time "buy / sell / decide later" answer for the intent screen
@@ -179,4 +192,14 @@ class AuthRepository {
       await _storage.clearSession();
     }
   }
+
+  /// Part 5 (client feedback): every account this device currently
+  /// remembers, for the profile screen's account switcher. The actual
+  /// switch/sign-out operations live on AuthStateController instead of
+  /// here — both need to trigger a full provider-tree restart
+  /// afterwards (see main.dart's restartApp()), which this repository
+  /// has no way to reach without a circular import back to core/.
+  Future<List<StoredAccount>> storedAccounts() => _storage.readAccounts();
+
+  Future<StoredAccount?> activeStoredAccount() => _storage.activeAccount();
 }

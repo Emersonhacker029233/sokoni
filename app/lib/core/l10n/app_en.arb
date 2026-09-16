@@ -211,6 +211,12 @@
   "@profileStartSelling": {},
   "profileSettings": "Settings",
   "@profileSettings": {},
+  "profileAccountsTitle": "Accounts",
+  "@profileAccountsTitle": {"description": "Section header above the list of signed-in accounts on this device (Part 5: account switching)"},
+  "profileAccountCurrent": "Current",
+  "@profileAccountCurrent": {"description": "Badge next to the account that is currently active in the switcher list"},
+  "profileAddAccount": "Add account",
+  "@profileAddAccount": {},
 
   "settingsTitle": "Settings",
   "@settingsTitle": {},

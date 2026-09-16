@@ -147,8 +147,13 @@ return [
     'auth_intent_sell' => 'Nataka kuuza',
     'auth_intent_later' => 'Nitaamua baadaye',
     'auth_continue_in_app' => 'Endelea kwenye programu ya Sokoni kwa uzoefu bora zaidi.',
+    'auth_add_account_title' => 'Ongeza akaunti nyingine',
+    'auth_add_account_body' => 'Ingia kwa nambari nyingine ya simu au akaunti ya Google — utabaki umeingia kwenye akaunti yako ya sasa pia.',
 
     // Account
+    'account_switch_accounts' => 'Akaunti',
+    'account_switch_current' => 'Inatumika',
+    'account_add_account' => 'Ongeza akaunti',
     'account_orders' => 'Oda zangu',
     'account_saved' => 'Vilivyohifadhiwa',
     'account_messages' => 'Ujumbe',

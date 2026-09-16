@@ -86,14 +86,12 @@ void main() {
       expect(await storage.readUserId(), isNull);
     });
 
-    test('writeToken() completes rather than throwing', () async {
+    test('addOrUpdateAccount() completes rather than throwing', () async {
       final storage = SokoniSecureStorage(storage: const _CorruptedPlatformStorage());
-      await expectLater(storage.writeToken('a-token'), completes);
-    });
-
-    test('writeUserId() completes rather than throwing', () async {
-      final storage = SokoniSecureStorage(storage: const _CorruptedPlatformStorage());
-      await expectLater(storage.writeUserId(7), completes);
+      await expectLater(
+        storage.addOrUpdateAccount(const StoredAccount(userId: 7, token: 'a-token', name: 'Asha')),
+        completes,
+      );
     });
 
     test('clearSession() completes rather than throwing, even though its own delete() and the recovery deleteAll() both fail', () async {

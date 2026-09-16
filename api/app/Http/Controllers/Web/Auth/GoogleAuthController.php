@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Web\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\Auth\WebAccountSwitcher;
 use App\Services\SocialAuth\SocialUserResolver;
 use App\Services\SocialAuth\VerifiedIdentity;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -33,7 +33,7 @@ class GoogleAuthController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function callback(SocialUserResolver $resolver): RedirectResponse
+    public function callback(SocialUserResolver $resolver, WebAccountSwitcher $switcher): RedirectResponse
     {
         abort_unless(self::isConfigured(), 404);
 
@@ -59,8 +59,7 @@ class GoogleAuthController extends Controller
             return redirect()->route('web.login')->withErrors(['google' => 'This account has been suspended.']);
         }
 
-        Auth::login($user, remember: true);
-        request()->session()->regenerate();
+        $switcher->login(request(), $user);
 
         return redirect()->intended(route('web.account.dashboard'));
     }
