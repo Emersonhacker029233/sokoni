@@ -194,7 +194,7 @@ class HomePageTest extends TestCase
         $seller = SellerProfile::factory()->verified()->create();
         Product::factory()->count(3)->create(['seller_id' => $seller->id, 'category_id' => $category->id]);
 
-        $response = $this->get('/');
+        $response = $this->get('/?lang=en');
 
         $response->assertOk();
         $response->assertSee('Electronics');

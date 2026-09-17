@@ -1,5 +1,5 @@
 @if ($paginator->hasPages())
-    <nav role="navigation" aria-label="Pagination" class="flex items-center justify-center gap-4 py-24">
+    <nav role="navigation" aria-label="{{ __('site.a11y_pagination') }}" class="flex items-center justify-center gap-4 py-24">
         @if ($paginator->onFirstPage())
             <span class="chip pointer-events-none opacity-40">&laquo;</span>
         @else

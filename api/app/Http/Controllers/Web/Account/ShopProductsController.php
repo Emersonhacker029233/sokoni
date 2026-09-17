@@ -35,7 +35,7 @@ class ShopProductsController extends Controller
 
         $products = $seller->products()->with(['category', 'media'])->latest()->paginate(20)->withQueryString();
 
-        return view('web.account.shop-products', ['products' => $products, 'title' => 'My products']);
+        return view('web.account.shop-products', ['products' => $products, 'title' => __('site.shop_products_title')]);
     }
 
     public function create(): View
@@ -43,7 +43,7 @@ class ShopProductsController extends Controller
         return view('web.account.shop-product-form', [
             'product' => null,
             ...$this->categoryFormData(),
-            'title' => 'New product',
+            'title' => __('site.product_form_title_new'),
             'maxMediaPerProduct' => Settings::maxMediaPerProduct(),
         ]);
     }
@@ -56,7 +56,7 @@ class ShopProductsController extends Controller
         $this->syncVehicleAttributes($product, $data);
 
         return redirect()->route('web.account.shop.products.edit', $product)
-            ->with('status', 'Product created — now add your photos below.');
+            ->with('status', __('site.shop_product_created'));
     }
 
     public function edit(Product $product): View
@@ -66,7 +66,7 @@ class ShopProductsController extends Controller
         return view('web.account.shop-product-form', [
             'product' => $product->load(['media', 'category', 'productAttributes']),
             ...$this->categoryFormData(),
-            'title' => 'Edit '.$product->title,
+            'title' => __('site.product_form_title_edit').' '.$product->title,
             'maxMediaPerProduct' => Settings::maxMediaPerProduct(),
         ]);
     }
@@ -77,7 +77,7 @@ class ShopProductsController extends Controller
         $product->update(collect($data)->except(['make', 'model', 'year'])->all());
         $this->syncVehicleAttributes($product, $data);
 
-        return redirect()->route('web.account.shop.products')->with('status', 'Product updated.');
+        return redirect()->route('web.account.shop.products')->with('status', __('site.shop_product_updated'));
     }
 
     /**
@@ -110,7 +110,7 @@ class ShopProductsController extends Controller
             ->orderBy('sort_order')
             ->get()
             ->groupBy('parent_id')
-            ->map(fn ($group) => $group->map(fn (Category $c) => ['id' => $c->id, 'name_en' => $c->name_en])->values())
+            ->map(fn ($group) => $group->map(fn (Category $c) => ['id' => $c->id, 'name' => $c->name(app()->getLocale())])->values())
             ->toArray();
 
         // C3 (tester feedback): "Cars" is always a subcategory (never

@@ -34,7 +34,7 @@ class ProductSubcategoryFormTest extends TestCase
         $electronics = Category::whereNull('parent_id')->where('name_en', 'Electronics')->firstOrFail();
         $tvs = Category::where('parent_id', $electronics->id)->firstOrFail();
 
-        $response = $this->actingAsWebUser($this->sellerUser())->get(route('web.account.shop.products.create'));
+        $response = $this->actingAsWebUser($this->sellerUser())->get(route('web.account.shop.products.create', ['lang' => 'en']));
 
         $response->assertOk();
         // The subcategory shouldn't appear as its own top-level <option> —

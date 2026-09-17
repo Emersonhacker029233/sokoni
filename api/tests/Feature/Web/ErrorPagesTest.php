@@ -14,7 +14,7 @@ class ErrorPagesTest extends TestCase
     {
         Category::factory()->create(['name_en' => 'Popular Category', 'parent_id' => null, 'is_active' => true]);
 
-        $response = $this->get('/c/this-does-not-exist');
+        $response = $this->get('/c/this-does-not-exist?lang=en');
 
         $response->assertNotFound();
         $response->assertSee('Popular Category');

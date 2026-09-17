@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<x-breadcrumb :items="[['label' => 'Sokoni', 'url' => route('web.home')], ['label' => 'Safety tips', 'url' => null]]" />
+<x-breadcrumb :items="[['label' => 'Sokoni', 'url' => route('web.home')], ['label' => __('site.footer_safety_link'), 'url' => null]]" />
 
 <article class="mx-auto max-w-3xl px-16 pb-64 lg:px-24">
 @if (app()->getLocale() === 'sw')

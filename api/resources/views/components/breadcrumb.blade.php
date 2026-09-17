@@ -1,7 +1,7 @@
 @props(['items'])
 {{-- $items: array of ['label' => string, 'url' => string|null] — the last item (url null) is the current page. --}}
 
-<nav aria-label="Breadcrumb" class="mx-auto max-w-7xl px-16 py-12 text-xs text-sokoni-black/50 lg:px-24">
+<nav aria-label="{{ __('site.a11y_breadcrumb') }}" class="mx-auto max-w-7xl px-16 py-12 text-xs text-sokoni-black/50 lg:px-24">
     <ol class="flex flex-wrap items-center gap-4" itemscope itemtype="https://schema.org/BreadcrumbList">
         @foreach ($items as $index => $item)
             <li class="flex items-center gap-4" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">

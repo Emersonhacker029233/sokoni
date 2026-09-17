@@ -55,7 +55,7 @@ class MegaMenuTest extends TestCase
         $electronics = Category::whereNull('parent_id')->where('name_en', 'Electronics')->firstOrFail();
         $tvs = Category::where('parent_id', $electronics->id)->where('name_en', 'TVs')->firstOrFail();
 
-        $response = $this->get('/');
+        $response = $this->get('/?lang=en');
 
         $response->assertOk();
         // Desktop trigger link.
@@ -71,10 +71,10 @@ class MegaMenuTest extends TestCase
     {
         (new CategorySeeder)->run();
 
-        $response = $this->get('/');
+        $response = $this->get('/?lang=en');
 
         $response->assertOk();
-        $response->assertSee(__('site.category_view_all_in', ['category' => 'Electronics']));
+        $response->assertSee(__('site.category_view_all_in', ['category' => 'Electronics'], 'en'));
     }
 
     public function test_a_category_with_no_subcategories_gets_no_dropdown_affordance(): void
@@ -160,7 +160,7 @@ class MegaMenuTest extends TestCase
             'category_id' => Category::whereNull('parent_id')->where('name_en', 'Fashion')->firstOrFail()->id,
         ]);
 
-        $response = $this->get('/');
+        $response = $this->get('/?lang=en');
 
         $response->assertOk();
         $html = $response->getContent();

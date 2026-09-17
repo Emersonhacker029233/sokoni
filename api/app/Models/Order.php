@@ -91,6 +91,30 @@ class Order extends Model
         return $this->status === 'completed';
     }
 
+    /**
+     * Language audit (client feedback): the website used to render this
+     * raw ('pending'/'accepted'/...) via `ucfirst()`, which is always
+     * English regardless of the visitor's chosen language — exactly the
+     * "mixture of two languages" the Kiswahili-default audit called out.
+     * Static so the timeline's own status strings (below) can share it
+     * without needing a full Order instance.
+     */
+    public static function labelForStatus(string $status): string
+    {
+        return __('site.order_status_'.$status);
+    }
+
+    public function statusLabel(): string
+    {
+        return self::labelForStatus($this->status);
+    }
+
+    /** Same reasoning as statusLabel() — delivery_method was also shown raw via ucfirst(). */
+    public function deliveryMethodLabel(): string
+    {
+        return __('site.order_delivery_'.$this->delivery_method);
+    }
+
     /** Ordered list of [status, timestamp] pairs both parties see as the order's timeline. */
     public function timeline(): array
     {

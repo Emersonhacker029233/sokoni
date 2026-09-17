@@ -117,5 +117,25 @@ class AppServiceProvider extends ServiceProvider
 
         Paginator::defaultView('vendor.pagination.sokoni');
         Paginator::defaultSimpleView('vendor.pagination.sokoni');
+
+        // Language audit (client feedback): resources/js/app.js is a
+        // plain compiled asset that can't call the translator itself —
+        // every user-facing string it needs goes through this bridge
+        // instead of being hardcoded English in the script.
+        View::composer('layouts.app', function ($view) {
+            $view->with('sokoniI18n', [
+                'locale' => app()->getLocale(),
+                'newMessageToast' => __('site.js_new_message_toast'),
+                'locationUnavailable' => __('site.js_location_unavailable'),
+                'locationPermissionDenied' => __('site.js_location_permission_denied'),
+                'locationOtherError' => __('site.js_location_other_error'),
+                'locationFilledIn' => __('site.js_location_filled_in'),
+                'locationNoAddress' => __('site.js_location_no_address'),
+                'logoUpdateFailed' => __('site.js_logo_update_failed'),
+                'photoProcessFailed' => __('site.js_photo_process_failed'),
+                'uploadFailed' => __('site.js_upload_failed'),
+                'networkError' => __('site.js_network_error'),
+            ]);
+        });
     }
 }

@@ -5,8 +5,8 @@
     @include('web.account.nav')
 
     <div class="flex items-center justify-between">
-        <h1 class="text-xl font-bold">My products</h1>
-        <a href="{{ route('web.account.shop.products.create') }}" class="btn-primary text-sm">+ Add product</a>
+        <h1 class="text-xl font-bold">{{ __('site.shop_products_title') }}</h1>
+        <a href="{{ route('web.account.shop.products.create') }}" class="btn-primary text-sm">{{ __('site.shop_dashboard_add_product') }}</a>
     </div>
 
     {{-- Status confirmation now renders globally via partials.flash. --}}
@@ -21,12 +21,12 @@
                 </div>
                 <div class="min-w-0 flex-1">
                     <p class="truncate font-medium">{{ $product->title }}</p>
-                    <p class="text-sm text-sokoni-black/50">{{ \App\Support\Money::format($product->price) }} &middot; {{ $product->stock }} in stock</p>
+                    <p class="text-sm text-sokoni-black/50">{{ \App\Support\Money::format($product->price) }} &middot; {{ __('site.shop_products_in_stock', ['count' => $product->stock]) }}</p>
                 </div>
-                <span class="chip text-xs">{{ $product->is_hidden ? 'Hidden' : ($product->is_active ? 'Live' : 'Inactive') }}</span>
+                <span class="chip text-xs">{{ $product->is_hidden ? __('site.shop_products_status_hidden') : ($product->is_active ? __('site.shop_products_status_live') : __('site.shop_products_status_inactive')) }}</span>
             </a>
         @empty
-            <p class="text-sm text-sokoni-black/50">No products yet.</p>
+            <p class="text-sm text-sokoni-black/50">{{ __('site.shop_products_empty') }}</p>
         @endforelse
     </div>
 

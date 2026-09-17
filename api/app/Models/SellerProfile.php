@@ -103,6 +103,12 @@ class SellerProfile extends Model
         return $this->status === 'verified';
     }
 
+    /** Language audit (client feedback): the shop dashboard used to render this raw via `ucfirst()` — see Order::statusLabel()'s docblock for the same reasoning. */
+    public function statusLabel(): string
+    {
+        return __('site.seller_status_'.$this->status);
+    }
+
     /** Falls back to the English bio when no Swahili one is set — true of every seller row that predates bio_sw. Named localizedBio(), not bio() — see Product::localizedDescription()'s docblock for why colliding with the raw column name is a real crash risk, not just a style nit. */
     public function localizedBio(string $locale): ?string
     {

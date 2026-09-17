@@ -12,6 +12,7 @@ import '../../../shared/widgets/error_state.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../seller/providers/seller_providers.dart';
 import '../providers/order_providers.dart';
+import 'order_labels.dart';
 
 /// Next forward status for each current status — drives the seller's
 /// single "advance" action button (CLAUDE.md feature 8: pending → accepted
@@ -154,16 +155,22 @@ class _OrderDetailBodyState extends ConsumerState<_OrderDetailBody> {
           _SummaryRow(label: l10n.checkoutDeliveryFee, value: SokoniFormat.tzs(order.deliveryFee)),
           _SummaryRow(label: l10n.checkoutTotal, value: SokoniFormat.tzs(order.total), emphasize: true),
           const SizedBox(height: SokoniDimens.space20),
-          Text(l10n.orderDeliveryMethod(order.deliveryMethod), style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            l10n.orderDeliveryMethod(orderDeliveryMethodLabel(l10n, order.deliveryMethod)),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           if (order.address != null) Text(order.address!, style: Theme.of(context).textTheme.bodySmall),
-          Text(l10n.orderPaymentMethod(order.paymentMethod), style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            l10n.orderPaymentMethod(orderPaymentMethodLabel(l10n, order.paymentMethod)),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: SokoniDimens.space24),
           if (isSeller && _nextStatus.containsKey(order.status))
             FilledButton(
               onPressed: _updating ? null : () => _advance(_nextStatus[order.status]!),
               child: _updating
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(l10n.orderAdvanceTo(_nextStatus[order.status]!)),
+                  : Text(l10n.orderAdvanceTo(orderStatusLabel(l10n, _nextStatus[order.status]!))),
             ),
           if (order.status == 'pending' || order.status == 'accepted' || order.status == 'ready') ...[
             const SizedBox(height: SokoniDimens.space8),
@@ -345,7 +352,7 @@ class _StatusChip extends StatelessWidget {
             decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
-          Text(status, style: TextStyle(color: onSurface, fontWeight: FontWeight.w700)),
+          Text(orderStatusLabel(AppLocalizations.of(context), status), style: TextStyle(color: onSurface, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -359,6 +366,7 @@ class _Timeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final formatter = DateFormat('d MMM, HH:mm');
     return Column(
       children: [
@@ -369,7 +377,7 @@ class _Timeline extends StatelessWidget {
               children: [
                 const Icon(Icons.check_circle_rounded, size: 16, color: SokoniColors.success),
                 const SizedBox(width: SokoniDimens.space8),
-                Expanded(child: Text(step.status)),
+                Expanded(child: Text(orderStatusLabel(l10n, step.status))),
                 Text(formatter.format(step.at), style: Theme.of(context).textTheme.bodySmall),
               ],
             ),

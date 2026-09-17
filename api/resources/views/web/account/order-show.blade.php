@@ -6,30 +6,30 @@
 
     <div class="flex items-center justify-between">
         <h1 class="text-xl font-bold">{{ $order->code }}</h1>
-        <span class="chip">{{ ucfirst($order->status) }}</span>
+        <span class="chip">{{ $order->statusLabel() }}</span>
     </div>
-    <p class="text-sm text-sokoni-black/50">{{ $order->seller->shop_name }} &middot; {{ $order->created_at->format('d M Y, H:i') }}</p>
+    <p class="text-sm text-sokoni-black/50">{{ $order->seller->shop_name }} &middot; {{ $order->created_at->translatedFormat('d M Y, H:i') }}</p>
 
     {{-- Status timeline --}}
     <div class="card mt-24 p-16">
-        <h2 class="text-sm font-semibold">Status</h2>
+        <h2 class="text-sm font-semibold">{{ __('site.order_status_heading') }}</h2>
         <ol class="mt-12 space-y-8">
             @foreach ($timeline as $step)
                 <li class="flex items-center gap-8 text-sm">
                     <span class="h-8 w-8 rounded-full bg-sokoni-yellow"></span>
-                    <span class="font-medium">{{ ucfirst($step['status']) }}</span>
-                    <span class="text-sokoni-black/40">{{ $step['at']->format('d M, H:i') }}</span>
+                    <span class="font-medium">{{ \App\Models\Order::labelForStatus($step['status']) }}</span>
+                    <span class="text-sokoni-black/40">{{ $step['at']->translatedFormat('d M, H:i') }}</span>
                 </li>
             @endforeach
         </ol>
         @if ($order->status === 'cancelled' && $order->cancelled_reason)
-            <p class="mt-8 text-sm text-sokoni-danger">Reason: {{ $order->cancelled_reason }}</p>
+            <p class="mt-8 text-sm text-sokoni-danger">{{ __('site.order_reason_prefix', ['reason' => $order->cancelled_reason]) }}</p>
         @endif
     </div>
 
     {{-- Items --}}
     <div class="card mt-16 p-16">
-        <h2 class="text-sm font-semibold">Items</h2>
+        <h2 class="text-sm font-semibold">{{ __('site.order_items_heading') }}</h2>
         <div class="mt-12 space-y-8">
             @foreach ($order->items as $item)
                 <div class="flex justify-between text-sm">
@@ -39,19 +39,19 @@
             @endforeach
         </div>
         <div class="mt-12 flex justify-between border-t border-sokoni-outline pt-12 font-semibold">
-            <span>Total</span>
+            <span>{{ __('site.order_total') }}</span>
             <span>{{ \App\Support\Money::format($order->total) }}</span>
         </div>
     </div>
 
     <div class="card mt-16 p-16 text-sm">
-        <h2 class="font-semibold">Delivery</h2>
-        <p class="mt-8 text-sokoni-black/70">{{ ucfirst($order->delivery_method) }}</p>
+        <h2 class="font-semibold">{{ __('site.order_delivery_heading') }}</h2>
+        <p class="mt-8 text-sokoni-black/70">{{ $order->deliveryMethodLabel() }}</p>
         @if ($order->address)
             <p class="text-sokoni-black/70">{{ $order->address }}</p>
         @endif
         @if ($order->notes)
-            <p class="mt-8 text-sokoni-black/50">Notes: {{ $order->notes }}</p>
+            <p class="mt-8 text-sokoni-black/50">{{ __('site.order_notes_prefix', ['notes' => $order->notes]) }}</p>
         @endif
     </div>
 

@@ -25,19 +25,19 @@
                 <p class="text-sm font-medium">{{ $order->code }}</p>
                 <p class="text-xs text-sokoni-black/50">{{ $order->seller->shop_name }}</p>
             </div>
-            <span class="chip text-xs">{{ ucfirst($order->status) }}</span>
+            <span class="chip text-xs">{{ $order->statusLabel() }}</span>
         </a>
     @empty
-        <p class="mt-8 text-sm text-sokoni-black/50">No orders yet.</p>
+        <p class="mt-8 text-sm text-sokoni-black/50">{{ __('site.orders_empty') }}</p>
     @endforelse
 
     @if (! $isSeller)
         <div class="card mt-32 flex items-center justify-between p-16">
             <div>
                 <p class="font-medium">{{ __('site.nav_sell') }}</p>
-                <p class="text-sm text-sokoni-black/50">Start your own shop on Sokoni.</p>
+                <p class="text-sm text-sokoni-black/50">{{ __('site.dashboard_start_shop_body') }}</p>
             </div>
-            <a href="{{ route('web.sell') }}" class="btn-primary text-sm">Get started</a>
+            <a href="{{ route('web.sell') }}" class="btn-primary text-sm">{{ __('site.dashboard_get_started') }}</a>
         </div>
     @endif
 </div>

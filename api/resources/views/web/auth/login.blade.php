@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-md px-16 py-48">
     <h1 class="text-xl font-bold">{{ $addingAccount ? __('site.auth_add_account_title') : __('site.nav_sign_in') }}</h1>
     <p class="mt-4 text-sm text-sokoni-black/60">
-        {{ $addingAccount ? __('site.auth_add_account_body') : 'Sign in or create an account — it only takes a phone number.' }}
+        {{ $addingAccount ? __('site.auth_add_account_body') : __('site.auth_signin_intro') }}
     </p>
 
     @if ($errors->any())
@@ -47,9 +47,9 @@
         <form action="{{ route('web.auth.otp.verify') }}" method="post" class="mt-24 space-y-16">
             @csrf
             <input type="hidden" name="phone" value="{{ $phone }}">
-            <p class="text-sm text-sokoni-black/60">Code sent to {{ $phone }}.</p>
+            <p class="text-sm text-sokoni-black/60">{{ __('site.auth_code_sent_to', ['phone' => $phone]) }}</p>
             @if ($isNewAccount)
-                <p class="rounded-chip bg-sokoni-surface-alt p-8 text-xs text-sokoni-black/60">This number is new to Sokoni — verifying the code will create your account.</p>
+                <p class="rounded-chip bg-sokoni-surface-alt p-8 text-xs text-sokoni-black/60">{{ __('site.auth_new_number_notice') }}</p>
             @endif
             <div>
                 <label for="code" class="text-sm font-medium">{{ __('site.auth_code_label') }}</label>

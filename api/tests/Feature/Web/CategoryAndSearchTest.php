@@ -86,11 +86,11 @@ class CategoryAndSearchTest extends TestCase
         $seller = SellerProfile::factory()->verified()->create(['shop_name' => 'Totally Unrelated Shop']);
         Product::factory()->create(['seller_id' => $seller->id, 'title' => 'Genuine Leather Wallet']);
 
-        $response = $this->get('/search?q=Wallet');
+        $response = $this->get('/search?q=Wallet&lang=en');
 
         $response->assertOk();
         $response->assertSee('Genuine Leather Wallet');
-        $response->assertDontSee(__('site.search_shops_heading'));
+        $response->assertDontSee(__('site.search_shops_heading', [], 'en'));
     }
 
     public function test_an_unverified_seller_never_matches_search(): void

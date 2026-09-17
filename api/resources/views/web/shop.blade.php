@@ -157,7 +157,7 @@
                     </div>
                 @endforeach
                 @if ($showcases->isEmpty() && $updates->isEmpty())
-                    <p class="col-span-3 py-24 text-center text-sm text-sokoni-black/50">No gallery items yet.</p>
+                    <p class="col-span-3 py-24 text-center text-sm text-sokoni-black/50">{{ __('site.shop_gallery_empty') }}</p>
                 @endif
             </div>
         @else

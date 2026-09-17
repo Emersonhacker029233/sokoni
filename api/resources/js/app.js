@@ -45,7 +45,7 @@ Alpine.data('messageNotifier', (initialCount, pollUrl, chatsUrl, isSignedIn) => 
 
     showToast() {
         clearTimeout(this.toastTimer);
-        this.toast = 'You have a new message';
+        this.toast = window.sokoniI18n.newMessageToast;
         this.toastTimer = setTimeout(() => { this.toast = null; }, 5000);
     },
 }));
@@ -189,7 +189,7 @@ Alpine.data('sellerLocationPicker', (regions) => ({
 
     useCurrentLocation() {
         if (!('geolocation' in navigator)) {
-            this.statusMessage = 'Location isn\'t available in this browser — please fill in the fields below.';
+            this.statusMessage = window.sokoniI18n.locationUnavailable;
             return;
         }
 
@@ -205,8 +205,8 @@ Alpine.data('sellerLocationPicker', (regions) => ({
             (error) => {
                 this.locating = false;
                 this.statusMessage = error.code === error.PERMISSION_DENIED
-                    ? 'Location access was declined — no problem, just fill in the fields below.'
-                    : 'Couldn\'t get your location — please fill in the fields below.';
+                    ? window.sokoniI18n.locationPermissionDenied
+                    : window.sokoniI18n.locationOtherError;
             },
             { timeout: 10000, maximumAge: 60000 }
         );
@@ -215,7 +215,7 @@ Alpine.data('sellerLocationPicker', (regions) => ({
     async reverseGeocode(lat, lng) {
         try {
             const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=en`,
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=${window.sokoniI18n.locale}`,
                 { headers: { Accept: 'application/json' } }
             );
             if (!response.ok) throw new Error('lookup failed');
@@ -230,9 +230,9 @@ Alpine.data('sellerLocationPicker', (regions) => ({
             const matchedRegion = this.regions.find((r) => candidates.some((c) => c.includes(r.toLowerCase()) || r.toLowerCase().includes(c)));
             if (matchedRegion) this.region = matchedRegion;
 
-            this.statusMessage = 'Filled in from your location — please check it\'s correct.';
+            this.statusMessage = window.sokoniI18n.locationFilledIn;
         } catch {
-            this.statusMessage = 'Got your location, but couldn\'t look up the address — please fill in the fields below.';
+            this.statusMessage = window.sokoniI18n.locationNoAddress;
         } finally {
             this.locating = false;
         }
@@ -273,7 +273,7 @@ Alpine.data('shopLogoUploader', (sellerId, currentLogoUrl) => ({
         this.compress(file)
             .then((blob) => this.upload(blob))
             .catch((e) => {
-                this.error = e.message || 'Could not update your logo.';
+                this.error = e.message || window.sokoniI18n.logoUpdateFailed;
                 this.logoUrl = previousUrl;
             })
             .finally(() => { this.uploading = false; });
@@ -301,12 +301,12 @@ Alpine.data('shopLogoUploader', (sellerId, currentLogoUrl) => ({
                 canvas.getContext('2d').drawImage(img, 0, 0, width, height);
                 canvas.toBlob((blob) => {
                     URL.revokeObjectURL(objectUrl);
-                    blob ? resolve(blob) : reject(new Error('Could not process this photo.'));
+                    blob ? resolve(blob) : reject(new Error(window.sokoniI18n.photoProcessFailed));
                 }, 'image/jpeg', 0.85);
             };
             img.onerror = () => {
                 URL.revokeObjectURL(objectUrl);
-                reject(new Error('Could not read this photo.'));
+                reject(new Error(window.sokoniI18n.photoProcessFailed));
             };
             img.src = objectUrl;
         });
@@ -331,7 +331,7 @@ Alpine.data('shopLogoUploader', (sellerId, currentLogoUrl) => ({
                     this.progress = 100;
                     resolve();
                 } else {
-                    let message = 'Upload failed.';
+                    let message = window.sokoniI18n.uploadFailed;
                     try {
                         const body = JSON.parse(xhr.responseText);
                         message = body.errors?.logo?.[0] || body.message || message;
@@ -339,7 +339,7 @@ Alpine.data('shopLogoUploader', (sellerId, currentLogoUrl) => ({
                     reject(new Error(message));
                 }
             };
-            xhr.onerror = () => reject(new Error('Network error — check your connection and try again.'));
+            xhr.onerror = () => reject(new Error(window.sokoniI18n.networkError));
             xhr.send(formData);
         });
     },
@@ -384,7 +384,7 @@ Alpine.data('productMediaManager', (productId, maxItems, initialMedia) => ({
         this.items.push(item);
         this.compress(file).then((blob) => this.upload(blob, item)).catch((e) => {
             item.uploading = false;
-            item.error = e.message || 'Could not process this photo.';
+            item.error = e.message || window.sokoniI18n.photoProcessFailed;
         });
     },
 
@@ -395,7 +395,7 @@ Alpine.data('productMediaManager', (productId, maxItems, initialMedia) => ({
         item.progress = 0;
         this.compress(item.file).then((blob) => this.upload(blob, item)).catch((e) => {
             item.uploading = false;
-            item.error = e.message || 'Upload failed.';
+            item.error = e.message || window.sokoniI18n.uploadFailed;
         });
     },
 
@@ -426,12 +426,12 @@ Alpine.data('productMediaManager', (productId, maxItems, initialMedia) => ({
                 canvas.getContext('2d').drawImage(img, 0, 0, width, height);
                 canvas.toBlob((blob) => {
                     URL.revokeObjectURL(objectUrl);
-                    blob ? resolve(blob) : reject(new Error('Could not process this photo.'));
+                    blob ? resolve(blob) : reject(new Error(window.sokoniI18n.photoProcessFailed));
                 }, 'image/jpeg', 0.8);
             };
             img.onerror = () => {
                 URL.revokeObjectURL(objectUrl);
-                reject(new Error('Could not read this photo.'));
+                reject(new Error(window.sokoniI18n.photoProcessFailed));
             };
             img.src = objectUrl;
         });
@@ -460,7 +460,7 @@ Alpine.data('productMediaManager', (productId, maxItems, initialMedia) => ({
                     item.progress = 100;
                     resolve();
                 } else {
-                    let message = 'Upload failed.';
+                    let message = window.sokoniI18n.uploadFailed;
                     try {
                         const body = JSON.parse(xhr.responseText);
                         message = body.errors?.file?.[0] || body.message || message;
@@ -468,7 +468,7 @@ Alpine.data('productMediaManager', (productId, maxItems, initialMedia) => ({
                     reject(new Error(message));
                 }
             };
-            xhr.onerror = () => reject(new Error('Network error — check your connection and try again.'));
+            xhr.onerror = () => reject(new Error(window.sokoniI18n.networkError));
             item._xhr = xhr;
             xhr.send(formData);
         });

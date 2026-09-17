@@ -13,7 +13,7 @@
         ['route' => 'web.profile', 'pattern' => 'web.profile*|web.account.dashboard|web.account.orders*|web.account.saved|web.account.settings|web.account.shop*', 'label' => __('site.nav_profile')],
     ];
 @endphp
-<nav aria-label="Primary" class="fixed inset-x-0 bottom-0 z-40 flex h-56 border-t border-sokoni-outline bg-white lg:hidden">
+<nav aria-label="{{ __('site.a11y_primary_nav') }}" class="fixed inset-x-0 bottom-0 z-40 flex h-56 border-t border-sokoni-outline bg-white lg:hidden">
     @foreach ($items as $item)
         @php($isActive = request()->routeIs(...explode('|', $item['pattern'])))
         <a href="{{ route($item['route']) }}" class="relative flex flex-1 flex-col items-center justify-center gap-2 {{ $isActive ? 'text-sokoni-yellow' : 'text-sokoni-black/50' }}">

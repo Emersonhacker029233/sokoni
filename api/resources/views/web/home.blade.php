@@ -333,10 +333,11 @@
                 label: '',
                 tick() {
                     const diffMs = new Date(endsAtIso) - new Date();
-                    if (diffMs <= 0) { this.label = 'Ended'; return; }
+                    if (diffMs <= 0) { this.label = {{ Illuminate\Support\Js::from(__('site.offer_ended')) }}; return; }
                     const h = Math.floor(diffMs / 3600000);
                     const m = Math.floor((diffMs % 3600000) / 60000);
-                    this.label = h > 24 ? Math.floor(h / 24) + 'd left' : h + 'h ' + m + 'm left';
+                    const leftSuffix = {{ Illuminate\Support\Js::from(__('site.offer_left_suffix')) }};
+                    this.label = h > 24 ? Math.floor(h / 24) + 'd ' + leftSuffix : h + 'h ' + m + 'm ' + leftSuffix;
                     setTimeout(() => this.tick(), 60000);
                 },
             };

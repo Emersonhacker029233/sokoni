@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/diagnostics/boot_log.dart';
 import 'core/l10n/gen/app_localizations.dart';
+import 'core/l10n/locale_controller.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -150,6 +151,13 @@ class SokoniApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     BootLog.step('SokoniApp.build() router obtained');
 
+    // Part 1 (language audit, client feedback): an explicit saved choice
+    // always wins; with none yet, `locale: null` makes MaterialApp fall
+    // through to localeListResolutionCallback below rather than
+    // Flutter's own default (which picks the FIRST supportedLocales
+    // entry on no match — fragile, and not "explicitly English").
+    final savedLocale = ref.watch(localeControllerProvider).value;
+
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,
@@ -158,6 +166,8 @@ class SokoniApp extends ConsumerWidget {
       themeMode: ThemeMode.system,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      locale: savedLocale,
+      localeListResolutionCallback: (deviceLocales, _) => resolveDeviceLocale(deviceLocales),
       routerConfig: router,
     );
   }

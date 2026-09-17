@@ -9,6 +9,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,7 +27,7 @@ use Laravel\Sanctum\HasApiTokens;
     'marketing_consent',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser, MustVerifyEmailContract
+class User extends Authenticatable implements FilamentUser, HasLocalePreference, MustVerifyEmailContract
 {
     /** @use HasFactory<UserFactory> */
     // C2 (tester feedback): admin deletion is soft — recoverable — see
@@ -136,6 +137,26 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmailContr
     public function sellerProfileId(): ?int
     {
         return $this->sellerProfile()->value('id');
+    }
+
+    /**
+     * Language audit (client feedback): implementing this interface is
+     * what makes Laravel's OWN mail chrome (the "Hello!"/"Regards,"/
+     * "All rights reserved." text every MailMessage-based notification
+     * renders through the framework's markdown template — see
+     * lang/sw.json) actually switch with the recipient, rather than
+     * with whatever App::getLocale() happens to be in the process that
+     * renders the mail (a queue worker, most of the time, which has no
+     * per-request locale of its own). Every Notification sent to a User
+     * is automatically wrapped in `Notification::locale($user->locale)`
+     * once this is implemented — no per-notification-class code needed.
+     * The notification classes' own existing `$sw = ($notifiable->locale
+     * ?? 'en') === 'sw'` branches for their intro/body copy are
+     * unaffected and still work exactly as before.
+     */
+    public function preferredLocale(): string
+    {
+        return $this->locale ?? 'sw';
     }
 
     /** True for both a permanent ban (`banned_until` null) and an active suspension (`banned_until` in the future). */

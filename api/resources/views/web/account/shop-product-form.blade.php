@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-2xl px-16 py-32 lg:px-24">
     @include('web.account.nav')
 
-    <h1 class="text-xl font-bold">{{ $product ? 'Edit product' : 'New product' }}</h1>
+    <h1 class="text-xl font-bold">{{ $product ? __('site.product_form_title_edit') : __('site.product_form_title_new') }}</h1>
 
     <form
         action="{{ $product ? route('web.account.shop.products.update', $product) : route('web.account.shop.products.store') }}"
@@ -18,7 +18,7 @@
         @endif
 
         <div>
-            <label for="title" class="text-sm font-medium">Title</label>
+            <label for="title" class="text-sm font-medium">{{ __('site.product_form_title_field') }}</label>
             <input type="text" id="title" name="title" value="{{ old('title', $product?->title) }}" required class="input-field mt-4">
             @error('title') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
         </div>
@@ -47,21 +47,21 @@
             class="space-y-16"
         >
             <div>
-                <label for="category_id_parent" class="text-sm font-medium">Category</label>
+                <label for="category_id_parent" class="text-sm font-medium">{{ __('site.product_form_category') }}</label>
                 <select id="category_id_parent" x-model.number="parentId" @change="childId = ''" required class="input-field mt-4">
                     @foreach ($categories as $category)
-                        <option value="{{ $category->id }}">{{ $category->name_en }}</option>
+                        <option value="{{ $category->id }}">{{ $category->name(app()->getLocale()) }}</option>
                     @endforeach
                 </select>
                 @error('category_id') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
             </div>
 
             <div x-show="(subcategories[parentId] || []).length > 0">
-                <label for="category_id_child" class="text-sm font-medium">Subcategory <span class="text-sokoni-black/40">(optional)</span></label>
+                <label for="category_id_child" class="text-sm font-medium">{{ __('site.product_form_subcategory') }} <span class="text-sokoni-black/40">{{ __('site.product_form_subcategory_optional') }}</span></label>
                 <select id="category_id_child" x-model="childId" class="input-field mt-4">
-                    <option value="">Use parent category</option>
+                    <option value="">{{ __('site.product_form_use_parent_category') }}</option>
                     <template x-for="sub in (subcategories[parentId] || [])" :key="sub.id">
-                        <option :value="String(sub.id)" x-text="sub.name_en"></option>
+                        <option :value="String(sub.id)" x-text="sub.name"></option>
                     </template>
                 </select>
             </div>
@@ -73,9 +73,9 @@
                  dropdowns, shown and required only when Cars is selected. --}}
             <div x-show="isCars" x-cloak class="space-y-16">
                 <div>
-                    <label for="make" class="text-sm font-medium">Make</label>
+                    <label for="make" class="text-sm font-medium">{{ __('site.product_form_make') }}</label>
                     <select id="make" name="make" x-model="make" @change="model = ''" :required="isCars" class="input-field mt-4">
-                        <option value="">Select a make</option>
+                        <option value="">{{ __('site.product_form_select_make') }}</option>
                         <template x-for="makeName in Object.keys(vehicleMakeModels)" :key="makeName">
                             <option :value="makeName" x-text="makeName"></option>
                         </template>
@@ -83,9 +83,9 @@
                     @error('make') <p class="mt-4 text-xs text-sokoni-danger">{{ $message }}</p> @enderror
                 </div>
                 <div x-show="make">
-                    <label for="model" class="text-sm font-medium">Model</label>
+                    <label for="model" class="text-sm font-medium">{{ __('site.product_form_model') }}</label>
                     <select id="model" name="model" x-model="model" :required="isCars" class="input-field mt-4">
-                        <option value="">Select a model</option>
+                        <option value="">{{ __('site.product_form_select_model') }}</option>
                         <template x-for="modelName in (vehicleMakeModels[make] || [])" :key="modelName">
                             <option :value="modelName" x-text="modelName"></option>
                         </template>
@@ -98,9 +98,9 @@
                      option list is a flat 1990-current range rather than
                      one narrowed by the chosen model (see DECISIONS.md). --}}
                 <div x-show="model">
-                    <label for="year" class="text-sm font-medium">Year</label>
+                    <label for="year" class="text-sm font-medium">{{ __('site.product_form_year') }}</label>
                     <select id="year" name="year" x-model="year" :required="isCars" class="input-field mt-4">
-                        <option value="">Select a year</option>
+                        <option value="">{{ __('site.product_form_select_year') }}</option>
                         @foreach ($vehicleYears as $yearOption)
                             <option value="{{ $yearOption }}">{{ $yearOption }}</option>
                         @endforeach
@@ -112,37 +112,37 @@
 
         <div class="grid grid-cols-2 gap-16">
             <div>
-                <label for="price" class="text-sm font-medium">Price (TSh)</label>
+                <label for="price" class="text-sm font-medium">{{ __('site.product_form_price') }}</label>
                 <input type="number" id="price" name="price" value="{{ old('price', $product?->price) }}" required min="0" class="input-field mt-4">
             </div>
             <div>
-                <label for="stock" class="text-sm font-medium">Stock</label>
+                <label for="stock" class="text-sm font-medium">{{ __('site.product_form_stock') }}</label>
                 <input type="number" id="stock" name="stock" value="{{ old('stock', $product?->stock ?? 1) }}" required min="0" class="input-field mt-4">
             </div>
         </div>
 
         <div>
-            <label for="condition" class="text-sm font-medium">Condition</label>
+            <label for="condition" class="text-sm font-medium">{{ __('site.product_form_condition') }}</label>
             <select id="condition" name="condition" required class="input-field mt-4">
-                <option value="new" @selected(old('condition', $product?->condition) === 'new')>New</option>
-                <option value="used" @selected(old('condition', $product?->condition) === 'used')>Used</option>
+                <option value="new" @selected(old('condition', $product?->condition) === 'new')>{{ __('site.product_form_condition_new') }}</option>
+                <option value="used" @selected(old('condition', $product?->condition) === 'used')>{{ __('site.product_form_condition_used') }}</option>
             </select>
         </div>
 
         <div>
-            <label for="description" class="text-sm font-medium">Description</label>
+            <label for="description" class="text-sm font-medium">{{ __('site.product_form_description') }}</label>
             <textarea id="description" name="description" rows="4" class="input-field mt-4">{{ old('description', $product?->description) }}</textarea>
         </div>
 
-        <button type="submit" class="btn-primary w-full py-12">{{ $product ? 'Save changes' : 'Create product' }}</button>
+        <button type="submit" class="btn-primary w-full py-12">{{ $product ? __('site.product_form_save_changes') : __('site.product_form_create') }}</button>
     </form>
 
     <div class="mt-32">
-        <label class="text-sm font-medium">Photos</label>
+        <label class="text-sm font-medium">{{ __('site.product_form_photos') }}</label>
 
         @if (! $product)
             <p class="mt-8 rounded-card border border-dashed border-sokoni-outline bg-sokoni-surface-alt p-16 text-sm text-sokoni-black/60">
-                Save the product's details above first — you can add up to {{ $maxMediaPerProduct }} photos once it's created.
+                {{ __('site.product_form_save_before_media', ['max' => $maxMediaPerProduct]) }}
             </p>
         @else
             <div
@@ -158,8 +158,8 @@
                     :class="dragOver ? 'border-sokoni-yellow bg-sokoni-yellow/5' : 'border-sokoni-outline'"
                     class="cursor-pointer rounded-card border-2 border-dashed p-24 text-center transition"
                 >
-                    <p class="text-sm font-medium">Drag photos here, or click to browse</p>
-                    <p class="mt-4 text-xs text-sokoni-black/50">JPEG, PNG or WebP · up to 8MB each · <span x-text="remainingSlots"></span> more allowed</p>
+                    <p class="text-sm font-medium">{{ __('site.product_form_drag_photos') }}</p>
+                    <p class="mt-4 text-xs text-sokoni-black/50">{{ __('site.product_form_photo_hint_prefix') }} <span x-text="remainingSlots"></span> {{ __('site.product_form_photo_hint_suffix') }}</p>
                     <input
                         type="file"
                         x-ref="fileInput"
@@ -171,7 +171,7 @@
                 </div>
 
                 <p x-show="remainingSlots === 0" class="mt-8 text-xs text-sokoni-black/50">
-                    You've reached the {{ $maxMediaPerProduct }}-photo limit for this product. Remove one to add another.
+                    {{ __('site.product_form_media_limit_reached', ['max' => $maxMediaPerProduct]) }}
                 </p>
 
                 <div class="mt-16 grid grid-cols-3 gap-8 sm:grid-cols-4">
@@ -185,7 +185,7 @@
                         >
                             <img x-show="item.thumb" :src="item.thumb" alt="" class="h-full w-full object-cover">
 
-                            <span x-show="index === 0 && item.thumb" class="absolute left-4 top-4 rounded-chip bg-sokoni-black/70 px-8 py-2 text-[10px] font-semibold text-white">Cover</span>
+                            <span x-show="index === 0 && item.thumb" class="absolute left-4 top-4 rounded-chip bg-sokoni-black/70 px-8 py-2 text-[10px] font-semibold text-white">{{ __('site.product_form_cover_badge') }}</span>
 
                             <div x-show="item.uploading" class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/50 text-white">
                                 <span class="text-xs font-medium" x-text="item.progress + '%'"></span>
@@ -196,13 +196,13 @@
 
                             <div x-show="item.error" class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-sokoni-danger/90 p-8 text-center text-white">
                                 <span class="text-[11px] leading-tight" x-text="item.error"></span>
-                                <button type="button" x-show="item.file" @click="retry(item)" class="rounded-chip bg-white/20 px-8 py-2 text-[10px] font-semibold">Retry</button>
+                                <button type="button" x-show="item.file" @click="retry(item)" class="rounded-chip bg-white/20 px-8 py-2 text-[10px] font-semibold">{{ __('site.product_form_retry') }}</button>
                             </div>
 
                             <button
                                 type="button"
                                 @click="removeItem(item)"
-                                aria-label="Remove photo"
+                                aria-label="{{ __('site.product_form_remove_photo') }}"
                                 class="absolute right-4 top-4 flex h-24 w-24 items-center justify-center rounded-full bg-black/70 text-white opacity-0 transition group-hover:opacity-100"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-12 w-12"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg>
@@ -210,7 +210,7 @@
                         </div>
                     </template>
                 </div>
-                <p class="mt-8 text-xs text-sokoni-black/40" x-show="items.length > 1">Drag a photo to reorder — the first one is the cover shown everywhere else.</p>
+                <p class="mt-8 text-xs text-sokoni-black/40" x-show="items.length > 1">{{ __('site.product_form_reorder_hint') }}</p>
             </div>
         @endif
     </div>

@@ -24,7 +24,7 @@ class BeemSmsGateway implements SmsGateway
 
     public function sendOtp(string $phone, string $code, string $locale = 'en'): void
     {
-        $this->send($phone, "Your Sokoni verification code is {$code}. It expires in 5 minutes.");
+        $this->send($phone, $this->messageFor($code, $locale));
     }
 
     /** C6: the bulk-SMS admin tool's generic send path — same transport, same failure handling, arbitrary body. */
@@ -54,5 +54,20 @@ class BeemSmsGateway implements SmsGateway
                 'Beem SMS send failed: '.($response->json('message') ?? $response->body())
             );
         }
+    }
+
+    /**
+     * Language audit (client feedback): this ignored its own $locale
+     * parameter and always sent the English copy — every Kiswahili
+     * visitor's OTP SMS was English regardless of the site's language,
+     * on whichever deployment has Beem configured as the active
+     * gateway. Matches TextifySmsGateway::messageFor()'s own wording
+     * convention for this exact message.
+     */
+    private function messageFor(string $code, string $locale): string
+    {
+        return $locale === 'sw'
+            ? "Msimbo wako wa uthibitisho wa Sokoni ni {$code}. Unaisha muda wake baada ya dakika 5."
+            : "Your Sokoni verification code is {$code}. It expires in 5 minutes.";
     }
 }

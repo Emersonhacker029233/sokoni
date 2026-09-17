@@ -83,7 +83,7 @@
 
                 {{-- App Store link removed entirely — no iOS build exists yet. Add it back once one ships. --}}
                 @if ($googlePlay = config('sokoni.app_links.google_play'))
-                    <a href="{{ $googlePlay }}" aria-label="Get it on Google Play" class="inline-flex h-40 items-center rounded-chip border border-white/20 px-12 text-xs font-medium text-white/70 hover:border-white/40 hover:text-white">Google Play</a>
+                    <a href="{{ $googlePlay }}" aria-label="{{ __('site.a11y_get_it_on_google_play') }}" class="inline-flex h-40 items-center rounded-chip border border-white/20 px-12 text-xs font-medium text-white/70 hover:border-white/40 hover:text-white">Google Play</a>
                 @endif
             </div>
         </div>

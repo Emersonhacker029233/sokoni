@@ -16,18 +16,18 @@
          or search pages. --}}
     @if ($showVehicleFilters ?? false)
         <div>
-            <h3 class="text-sm font-semibold">Make</h3>
+            <h3 class="text-sm font-semibold">{{ __('site.product_form_make') }}</h3>
             <select name="make" x-model="make" @change="$el.form.model.value = ''" class="input-field mt-8 text-sm">
-                <option value="">Any make</option>
+                <option value="">{{ __('site.filter_any_make') }}</option>
                 @foreach ($vehicleMakes ?? [] as $makeName)
                     <option value="{{ $makeName }}" @selected(request('make') === $makeName)>{{ $makeName }}</option>
                 @endforeach
             </select>
         </div>
         <div x-show="make">
-            <h3 class="text-sm font-semibold">Model</h3>
+            <h3 class="text-sm font-semibold">{{ __('site.product_form_model') }}</h3>
             <select name="model" class="input-field mt-8 text-sm">
-                <option value="">Any model</option>
+                <option value="">{{ __('site.filter_any_model') }}</option>
                 <template x-for="modelName in (vehicleMakeModels[make] || [])" :key="modelName">
                     <option :value="modelName" :selected="modelName === {{ Illuminate\Support\Js::from(request('model', '')) }}" x-text="modelName"></option>
                 </template>
@@ -37,9 +37,9 @@
              DECISIONS.md), not narrowed by make/model, so it's independent
              of both and always available once browsing Cars. --}}
         <div>
-            <h3 class="text-sm font-semibold">Year</h3>
+            <h3 class="text-sm font-semibold">{{ __('site.product_form_year') }}</h3>
             <select name="year" class="input-field mt-8 text-sm">
-                <option value="">Any year</option>
+                <option value="">{{ __('site.filter_any_year') }}</option>
                 @foreach ($vehicleYears ?? [] as $yearOption)
                     <option value="{{ $yearOption }}" @selected((string) request('year') === (string) $yearOption)>{{ $yearOption }}</option>
                 @endforeach

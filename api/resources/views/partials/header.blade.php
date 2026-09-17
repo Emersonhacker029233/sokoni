@@ -29,7 +29,7 @@
             </a>
 
             {{-- Primary nav — the 5 destinations, desktop only (mobile gets the fixed bottom bar instead). --}}
-            <nav aria-label="Primary" class="hidden shrink-0 items-center gap-4 lg:flex">
+            <nav aria-label="{{ __('site.a11y_primary_nav') }}" class="hidden shrink-0 items-center gap-4 lg:flex">
                 @foreach ([
                     ['route' => 'web.home', 'pattern' => 'web.home', 'label' => __('site.nav_home')],
                     ['route' => 'web.stores', 'pattern' => 'web.stores', 'label' => __('site.nav_stores')],
@@ -188,7 +188,7 @@
                 {{-- min-h/w-44 is the real tap target (was a 24px icon + 8px padding = 40px,
                      just under the 44px minimum — tester feedback A7); the icon itself
                      stays a legible 24px, centred inside the larger touch area. --}}
-                <button type="button" class="flex min-h-44 min-w-44 items-center justify-center lg:hidden" @click="mobileOpen = !mobileOpen" aria-label="Menu">
+                <button type="button" class="flex min-h-44 min-w-44 items-center justify-center lg:hidden" @click="mobileOpen = !mobileOpen" aria-label="{{ __('site.a11y_menu') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-24 w-24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
             </div>
@@ -276,7 +276,7 @@
          indexable and works with JS disabled — Alpine only toggles
          visibility. See Alpine.data('megaMenu', ...) in app.js. --}}
     <nav
-        aria-label="Categories"
+        aria-label="{{ __('site.a11y_categories') }}"
         class="relative hidden bg-sokoni-black lg:block"
         x-data="megaMenu()"
         @focusout="if (! $el.contains($event.relatedTarget)) close()"

@@ -52,7 +52,7 @@ class HomeCategoryTilesTest extends TestCase
         (new CategorySeeder)->run();
         $electronics = Category::whereNull('parent_id')->where('name_en', 'Electronics')->firstOrFail();
 
-        $response = $this->get('/');
+        $response = $this->get('/?lang=en');
         $html = $response->getContent();
 
         // The category name and its link href must both live inside the

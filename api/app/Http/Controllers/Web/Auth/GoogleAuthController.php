@@ -42,7 +42,7 @@ class GoogleAuthController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Google OAuth callback failed', ['error' => $e->getMessage()]);
 
-            return redirect()->route('web.login')->withErrors(['google' => 'Google sign-in failed. Please try again.']);
+            return redirect()->route('web.login')->withErrors(['google' => __('site.google_signin_failed')]);
         }
 
         $identity = new VerifiedIdentity(
@@ -56,7 +56,7 @@ class GoogleAuthController extends Controller
         ['user' => $user] = $resolver->resolve($identity);
 
         if ($user->isBanned()) {
-            return redirect()->route('web.login')->withErrors(['google' => 'This account has been suspended.']);
+            return redirect()->route('web.login')->withErrors(['google' => __('site.account_suspended')]);
         }
 
         $switcher->login(request(), $user);

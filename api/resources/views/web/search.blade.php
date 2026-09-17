@@ -17,7 +17,7 @@
         <div class="min-w-0 flex-1">
             <div class="mb-16 flex flex-wrap items-center justify-between gap-8">
                 <div>
-                    <h1 class="text-xl font-bold">{{ $query ? "\"{$query}\"" : 'All listings' }}</h1>
+                    <h1 class="text-xl font-bold">{{ $query ? "\"{$query}\"" : __('site.search_all_listings') }}</h1>
                     <p class="text-sm text-sokoni-black/50">{{ __('site.results_count', ['count' => $products->total()]) }}</p>
                 </div>
                 @include('web.partials.sort-select')

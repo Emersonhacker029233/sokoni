@@ -48,16 +48,16 @@
                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
                             >
                             {{-- Part A (client feedback): never blank on a failed load. --}}
-                            <div class="hidden h-full items-center justify-center text-sokoni-black/20" style="display:none">No photo</div>
+                            <div class="hidden h-full items-center justify-center text-sokoni-black/20" style="display:none">{{ __('site.no_photo') }}</div>
                         @endif
                     </div>
                 @empty
-                    <div class="flex h-full items-center justify-center text-sokoni-black/20">No photo</div>
+                    <div class="flex h-full items-center justify-center text-sokoni-black/20">{{ __('site.no_photo') }}</div>
                 @endforelse
 
                 @if ($product->media->count() > 1)
-                    <button type="button" @click="active = (active - 1 + items) % items" aria-label="Previous" class="absolute left-8 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-8 shadow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-16 w-16"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" /></svg></button>
-                    <button type="button" @click="active = (active + 1) % items" aria-label="Next" class="absolute right-8 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-8 shadow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-16 w-16"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" /></svg></button>
+                    <button type="button" @click="active = (active - 1 + items) % items" aria-label="{{ __('site.a11y_previous') }}" class="absolute left-8 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-8 shadow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-16 w-16"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" /></svg></button>
+                    <button type="button" @click="active = (active + 1) % items" aria-label="{{ __('site.a11y_next') }}" class="absolute right-8 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-8 shadow"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-16 w-16"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" /></svg></button>
                 @endif
             </div>
 
@@ -76,7 +76,7 @@
 
             {{-- Lightbox --}}
             <div x-show="lightbox" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-16" @click="lightbox = false">
-                <button type="button" class="absolute right-16 top-16 text-white" @click="lightbox = false" aria-label="Close"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-32 w-32"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                <button type="button" class="absolute right-16 top-16 text-white" @click="lightbox = false" aria-label="{{ __('site.a11y_close') }}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-32 w-32"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
                 @foreach ($product->media as $index => $media)
                     <img x-show="active === {{ $index }} && !{{ $media->isVideo() ? 'true' : 'false' }}" src="{{ $media->path }}" alt="{{ $product->title }}" class="max-h-full max-w-full object-contain" @click.stop>
                 @endforeach
@@ -271,7 +271,7 @@
             label: '',
             tick() {
                 const diffMs = new Date(endsAtIso) - new Date();
-                if (diffMs <= 0) { this.label = 'Ended'; return; }
+                if (diffMs <= 0) { this.label = {{ Illuminate\Support\Js::from(__('site.offer_ended')) }}; return; }
                 const h = Math.floor(diffMs / 3600000);
                 const m = Math.floor((diffMs % 3600000) / 60000);
                 this.label = h > 24 ? Math.floor(h / 24) + 'd ' + (h % 24) + 'h' : h + 'h ' + m + 'm';

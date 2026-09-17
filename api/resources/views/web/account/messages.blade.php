@@ -12,14 +12,14 @@
             <div class="min-w-0">
                 <p class="truncate font-medium">{{ $otherName }}</p>
                 @if ($conversation->product)
-                    <p class="truncate text-xs text-sokoni-black/50">Re: {{ $conversation->product->title }}</p>
+                    <p class="truncate text-xs text-sokoni-black/50">{{ __('site.messages_re_prefix', ['title' => $conversation->product->title]) }}</p>
                 @endif
-                <p class="truncate text-sm text-sokoni-black/50">{{ $conversation->messages->last()?->body ?? 'No messages yet' }}</p>
+                <p class="truncate text-sm text-sokoni-black/50">{{ $conversation->messages->last()?->body ?? __('site.messages_no_messages_yet') }}</p>
             </div>
             <span class="shrink-0 text-xs text-sokoni-black/40">{{ $conversation->last_message_at?->diffForHumans() }}</span>
         </a>
     @empty
-        <p class="mt-16 text-sm text-sokoni-black/50">No conversations yet.</p>
+        <p class="mt-16 text-sm text-sokoni-black/50">{{ __('site.messages_empty') }}</p>
     @endforelse
 
     {{ $conversations->links() }}

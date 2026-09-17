@@ -14,6 +14,7 @@ import '../../../shared/widgets/error_state.dart';
 import '../../auth/presentation/auth_entry_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../providers/order_providers.dart';
+import 'order_labels.dart';
 
 class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
@@ -124,7 +125,7 @@ class _OrderRow extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       title: Text(order.code),
       subtitle: Text('${counterparty ?? ''} · ${SokoniFormat.tzs(order.total)}'),
-      trailing: Text(order.status),
+      trailing: Text(orderStatusLabel(AppLocalizations.of(context), order.status)),
       onTap: () => context.push(SokoniRoutes.orderDetail(order.id)),
     );
   }

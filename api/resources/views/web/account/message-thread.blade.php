@@ -27,7 +27,7 @@
     <h1 class="text-xl font-bold">{{ $otherName }}</h1>
     @if ($conversation->product)
         <a href="{{ route('web.product', ['product' => $conversation->product->id, 'slug' => \Illuminate\Support\Str::slug($conversation->product->title)]) }}" class="mt-4 inline-block text-sm text-sokoni-black/50 hover:underline">
-            Re: {{ $conversation->product->title }}
+            {{ __('site.messages_re_prefix', ['title' => $conversation->product->title]) }}
         </a>
     @endif
 
@@ -75,12 +75,12 @@
 
     <form action="{{ route('web.account.messages.store', $conversation) }}" method="post" enctype="multipart/form-data" class="mt-12 flex gap-8">
         @csrf
-        <input type="text" name="body" placeholder="Type a message..." class="input-field flex-1">
+        <input type="text" name="body" placeholder="{{ __('site.messages_type_placeholder') }}" class="input-field flex-1">
         <label class="btn-secondary cursor-pointer text-sm">
             <input type="file" name="attachment" accept="image/*,.pdf,.doc,.docx" class="hidden">
             📎
         </label>
-        <button type="submit" class="btn-primary text-sm">Send</button>
+        <button type="submit" class="btn-primary text-sm">{{ __('site.messages_send') }}</button>
     </form>
 
     {{-- Full-screen image viewer — same open/close/swipe-navigation
@@ -103,14 +103,14 @@
             type="button"
             class="absolute right-16 top-16 text-2xl text-white"
             @click="lightboxOpen = false"
-            aria-label="Close"
+            aria-label="{{ __('site.a11y_close') }}"
         >✕</button>
         <button
             type="button"
             x-show="images.length > 1"
             class="absolute left-16 text-3xl text-white"
             @click.stop="lightboxIndex = (lightboxIndex - 1 + images.length) % images.length"
-            aria-label="Previous"
+            aria-label="{{ __('site.a11y_previous') }}"
         >‹</button>
         <template x-for="(image, index) in images" :key="image">
             <img
@@ -125,7 +125,7 @@
             x-show="images.length > 1"
             class="absolute right-16 text-3xl text-white"
             @click.stop="lightboxIndex = (lightboxIndex + 1) % images.length"
-            aria-label="Next"
+            aria-label="{{ __('site.a11y_next') }}"
         >›</button>
     </div>
 </div>
@@ -159,7 +159,7 @@
             },
             fileName(url) {
                 const path = url.split('?')[0];
-                return path.substring(path.lastIndexOf('/') + 1) || 'Document';
+                return path.substring(path.lastIndexOf('/') + 1) || {{ Illuminate\Support\Js::from(__('site.messages_document_fallback')) }};
             },
             // Every image attachment currently loaded in this thread, in
             // order — "where several images exist in a conversation,

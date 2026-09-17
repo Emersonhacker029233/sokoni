@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
+import '../../../core/l10n/locale_controller.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
@@ -153,12 +154,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(l10n.settingsSave),
                   ),
+                  const SizedBox(height: SokoniDimens.space24),
+                  const Divider(),
+                  const SizedBox(height: SokoniDimens.space8),
+                  const _LanguageRow(),
                 ],
               ),
             ),
           );
         },
       ),
+    );
+  }
+}
+
+/// Part 1 (language audit, client feedback): "Keep the existing language
+/// switcher in settings... persist the choice across restarts and
+/// across account switches." A minimal picker for now — Part 2 replaces
+/// this with the full flag/dropdown/bottom-sheet component described
+/// there; [LocaleController] (the actual default-resolution and
+/// persistence logic) doesn't change when that happens.
+class _LanguageRow extends ConsumerWidget {
+  const _LanguageRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final saved = ref.watch(localeControllerProvider).value;
+    final active = saved?.languageCode ?? resolveDeviceLocale(WidgetsBinding.instance.platformDispatcher.locales).languageCode;
+
+    return Row(
+      children: [
+        Expanded(child: Text(l10n.settingsLanguageLabel, style: Theme.of(context).textTheme.titleSmall)),
+        DropdownButton<String>(
+          value: active,
+          underline: const SizedBox.shrink(),
+          items: [
+            for (final code in supportedLanguageCodes)
+              DropdownMenuItem(value: code, child: Text(languageEndonyms[code]!)),
+          ],
+          onChanged: (code) {
+            if (code != null) ref.read(localeControllerProvider.notifier).setLocale(code);
+          },
+        ),
+      ],
     );
   }
 }

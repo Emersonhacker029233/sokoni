@@ -26,7 +26,7 @@ class SearchCategoryFilterTest extends TestCase
         Product::factory()->count(2)->create(['seller_id' => $seller->id, 'category_id' => $electronics->id]);
         Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $fashion->id]);
 
-        $response = $this->get('/search');
+        $response = $this->get('/search?lang=en');
 
         $response->assertOk();
         $response->assertSee('Electronics');
@@ -56,7 +56,7 @@ class SearchCategoryFilterTest extends TestCase
         Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $parent->id]);
         Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $child->id]);
 
-        $response = $this->get('/search');
+        $response = $this->get('/search?lang=en');
 
         $response->assertOk();
         // Both the parent's own product and its child's product count
@@ -71,7 +71,7 @@ class SearchCategoryFilterTest extends TestCase
         $seller = SellerProfile::factory()->verified()->create();
         Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $child->id]);
 
-        $response = $this->get("/search?category_id={$parent->id}");
+        $response = $this->get("/search?category_id={$parent->id}&lang=en");
 
         $response->assertOk();
         $response->assertSee('Motorbike Parts');
@@ -84,7 +84,7 @@ class SearchCategoryFilterTest extends TestCase
         Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $electronics->id, 'price' => 5000]);
         Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $electronics->id, 'price' => 500000]);
 
-        $response = $this->get('/search?price_max=10000');
+        $response = $this->get('/search?price_max=10000&lang=en');
 
         $response->assertOk();
         // Only 1 of Electronics' 2 products matches the active price
@@ -107,7 +107,7 @@ class SearchCategoryFilterTest extends TestCase
         $seller = SellerProfile::factory()->verified()->create();
         Product::factory()->create(['seller_id' => $seller->id, 'category_id' => $tvs->id]);
 
-        $response = $this->get("/search?category_id={$electronics->id}");
+        $response = $this->get("/search?category_id={$electronics->id}&lang=en");
 
         $response->assertOk();
         $response->assertSee('Electronics');
