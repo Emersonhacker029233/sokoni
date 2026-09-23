@@ -29,16 +29,32 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::post('/auth/otp/request', [AuthController::class, 'requestOtp'])->middleware('throttle:otp');
-Route::post('/auth/otp/verify', [AuthController::class, 'verifyOtp']);
+// Bug (client feedback): "Too Many Attempts" when adding a second
+// account. Root cause was checkPhone() (fired automatically, debounced,
+// every time the phone field settles while typing — step2_details.dart)
+// sharing the exact same phone-keyed, 3-per-15-minutes 'otp' bucket as
+// requestOtp() — even though checking availability never sends an SMS.
+// A couple of debounced checks while carefully typing a second number
+// (more likely than for one's own, already-memorised number) could
+// exhaust that budget before "Send code" was ever tapped. Each route
+// below now gets its own purpose-sized limiter (AppServiceProvider) —
+// full reasoning lives there — plus a shared, generous per-IP backstop
+// ('otp-ip') against one connection hammering many different numbers,
+// asked for independently of the bug itself.
+Route::post('/auth/otp/request', [AuthController::class, 'requestOtp'])
+    ->middleware(['throttle:otp', 'throttle:otp-ip']);
+Route::post('/auth/otp/verify', [AuthController::class, 'verifyOtp'])
+    ->middleware(['throttle:otp-verify', 'throttle:otp-ip']);
 Route::post('/auth/social', [AuthController::class, 'socialLogin']);
 
 // "Create an account" flow (CLAUDE.md restructure, 2026-08-25) — check-only
 // endpoints so Step 2 can validate a phone/handle before the user ever
 // reaches the final verify step, plus the atomic account-creation endpoint
 // itself. See RegisterAccountRequest/AuthController::register().
-Route::post('/auth/check-phone', [AuthController::class, 'checkPhone'])->middleware('throttle:otp');
-Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/check-phone', [AuthController::class, 'checkPhone'])
+    ->middleware(['throttle:otp-check', 'throttle:otp-ip']);
+Route::post('/auth/register', [AuthController::class, 'register'])
+    ->middleware(['throttle:otp-verify', 'throttle:otp-ip']);
 
 Route::get('/categories', [CategoryController::class, 'index']);
 

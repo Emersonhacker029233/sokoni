@@ -141,6 +141,75 @@ class PhoneOtpTest extends TestCase
         $this->postJson('/api/auth/otp/request', ['phone' => '+255755987654'])->assertOk();
     }
 
+    /**
+     * Bug (client feedback): "Adding another account leads correctly into
+     * registration, but requesting the verification code fails with Too
+     * Many Attempts." Root cause, found via `php artisan route:list -vv`
+     * (there is no IP-based group throttle stacked on these routes at
+     * all — that was the first, wrong suspicion): checkPhone() — fired
+     * automatically, debounced, each time the phone field settles while
+     * typing (step2_details.dart) — shared the exact same phone-keyed
+     * 'otp' bucket as requestOtp() itself, even though checking
+     * availability never sends an SMS. A few debounced checks while
+     * carefully typing a second, less-familiar number could exhaust that
+     * 3-per-15-minutes budget before "Send code" was ever tapped.
+     */
+    public function test_checking_phone_availability_never_counts_against_the_send_code_budget(): void
+    {
+        $newNumber = '+255755987654';
+
+        // Simulates pausing mid-number, correcting a digit, and
+        // re-checking — five debounced availability checks, well past
+        // the SMS-send limiter's own 3-per-15-minutes budget.
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/auth/check-phone', ['phone' => $newNumber])->assertOk();
+        }
+
+        // The actual "Send code" tap — must still succeed. All 3 of the
+        // real, phone-keyed SMS-send budget are still available, since
+        // none of the checks above touched it.
+        $this->postJson('/api/auth/otp/request', ['phone' => $newNumber])->assertOk();
+    }
+
+    public function test_the_send_code_budget_itself_is_unaffected_by_how_many_times_availability_was_checked_first(): void
+    {
+        $newNumber = '+255755987654';
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/auth/check-phone', ['phone' => $newNumber])->assertOk();
+        }
+
+        // The genuine 3-per-15-minutes ceiling on sending codes is still
+        // intact and still fires on its own 4th call — this isn't "check
+        // -phone no longer rate limited at all", just "on its own budget".
+        for ($i = 0; $i < 3; $i++) {
+            $this->postJson('/api/auth/otp/request', ['phone' => $newNumber])->assertOk();
+        }
+        $this->postJson('/api/auth/otp/request', ['phone' => $newNumber])->assertStatus(429);
+    }
+
+    /**
+     * The replacement for that shared budget: a real per-IP ceiling
+     * (AppServiceProvider's 'otp-ip' limiter, 30 per 15 minutes) still
+     * exists to stop one connection hammering many different phone
+     * numbers — generous enough that legitimate multi-account use never
+     * reaches it (this test needs 31 *distinct* numbers to prove that;
+     * three real accounts from one household never will), but not
+     * unlimited.
+     */
+    public function test_one_ip_requesting_otps_for_many_different_numbers_is_still_eventually_rate_limited(): void
+    {
+        for ($i = 0; $i < 30; $i++) {
+            $this->postJson('/api/auth/otp/request', ['phone' => '+25575500'.str_pad((string) $i, 4, '0', STR_PAD_LEFT)])
+                ->assertOk();
+        }
+
+        $response = $this->postJson('/api/auth/otp/request', ['phone' => '+255755009999']);
+
+        $response->assertStatus(429);
+        $this->assertNotNull($response->headers->get('Retry-After'));
+    }
+
     public function test_otp_request_flags_a_never_seen_number_as_a_new_account(): void
     {
         $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE])

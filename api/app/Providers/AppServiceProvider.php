@@ -68,17 +68,68 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Default budget for the `api` middleware group's built-in throttle:api.
+        // Budget for the `api` middleware group's built-in throttle:api —
+        // registered here in case anything opts into it later, but NOT
+        // currently applied to any route: `bootstrap/app.php` never calls
+        // `$middleware->throttleApi(...)`, and Laravel's own default for
+        // that (`$apiLimiter`) is null, not 'api' — confirmed via
+        // `php artisan route:list -vv`, which is what actually settled
+        // the "Too Many Attempts" bug (client feedback) this file's other
+        // otp-* limiters were written for: not this one stacking on top
+        // of anything, as first suspected, but checkPhone() sharing a
+        // budget with requestOtp() that it had no business sharing.
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
-        // 3 OTP requests per phone number per 15 minutes — the phone is the
+        // 3 OTP *sends* per phone number per 15 minutes — the phone is the
         // resource being protected against SMS-bombing (and, with a real
         // paid gateway now wired up, against burning the client's prepaid
-        // SMS credit), not the requester.
+        // SMS credit), not the requester. Applied ONLY to the route that
+        // actually sends an SMS (requestOtp) — see the 'otp-check' note
+        // just below for why the other auth routes must NOT share this
+        // same budget, even though they're also keyed by phone.
         RateLimiter::for('otp', function (Request $request) {
             return Limit::perMinutes(15, 3)->by($request->input('phone', $request->ip()));
+        });
+
+        // Bug (client feedback): "Adding another account leads correctly
+        // into registration, but requesting the verification code fails
+        // with Too Many Attempts." Root cause: checkPhone() — called
+        // automatically, debounced, every time the phone field's value
+        // settles while typing (step2_details.dart) — used to share the
+        // exact same 'otp' limiter and bucket as requestOtp() above, even
+        // though it never sends an SMS. Pausing mid-number, correcting a
+        // digit, or re-checking a number the user wasn't sure of could
+        // each fire another checkPhone() call for that same number — on a
+        // second account someone types more carefully than their own
+        // memorised number, three or four of those before ever tapping
+        // "Send code" was enough to exhaust the 3-per-15-minutes budget
+        // that route was never supposed to be spending. Kept separate,
+        // and considerably more generous, since checking availability
+        // costs nothing and has no reason to share a budget that exists
+        // specifically to protect SMS spend.
+        RateLimiter::for('otp-check', function (Request $request) {
+            return Limit::perMinutes(15, 20)->by($request->input('phone', $request->ip()));
+        });
+
+        // otp/verify and register() don't send an SMS either, but a
+        // phone-keyed ceiling is still worth having here specifically
+        // against brute-forcing the 6-digit code itself — generous enough
+        // that mistyping it a couple of times, or a legitimate resend
+        // requiring a second verify, never trips it.
+        RateLimiter::for('otp-verify', function (Request $request) {
+            return Limit::perMinutes(15, 10)->by($request->input('phone', $request->ip()));
+        });
+
+        // A real per-IP ceiling for the auth routes as a whole — not the
+        // root cause found above, but "a sensible IP-level ceiling to
+        // prevent abuse, set high enough that normal use never reaches
+        // it" was asked for independently: one connection hammering many
+        // *different* phone numbers should still eventually be stopped,
+        // even though each individual number's own budget looks fine.
+        RateLimiter::for('otp-ip', function (Request $request) {
+            return Limit::perMinutes(15, 30)->by($request->ip());
         });
 
         // Writes (POST/PATCH/PUT/DELETE) get a tighter budget than reads.
