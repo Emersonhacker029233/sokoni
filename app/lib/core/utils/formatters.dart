@@ -36,6 +36,15 @@ abstract final class SokoniFormat {
     return '0${digits.substring(0, 3)} *** ${digits.substring(6, 9)}';
   }
 
+  /// Part 2 (client feedback): "shared product links don't open" — every
+  /// share action must build this exact shape, matching the website's
+  /// real route (`routes/web.php`'s `/p/{product}/{slug?}`), not the
+  /// `/products/{id}` shape that was never a registered route at all. No
+  /// slug is included — the website 301-redirects `/p/{id}` to the
+  /// canonical slugged URL itself, so there's one place (`Str::slug()`,
+  /// server-side) computing it, not two that could drift apart.
+  static String productShareUrl(int productId) => 'https://sokoni.co.tz/p/$productId';
+
   /// `"0754123456"` or `"754123456"` → `"+255754123456"`. Returns null if
   /// the input isn't a plausible Tanzanian mobile number.
   static String? phoneToE164(String local) {

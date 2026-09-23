@@ -33,6 +33,32 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Bug (client feedback): "shared product links don't open"
+                 — a sokoni.co.tz link (WhatsApp, SMS, anywhere) always
+                 opened in the browser, never the app, because no App
+                 Links intent-filter existed at all. autoVerify="true"
+                 makes Android fetch https://sokoni.co.tz/.well-known/
+                 assetlinks.json (SeoController::assetlinks()) to confirm
+                 this exact app/certificate is allowed to intercept it,
+                 rather than showing a disambiguation dialog or falling
+                 back to the browser. `/products` is kept alongside `/p`
+                 (the real, current share-link path) so a link already
+                 shared before this fix — using the old, wrong
+                 `/products/{id}` shape — still opens directly in the app
+                 too, on a device where it's installed; MainActivity's own
+                 default FlutterActivity.getInitialRoute() forwards the
+                 intent's path to go_router, matching this same
+                 `/products/:id` route the in-app product-card taps
+                 already use — see app_router.dart. No FlutterActivity
+                 override, no third-party deep-link package needed for
+                 either. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="sokoni.co.tz" android:pathPrefix="/p"/>
+                <data android:scheme="https" android:host="sokoni.co.tz" android:pathPrefix="/products"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

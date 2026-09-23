@@ -42,4 +42,21 @@ return [
     // App\Http\Middleware\NoindexBetaHost. Once the site moves to the main
     // domain this simply never matches again; no manual toggle-off needed.
     'beta_hostname' => env('SOKONI_BETA_HOSTNAME', 'beta.sokoni.co.tz'),
+
+    // Part 2 (client feedback): "shared product links don't open" — the
+    // Android app now registers an autoVerify App Links intent-filter for
+    // this website's host; assetlinks.json (SeoController::assetlinks())
+    // is what proves the app actually owns it, matching this exact
+    // package + certificate against Google's Digital Asset Links check.
+    // The fingerprint is the release keystore's own SHA-256 certificate
+    // digest (colon-separated hex) — from `apksigner verify --print-certs`
+    // against a real signed release build; changes only if that keystore
+    // is ever rotated (see docs/DEPLOY.md's own keystore-loss warning).
+    'android_app' => [
+        'package_name' => env('SOKONI_ANDROID_PACKAGE', 'tz.co.sokoni.sokoni'),
+        'sha256_cert_fingerprint' => env(
+            'SOKONI_ANDROID_SHA256_FINGERPRINT',
+            '6C:5D:D0:CA:1E:E6:6A:C3:BC:90:A9:A3:49:D1:42:51:31:87:D4:0A:57:94:74:BF:2E:07:60:67:DD:28:B4:DB'
+        ),
+    ],
 ];

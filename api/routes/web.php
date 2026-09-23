@@ -63,6 +63,14 @@ Route::get('/profile', [NavGateController::class, 'profile'])->name('web.profile
 Route::get('/p/{product}/{slug?}', ProductController::class)->name('web.product');
 Route::post('/p/{product}/reveal-call', [LeadController::class, 'revealCall'])->name('web.product.reveal-call');
 
+// Bug (client feedback): "shared product links don't open" — the app's
+// own share action used to build this exact, never-registered path
+// instead of the real `/p/{id}` one above, so every link already shared
+// before this fix 404s. A permanent redirect (not a route alias) both
+// fixes those already-circulating links and tells search engines/social
+// crawlers the canonical URL is the `/p/...` one, not this one.
+Route::get('/products/{product}', fn (int $product) => redirect()->route('web.product', ['product' => $product], 301));
+
 Route::get('/@{handle}', ShopController::class)->name('web.shop');
 
 Route::get('/banners/{banner}/click', BannerClickController::class)->name('web.banners.click');
@@ -86,6 +94,7 @@ Route::get('/sitemap-products.xml', [SeoController::class, 'sitemapProducts'])->
 Route::get('/sitemap-shops.xml', [SeoController::class, 'sitemapShops'])->name('web.sitemap.shops');
 Route::get('/sitemap-categories.xml', [SeoController::class, 'sitemapCategories'])->name('web.sitemap.categories');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('web.robots');
+Route::get('/.well-known/assetlinks.json', [SeoController::class, 'assetlinks'])->name('web.assetlinks');
 
 // Part 5 (client feedback): NOT behind `guest:web` — "Add account" reaches
 // this exact phone-OTP/Google flow while already signed in as someone

@@ -35,7 +35,16 @@ class ProductDetailScreen extends ConsumerWidget {
       body: productAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => SokoniErrorState(
-          message: error is ApiException ? error.message : l10n.feedErrorBody,
+          // Part 2 (client feedback): "a missing product shows a helpful
+          // message rather than a bare 404" — a shared link to a
+          // deleted/hidden product is exactly what a plain
+          // NotFoundException's generic "Not found." would otherwise
+          // surface here unchanged.
+          message: error is NotFoundException
+              ? l10n.productNotFoundBody
+              : error is ApiException
+              ? error.message
+              : l10n.feedErrorBody,
           onRetry: () => ref.invalidate(productDetailProvider(productId)),
         ),
         data: (product) => _ProductDetailBody(product: product),
@@ -93,7 +102,7 @@ class _ProductDetailBody extends ConsumerWidget {
               onPressed: () => SharePlus.instance.share(
                 ShareParams(
                   text: '${product.title} — ${SokoniFormat.tzs(product.price)}\n'
-                      'https://sokoni.co.tz/products/${product.id}',
+                      '${SokoniFormat.productShareUrl(product.id)}',
                 ),
               ),
             ),
@@ -229,7 +238,7 @@ class _ActionButtons extends ConsumerWidget {
               // wa.me wants the number digits-only (no leading '+').
               final digits = product.seller!.whatsapp!.replaceAll('+', '');
               final text = Uri.encodeComponent(
-                '${product.title} — https://sokoni.co.tz/products/${product.id}',
+                '${product.title} — ${SokoniFormat.productShareUrl(product.id)}',
               );
               launchUrl(
                 Uri.parse('https://wa.me/$digits?text=$text'),

@@ -80,6 +80,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: ProductDetailScreen(productId: int.parse(state.pathParameters['id']!)),
         ),
       ),
+      // Bug (client feedback): "shared product links don't open" —
+      // Android hands the app the *website's* URL when its App Links
+      // intent-filter intercepts a matching https://sokoni.co.tz/...
+      // link (see AndroidManifest.xml), which is `/p/{id}/{slug?}`, a
+      // different shape than this app's own internal route above (that
+      // one already matches the intent-filter's `/products` prefix
+      // directly, covering a link shared before this fix). These two
+      // just translate the website's real shape into the internal one.
+      GoRoute(path: '/p/:id', redirect: (context, state) => sharedProductLinkRedirect(state)),
+      GoRoute(path: '/p/:id/:slug', redirect: (context, state) => sharedProductLinkRedirect(state)),
       GoRoute(
         path: SokoniRoutes.shopPattern,
         parentNavigatorKey: _rootNavigatorKey,
@@ -227,3 +237,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// A tampered/garbage id in an incoming `/p/...` link (unlikely, but this
+/// runs on whatever string arrives from outside the app, not something
+/// this app itself ever generates) falls back to home rather than
+/// crashing on `int.parse`. Top-level and exported (not the router's own
+/// private helper) so app_router_test.dart can exercise it directly.
+String sharedProductLinkRedirect(GoRouterState state) {
+  final id = int.tryParse(state.pathParameters['id'] ?? '');
+  return id == null ? SokoniRoutes.home : SokoniRoutes.product(id);
+}

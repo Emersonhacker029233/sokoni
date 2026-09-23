@@ -39,6 +39,31 @@ class ProductPageTest extends TestCase
         $response->assertRedirect("/p/{$product->id}/".Str::slug($product->title));
     }
 
+    /**
+     * Part 2 (client feedback): "shared product links don't open" — the
+     * app's own share action used to build this exact URL shape, which
+     * has never matched any registered route; this is what makes a link
+     * already shared with it before the fix keep working.
+     */
+    public function test_the_old_wrong_share_url_redirects_to_the_real_product_page(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id, 'title' => 'iPhone 12 Pro 64GB']);
+
+        $response = $this->get("/products/{$product->id}");
+
+        // Redirects straight to the id-only `/p/{id}` form — itself a
+        // fully valid URL (the slug is optional) that then 301s again to
+        // the canonical slugged one, exactly like directly visiting
+        // `/p/{id}` with no slug at all does (test_a_wrong_slug_redirects
+        // above). Two hops, not one, but no product model needs loading
+        // here just to compute a slug a second time.
+        $response->assertRedirect("/p/{$product->id}");
+        $response->assertStatus(301);
+
+        $this->get("/p/{$product->id}")->assertRedirect("/p/{$product->id}/".Str::slug($product->title));
+    }
+
     public function test_a_hidden_product_404s(): void
     {
         $seller = SellerProfile::factory()->verified()->create();

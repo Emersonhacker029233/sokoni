@@ -182,6 +182,7 @@
   "feedEmptyTitle": "Hakuna bidhaa karibu bado",
   "feedEmptyBody": "Jaribu umbali mkubwa zaidi au kategoria tofauti.",
   "feedErrorBody": "Hatukuweza kupakia mipasho.",
+  "productNotFoundBody": "Bidhaa hii haipatikani tena — huenda imeondolewa au imeuzwa.",
 
   "locationPermissionTitle": "Pata maduka karibu nawe",
   "locationPermissionBody": "Sokoni hutumia eneo lako kuonyesha wauzaji walio karibu kwanza. Unaweza pia kuchagua eneo lako mwenyewe.",

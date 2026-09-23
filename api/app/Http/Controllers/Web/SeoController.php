@@ -98,4 +98,26 @@ class SeoController extends Controller
 
         return response(implode("\n", $lines), 200)->header('Content-Type', 'text/plain');
     }
+
+    /**
+     * Part 2 (client feedback): "shared product links don't open" — the
+     * app's Android manifest declares an autoVerify intent-filter for
+     * this host (`/p`, plus `/products` for links shared before this
+     * fix), and Android's Digital Asset Links check fetches exactly this
+     * URL to confirm the app named here really is allowed to intercept
+     * them, before it ever hands a link to the app instead of a browser.
+     */
+    public function assetlinks(): \Illuminate\Http\JsonResponse
+    {
+        $json = [[
+            'relation' => ['delegate_permission/common.handle_all_urls'],
+            'target' => [
+                'namespace' => 'android_app',
+                'package_name' => config('sokoni.android_app.package_name'),
+                'sha256_cert_fingerprints' => [config('sokoni.android_app.sha256_cert_fingerprint')],
+            ],
+        ]];
+
+        return response()->json($json);
+    }
 }

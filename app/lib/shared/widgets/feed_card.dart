@@ -539,7 +539,7 @@ class _ActionRow extends ConsumerWidget {
             ShareParams(
               text:
                   '${product.title} — ${SokoniFormat.tzs(product.price)}\n'
-                  'https://sokoni.co.tz/products/${product.id}',
+                  '${SokoniFormat.productShareUrl(product.id)}',
             ),
           ),
         ),

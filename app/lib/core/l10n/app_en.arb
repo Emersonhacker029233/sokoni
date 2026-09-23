@@ -346,6 +346,8 @@
   "@feedEmptyBody": {},
   "feedErrorBody": "We couldn't load the feed.",
   "@feedErrorBody": {},
+  "productNotFoundBody": "This product is no longer available — it may have been removed or sold.",
+  "@productNotFoundBody": {},
 
   "locationPermissionTitle": "Find shops near you",
   "@locationPermissionTitle": {},

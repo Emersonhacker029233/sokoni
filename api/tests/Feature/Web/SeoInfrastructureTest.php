@@ -67,4 +67,27 @@ class SeoInfrastructureTest extends TestCase
         $response->assertSee('Sitemap: '.url('/sitemap.xml'), false);
         $response->assertSee('Disallow: /account', false);
     }
+
+    /**
+     * Part 2 (client feedback): "shared product links don't open" —
+     * Android's Digital Asset Links check fetches exactly this URL before
+     * letting the app intercept a sokoni.co.tz link at all; a wrong
+     * package name or fingerprint here means the OS silently falls back
+     * to opening the link in a browser instead, indistinguishable from
+     * this file not existing at all.
+     */
+    public function test_assetlinks_json_declares_the_real_android_app_and_fingerprint(): void
+    {
+        $response = $this->get('/.well-known/assetlinks.json');
+
+        $response->assertOk();
+        $response->assertJson([[
+            'relation' => ['delegate_permission/common.handle_all_urls'],
+            'target' => [
+                'namespace' => 'android_app',
+                'package_name' => 'tz.co.sokoni.sokoni',
+                'sha256_cert_fingerprints' => ['6C:5D:D0:CA:1E:E6:6A:C3:BC:90:A9:A3:49:D1:42:51:31:87:D4:0A:57:94:74:BF:2E:07:60:67:DD:28:B4:DB'],
+            ],
+        ]]);
+    }
 }
