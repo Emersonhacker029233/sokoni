@@ -77,6 +77,10 @@
   "startupTimeoutBody": "Kuanza kunachukua muda mrefu kuliko kawaida. Angalia mtandao wako kisha ujaribu tena.",
   "commonSkip": "Ruka",
   "commonClose": "Funga",
+  "commonGoBack": "Rudi nyuma",
+  "commonGoHome": "Nenda mwanzo",
+  "unexpectedErrorTitle": "Hitilafu imetokea",
+  "unexpectedErrorBody": "Skrini hii imepata tatizo. Sehemu nyingine za programu bado zinafanya kazi.",
 
   "offlineShowingSavedResults": "Huna mtandao — inaonyesha matokeo yaliyohifadhiwa",
 

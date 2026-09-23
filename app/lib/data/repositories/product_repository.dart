@@ -42,7 +42,9 @@ class ProductRepository {
       return categories;
     } catch (e) {
       final mapped = mapDioError(e);
-      if (mapped is! NetworkException && mapped is! RequestTimeoutException) rethrow;
+      // See the same fix in products() below for why this throws the
+      // typed exception rather than the original, possibly-untyped one.
+      if (mapped is! NetworkException && mapped is! RequestTimeoutException) throw mapped;
       final rows = await _cache.readCachedCategoriesJson() as List<String>;
       return rows.map((row) => SokoniCategory.fromJson(jsonDecode(row) as Map<String, dynamic>)).toList();
     }
@@ -88,7 +90,13 @@ class ProductRepository {
       return result;
     } catch (e) {
       final mapped = mapDioError(e);
-      if (mapped is! NetworkException && mapped is! RequestTimeoutException) rethrow;
+      // Bug (client feedback): this used to `rethrow` the raw, untyped
+      // exception for anything other than a network/timeout failure —
+      // including a JSON-shape mismatch, which meant callers received a
+      // bare TypeError instead of the ApiException every other
+      // repository method promises, and couldn't branch on it (or show
+      // a sensible message) the normal way.
+      if (mapped is! NetworkException && mapped is! RequestTimeoutException) throw mapped;
       final rows = await _cache.readCachedProductsJson(categoryId: categoryId) as List<String>;
       final items = rows
           .map((row) => Product.fromJson(jsonDecode(row) as Map<String, dynamic>))

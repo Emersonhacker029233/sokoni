@@ -174,7 +174,14 @@ class _ForYouTabBodyState extends ConsumerState<_ForYouTabBody> {
 
   void _onScroll() {
     if (_scrollController.position.pixels > _scrollController.position.maxScrollExtent - 600) {
-      ref.read(forYouFeedProvider.notifier).loadMore();
+      // Bug (client feedback): loadMore() isn't awaited here (it's a
+      // scroll-position callback, not an async handler) — a failure
+      // used to become an unhandled Future rejection instead of
+      // anything visible. Already-loaded items must stay on screen
+      // either way (scrolling back down and up again retries it
+      // naturally, same as a failed pull-to-refresh would), so this
+      // just needs to stop the failure from going uncaught.
+      ref.read(forYouFeedProvider.notifier).loadMore().catchError((_) {});
     }
   }
 
@@ -286,7 +293,8 @@ class _ShopsTabBodyState extends ConsumerState<_ShopsTabBody> {
 
   void _onScroll() {
     if (_scrollController.position.pixels > _scrollController.position.maxScrollExtent - 400) {
-      ref.read(discoveryFeedProvider.notifier).loadMore();
+      // See the other _onScroll()'s own comment above — same reasoning.
+      ref.read(discoveryFeedProvider.notifier).loadMore().catchError((_) {});
     }
   }
 

@@ -78,8 +78,11 @@ class _ShowcaseScreenState extends ConsumerState<ShowcaseScreen> {
             onPageChanged: (index) {
               setState(() => _activeIndex = index);
               // Preload one page ahead (CLAUDE.md: "preload one ahead").
+              // Not awaited (a page-change callback, not async) — see
+              // home_screen.dart's own _onScroll() for why a failure here
+              // must not become an unhandled Future rejection.
               if (index >= state.items.length - 2) {
-                ref.read(showcaseFeedProvider.notifier).loadMore();
+                ref.read(showcaseFeedProvider.notifier).loadMore().catchError((_) {});
               }
             },
             itemBuilder: (context, index) {

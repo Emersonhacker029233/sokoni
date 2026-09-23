@@ -40,9 +40,21 @@ class ProductResource extends JsonResource
             // as a flat key=>value map so Real Estate's own attributes
             // (bedrooms, size, ...) need no resource change to reuse this
             // later — just more rows in the same table.
+            //
+            // BUG (client feedback): most products (anything outside
+            // Cars) have zero rows here, and json_encode() of an EMPTY
+            // PHP array/Collection always produces `[]`, never `{}` — PHP
+            // has no way to distinguish an empty list from an empty map.
+            // The Flutter client casts this field `as Map<String,
+            // dynamic>?`, which throws exactly on that `[]` ("type
+            // 'List<dynamic>?' is not a subtype of type 'Map<String,
+            // dynamic>?'") for every non-Cars product — i.e. almost every
+            // product in the app, on every screen that renders one.
+            // Casting to a plain PHP object forces `{}` regardless of
+            // emptiness while leaving a non-empty map's shape unchanged.
             'attributes' => $this->when(
                 $this->relationLoaded('productAttributes'),
-                fn () => $this->productAttributes->pluck('value', 'key')
+                fn () => (object) $this->productAttributes->pluck('value', 'key')->all()
             ),
             'is_favorited' => $this->when(
                 $request->user() !== null,

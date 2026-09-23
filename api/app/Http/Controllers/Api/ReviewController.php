@@ -46,13 +46,20 @@ class ReviewController extends Controller
 
         $reviews = $seller->reviews()->where('is_hidden', false)->with('buyer')->latest()->paginate(20);
 
+        // BUG (client feedback): a seller with zero reviews yet (any
+        // brand-new shop) makes this pluck() empty, and json_encode() of
+        // an empty PHP array/Collection is always `[]`, never `{}` — see
+        // ProductResource::attributes's own note on the same underlying
+        // issue. The Flutter client casts `meta.distribution` `as
+        // Map<String, dynamic>?`, which throws on exactly that `[]`.
         return ReviewResource::collection($reviews)->additional([
             'meta' => [
-                'distribution' => $seller->reviews()
+                'distribution' => (object) $seller->reviews()
                     ->where('is_hidden', false)
                     ->selectRaw('rating, count(*) as total')
                     ->groupBy('rating')
-                    ->pluck('total', 'rating'),
+                    ->pluck('total', 'rating')
+                    ->all(),
             ],
         ]);
     }

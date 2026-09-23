@@ -150,6 +150,18 @@
   "commonClose": "Close",
   "@commonClose": {},
 
+  "commonGoBack": "Go back",
+  "@commonGoBack": {"description": "Generic back-navigation action label, used by the global unexpected-error screen"},
+
+  "commonGoHome": "Go to home",
+  "@commonGoHome": {"description": "Generic navigate-home action label, used by the global unexpected-error screen when there's nothing to go back to"},
+
+  "unexpectedErrorTitle": "Something went wrong",
+  "@unexpectedErrorTitle": {"description": "Title on the last-resort error screen shown when a widget fails to build — client feedback: a single failed request must never force-close the app"},
+
+  "unexpectedErrorBody": "This screen ran into a problem. The rest of the app is still working.",
+  "@unexpectedErrorBody": {},
+
   "offlineShowingSavedResults": "You're offline — showing saved results",
   "@offlineShowingSavedResults": {"description": "Banner shown when the device has no connectivity and a cached feed is displayed instead"},
 

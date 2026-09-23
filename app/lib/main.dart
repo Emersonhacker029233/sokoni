@@ -3,12 +3,16 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'core/diagnostics/boot_log.dart';
 import 'core/l10n/gen/app_localizations.dart';
 import 'core/l10n/locale_controller.dart';
 import 'core/router/app_router.dart';
+import 'core/router/routes.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/colors.dart';
+import 'core/theme/dimens.dart';
 
 Timer? _globalStartupWatchdog;
 bool _firstFrameConfirmed = false;
@@ -59,6 +63,20 @@ void main() {
       BootLog.step('FlutterError stack: ${details.stack}');
       FlutterError.presentError(details);
     };
+
+    // Bug (client feedback): a single bad response (the type-cast crash
+    // this was written for, but really any widget-build exception) used
+    // to leave the user staring at a dead screen with no way back short
+    // of force-closing the app — Flutter's own default ErrorWidget is a
+    // blank grey box in release mode (no message, nothing tappable) and
+    // widget errors don't reach the try/catch in repositories at all,
+    // since they happen during build(), not during the request. This is
+    // the last-resort net: "no single failed request should ever [do
+    // that] — shown as a retryable error on that screen, and leaves the
+    // rest of the app working" — screens that already handle their own
+    // AsyncValue error state (almost all of them, via SokoniErrorState)
+    // never reach this at all; this only catches what slips past that.
+    ErrorWidget.builder = (details) => const _UnexpectedErrorWidget();
 
     PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
       BootLog.step('PlatformDispatcher.onError: $error');
@@ -217,6 +235,61 @@ class _StartupTimeoutApp extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Part 1 (client feedback): the app-wide [ErrorWidget.builder]
+/// replacement — see main()'s own comment on why this exists. Deliberately
+/// minimal: it doesn't know what failed or how to specifically retry it
+/// (that's each screen's own `.when(error: ...)` handling, via
+/// SokoniErrorState, which already covers the vast majority of failures
+/// correctly), so the only actions on offer are generic navigation ones
+/// that are always safe — back if there's somewhere to go back to, home
+/// otherwise — rather than guessing at a retry that might not apply.
+class _UnexpectedErrorWidget extends StatelessWidget {
+  const _UnexpectedErrorWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          final canPop = GoRouter.of(context).canPop();
+
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(SokoniDimens.space32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline_rounded, size: 40, color: SokoniColors.danger),
+                  const SizedBox(height: SokoniDimens.space16),
+                  Text(
+                    l10n.unexpectedErrorTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: SokoniDimens.space8),
+                  Text(
+                    l10n.unexpectedErrorBody,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: SokoniDimens.space20),
+                  FilledButton(
+                    onPressed: () =>
+                        canPop ? GoRouter.of(context).pop() : GoRouter.of(context).go(SokoniRoutes.home),
+                    child: Text(canPop ? l10n.commonGoBack : l10n.commonGoHome),
+                  ),
+                ],
               ),
             ),
           );

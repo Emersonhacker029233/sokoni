@@ -23,7 +23,14 @@ class AppNotificationResource extends JsonResource
             // strips the `{"data": {...}}` envelope every other endpoint
             // in this API returns. The `app_notifications.data` DB column
             // itself keeps its name; only the API-facing key changes.
-            'payload' => $this->data,
+            // BUG (client feedback): every notification dispatched without
+            // an explicit $data argument (PushNotifier::notify()'s own
+            // default is []) stores an empty array, and json_encode() of
+            // an empty PHP array is always `[]`, never `{}` — see
+            // ProductResource::attributes's own note on the same
+            // underlying issue. The Flutter client casts this field `as
+            // Map<String, dynamic>?`, which throws on exactly that `[]`.
+            'payload' => (object) ($this->data ?? []),
             'is_read' => $this->read_at !== null,
             'created_at' => $this->created_at,
         ];
