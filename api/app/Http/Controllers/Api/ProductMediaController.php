@@ -10,6 +10,7 @@ use App\Models\ProductMedia;
 use App\Services\Media\ImageVariants;
 use App\Support\Settings;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -64,5 +65,36 @@ class ProductMediaController extends Controller
         $media->deleteWithFiles();
 
         return response()->json(['message' => 'Media deleted.']);
+    }
+
+    /**
+     * Part 3 (client feedback): "reordering so the seller chooses the
+     * cover image" — mirrors Web\Account\ShopProductMediaController's own
+     * reorder() exactly (same complete-order-required, same ownership
+     * check), just Sanctum-authenticated instead of session-authenticated
+     * so the app can reuse it too. Takes the *complete* new order as a
+     * list of this product's own media ids (not a partial move), so
+     * there's no ambiguity about where an id not mentioned should end up,
+     * and no way to smuggle in another seller's media id to have it
+     * silently adopted.
+     */
+    public function reorder(Request $request, Product $product): JsonResponse
+    {
+        $this->authorize('update', $product);
+
+        $validated = $request->validate([
+            'order' => ['required', 'array'],
+            'order.*' => ['integer', 'exists:product_media,id'],
+        ]);
+
+        $ids = collect($validated['order']);
+        $ownIds = $product->media()->pluck('id');
+        abort_unless($ids->count() === $ownIds->count() && $ids->diff($ownIds)->isEmpty(), 422);
+
+        foreach ($ids->values() as $sort => $id) {
+            ProductMedia::whereKey($id)->update(['sort' => $sort]);
+        }
+
+        return response()->json(['message' => 'Order saved.']);
     }
 }

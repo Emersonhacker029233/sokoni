@@ -120,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/products/{product}', [ProductController::class, 'destroy']);
         Route::post('/products/{product}/media', [ProductMediaController::class, 'store']);
         Route::delete('/products/{product}/media/{media}', [ProductMediaController::class, 'destroy']);
+        Route::post('/products/{product}/media/reorder', [ProductMediaController::class, 'reorder']);
         Route::post('/products/{product}/comments', [CommentController::class, 'store']);
         Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
     });

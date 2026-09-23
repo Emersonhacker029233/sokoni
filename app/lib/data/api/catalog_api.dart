@@ -44,4 +44,11 @@ abstract class CatalogApi {
 
   @DELETE('/products/{productId}/media/{mediaId}')
   Future<void> deleteMedia(@Path('productId') int productId, @Path('mediaId') int mediaId);
+
+  /// Part 3 (client feedback): "reordering so the seller chooses the
+  /// cover image" — takes the product's *complete* new media order (a
+  /// list of media ids), matching the server's own all-or-nothing
+  /// contract (see Api\ProductMediaController::reorder()).
+  @POST('/products/{productId}/media/reorder')
+  Future<void> reorderMedia(@Path('productId') int productId, @Body() Map<String, dynamic> body);
 }

@@ -60,7 +60,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   Product? _product;
   bool _loading = false;
   bool _submitting = false;
-  bool _mediaBusy = false;
+  /// Part 3 (client feedback): "per-file upload progress" — 0.0-1.0 while
+  /// an image/video is mid-upload, null otherwise. Replaces the old single
+  /// `_mediaBusy` boolean so the grid can show an actual percentage.
+  double? _uploadProgress;
+  /// The media item currently being deleted, if any — lets that one tile
+  /// show its own spinner instead of freezing the whole grid.
+  int? _deletingMediaId;
   String? _error;
 
   bool get _isEditing => widget.productId != null;
@@ -172,7 +178,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   Future<void> _addPhoto(ImageSource source) async {
     final picked = await ImagePicker().pickImage(source: source, imageQuality: 90);
     if (picked == null || _product == null) return;
-    setState(() => _mediaBusy = true);
+    setState(() => _uploadProgress = 0);
     try {
       final targetDir = await getTemporaryDirectory();
       final targetPath = p.join(targetDir.path, 'product_${DateTime.now().millisecondsSinceEpoch}.jpg');
@@ -185,19 +191,25 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       );
       final media = await ref
           .read(productRepositoryProvider)
-          .uploadImageMedia(productId: _product!.id, imagePath: compressed?.path ?? picked.path);
+          .uploadImageMedia(
+            productId: _product!.id,
+            imagePath: compressed?.path ?? picked.path,
+            onProgress: (progress) {
+              if (mounted) setState(() => _uploadProgress = progress);
+            },
+          );
       setState(() => _product = _product!.copyWith(media: [..._product!.media, media]));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
-      if (mounted) setState(() => _mediaBusy = false);
+      if (mounted) setState(() => _uploadProgress = null);
     }
   }
 
   Future<void> _addVideo() async {
     final picked = await ImagePicker().pickVideo(source: ImageSource.gallery, maxDuration: const Duration(seconds: 60));
     if (picked == null || _product == null) return;
-    setState(() => _mediaBusy = true);
+    setState(() => _uploadProgress = 0);
     try {
       final info = await VideoCompress.compressVideo(
         picked.path,
@@ -217,25 +229,53 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             videoPath: compressedPath,
             thumbnailPath: thumb.path,
             durationSeconds: durationSeconds,
+            onProgress: (progress) {
+              if (mounted) setState(() => _uploadProgress = progress);
+            },
           );
       setState(() => _product = _product!.copyWith(media: [..._product!.media, media]));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
-      if (mounted) setState(() => _mediaBusy = false);
+      if (mounted) setState(() => _uploadProgress = null);
     }
   }
 
   Future<void> _deleteMedia(ProductMediaItem media) async {
     if (_product == null) return;
-    setState(() => _mediaBusy = true);
+    setState(() => _deletingMediaId = media.id);
     try {
       await ref.read(productRepositoryProvider).deleteMedia(productId: _product!.id, mediaId: media.id);
       setState(() => _product = _product!.copyWith(media: _product!.media.where((m) => m.id != media.id).toList()));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
-      if (mounted) setState(() => _mediaBusy = false);
+      if (mounted) setState(() => _deletingMediaId = null);
+    }
+  }
+
+  /// Part 3 (client feedback): "reordering so the seller chooses the cover
+  /// image" — the first item in [ProductMediaItem]'s list is treated as
+  /// the cover everywhere else in the app (product cards, shop grid), so
+  /// reordering to slot 0 *is* choosing the cover. Optimistic: the grid
+  /// updates immediately and rolls back only if the server rejects it.
+  Future<void> _reorderMedia(int oldIndex, int newIndex) async {
+    if (_product == null || oldIndex == newIndex) return;
+    final previousOrder = _product!.media;
+    final reordered = List<ProductMediaItem>.from(previousOrder);
+    reordered.insert(newIndex, reordered.removeAt(oldIndex));
+    setState(() => _product = _product!.copyWith(media: reordered));
+    try {
+      await ref
+          .read(productRepositoryProvider)
+          .reorderMedia(productId: _product!.id, orderedMediaIds: reordered.map((m) => m.id).toList());
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _product = _product!.copyWith(media: previousOrder);
+          _error = e.message;
+        });
+      }
     }
   }
 
@@ -479,14 +519,21 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     const SizedBox(height: SokoniDimens.space12),
                     if (_product == null)
                       Text(l10n.productFormSaveBeforeMedia, style: Theme.of(context).textTheme.bodySmall)
-                    else
+                    else ...[
+                      if (_product!.media.length > 1) ...[
+                        Text(l10n.productFormReorderHint, style: Theme.of(context).textTheme.bodySmall),
+                        const SizedBox(height: SokoniDimens.space8),
+                      ],
                       _MediaGrid(
                         media: _product!.media,
-                        busy: _mediaBusy,
+                        uploadProgress: _uploadProgress,
+                        deletingMediaId: _deletingMediaId,
                         canAddMore: _product!.media.length < 8,
                         onAdd: _showAddMediaSheet,
                         onDelete: _deleteMedia,
+                        onReorder: _reorderMedia,
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -498,57 +545,78 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 class _MediaGrid extends StatelessWidget {
   const _MediaGrid({
     required this.media,
-    required this.busy,
+    required this.uploadProgress,
+    required this.deletingMediaId,
     required this.canAddMore,
     required this.onAdd,
     required this.onDelete,
+    required this.onReorder,
   });
 
   final List<ProductMediaItem> media;
-  final bool busy;
+  final double? uploadProgress;
+  final int? deletingMediaId;
   final bool canAddMore;
   final VoidCallback onAdd;
   final ValueChanged<ProductMediaItem> onDelete;
+  final void Function(int oldIndex, int newIndex) onReorder;
 
   @override
   Widget build(BuildContext context) {
+    final isUploading = uploadProgress != null;
     return Wrap(
       spacing: SokoniDimens.space8,
       runSpacing: SokoniDimens.space8,
       children: [
-        for (final item in media)
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
-                child: SokoniNetworkImage(
-                  imageUrl: item.thumbPath ?? item.path,
-                  width: 84,
-                  height: 84,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) =>
-                      Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+        for (var i = 0; i < media.length; i++)
+          // Part 3 (client feedback): "reordering so the seller chooses
+          // the cover image" — long-press-drag a tile onto another to
+          // swap their positions; slot 0 is the cover (see
+          // _MediaTile's isCover badge).
+          DragTarget<int>(
+            onWillAcceptWithDetails: (details) => details.data != i,
+            onAcceptWithDetails: (details) => onReorder(details.data, i),
+            builder: (context, candidateData, _) {
+              final item = media[i];
+              final tile = _MediaTile(
+                item: item,
+                isCover: i == 0,
+                isDeleting: deletingMediaId == item.id,
+                isDropTarget: candidateData.isNotEmpty,
+                onDelete: () => onDelete(item),
+              );
+              return LongPressDraggable<int>(
+                data: i,
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: Opacity(
+                    opacity: 0.85,
+                    child: SizedBox(width: 84, height: 84, child: tile),
+                  ),
                 ),
-              ),
-              if (item.isVideo)
-                const Positioned(
-                  bottom: 4,
-                  left: 4,
-                  child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 20),
-                ),
-              Positioned(
-                top: -4,
-                right: -4,
-                child: IconButton(
-                  icon: const Icon(Icons.cancel_rounded, size: 20),
-                  onPressed: () => onDelete(item),
-                ),
-              ),
-            ],
+                childWhenDragging: Opacity(opacity: 0.3, child: tile),
+                child: tile,
+              );
+            },
           ),
-        if (canAddMore)
+        if (isUploading)
+          SizedBox(
+            width: 84,
+            height: 84,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(value: uploadProgress! > 0 ? uploadProgress : null),
+                Text(
+                  '${(uploadProgress! * 100).round()}%',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
+            ),
+          ),
+        if (canAddMore && !isUploading)
           InkWell(
-            onTap: busy ? null : onAdd,
+            onTap: onAdd,
             borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
             child: Container(
               width: 84,
@@ -558,12 +626,89 @@ class _MediaGrid extends StatelessWidget {
                 borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
               ),
               alignment: Alignment.center,
-              child: busy
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.add_rounded),
+              child: const Icon(Icons.add_rounded),
             ),
           ),
       ],
+    );
+  }
+}
+
+class _MediaTile extends StatelessWidget {
+  const _MediaTile({
+    required this.item,
+    required this.isCover,
+    required this.isDeleting,
+    required this.isDropTarget,
+    required this.onDelete,
+  });
+
+  final ProductMediaItem item;
+  final bool isCover;
+  final bool isDeleting;
+  final bool isDropTarget;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SizedBox(
+      width: 84,
+      height: 84,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
+            child: SokoniNetworkImage(
+              imageUrl: item.thumbPath ?? item.path,
+              width: 84,
+              height: 84,
+              fit: BoxFit.cover,
+              placeholder: (context, url) =>
+                  Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+            ),
+          ),
+          if (isDropTarget)
+            Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(SokoniDimens.radiusChip),
+                border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+              ),
+            ),
+          if (item.isVideo)
+            const Positioned(
+              bottom: 4,
+              left: 4,
+              child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 20),
+            ),
+          if (isCover)
+            Positioned(
+              bottom: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  l10n.productFormCoverBadge,
+                  style: const TextStyle(color: Colors.white, fontSize: 9),
+                ),
+              ),
+            ),
+          Positioned(
+            top: -4,
+            right: -4,
+            child: isDeleting
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : IconButton(icon: const Icon(Icons.cancel_rounded, size: 20), onPressed: onDelete),
+          ),
+        ],
+      ),
     );
   }
 }

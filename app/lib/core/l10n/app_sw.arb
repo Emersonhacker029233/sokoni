@@ -333,6 +333,8 @@
   "productFormMediaTitle": "Picha na video",
   "productFormMediaHint": "Hadi vitu 8. Maudhui ya biashara pekee.",
   "productFormSaveBeforeMedia": "Hifadhi bidhaa kwanza ili kuongeza picha au video.",
+  "productFormReorderHint": "Bonyeza na ushikilie picha ili kupanga upya — ya kwanza ndiyo picha ya jalada.",
+  "productFormCoverBadge": "Jalada",
   "productFormAddPhotoCamera": "Piga picha",
   "productFormAddPhotoGallery": "Chagua picha kutoka kwenye picha za simu",
   "productFormAddVideo": "Ongeza video",

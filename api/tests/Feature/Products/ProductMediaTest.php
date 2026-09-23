@@ -107,4 +107,55 @@ class ProductMediaTest extends TestCase
         $ids = collect($response->json('data'))->pluck('id');
         $this->assertTrue($ids->contains($product->id));
     }
+
+    /**
+     * Part 3 (client feedback): "reordering so the seller chooses the
+     * cover image" — mirrors Web\Account\ShopProductMediaControllerTest's
+     * own reorder test exactly, against the API's Sanctum-authenticated
+     * equivalent instead.
+     */
+    public function test_seller_can_reorder_their_products_media_which_sets_the_new_cover(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id]);
+        $first = $product->media()->create(['type' => 'image', 'path' => 'a', 'thumb_path' => 'a', 'sort' => 0]);
+        $second = $product->media()->create(['type' => 'image', 'path' => 'b', 'thumb_path' => 'b', 'sort' => 1]);
+
+        $this->actingAs($seller->user)
+            ->postJson("/api/products/{$product->id}/media/reorder", ['order' => [$second->id, $first->id]])
+            ->assertOk();
+
+        $this->assertSame(0, $second->fresh()->sort);
+        $this->assertSame(1, $first->fresh()->sort);
+    }
+
+    public function test_reorder_rejects_a_list_that_does_not_exactly_match_the_products_own_media(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id]);
+        $ownMedia = $product->media()->create(['type' => 'image', 'path' => 'a', 'thumb_path' => 'a', 'sort' => 0]);
+        $foreignMedia = Product::factory()->create()->media()->create([
+            'type' => 'image', 'path' => 'x', 'thumb_path' => 'x', 'sort' => 0,
+        ]);
+
+        $this->actingAs($seller->user)
+            ->postJson("/api/products/{$product->id}/media/reorder", ['order' => [$foreignMedia->id]])
+            ->assertStatus(422);
+
+        $this->actingAs($seller->user)
+            ->postJson("/api/products/{$product->id}/media/reorder", ['order' => [$ownMedia->id, $foreignMedia->id]])
+            ->assertStatus(422);
+    }
+
+    public function test_a_stranger_cannot_reorder_someone_elses_product_media(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id]);
+        $media = $product->media()->create(['type' => 'image', 'path' => 'a', 'thumb_path' => 'a', 'sort' => 0]);
+        $stranger = User::factory()->create();
+
+        $this->actingAs($stranger)
+            ->postJson("/api/products/{$product->id}/media/reorder", ['order' => [$media->id]])
+            ->assertForbidden();
+    }
 }

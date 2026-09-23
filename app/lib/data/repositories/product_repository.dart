@@ -209,7 +209,16 @@ class ProductRepository {
     }
   }
 
-  Future<ProductMediaItem> uploadImageMedia({required int productId, required String imagePath, int? sort}) async {
+  /// Part 3 (client feedback): "per-file upload progress" — [onProgress]
+  /// reports 0.0-1.0 based on bytes actually sent, the same signal the
+  /// website's own per-photo progress bar uses (Dio's `onSendProgress`
+  /// mirrors XHR's `upload.onprogress` this reuses).
+  Future<ProductMediaItem> uploadImageMedia({
+    required int productId,
+    required String imagePath,
+    int? sort,
+    void Function(double progress)? onProgress,
+  }) async {
     try {
       final response = await _dio.post(
         '/products/$productId/media',
@@ -218,6 +227,7 @@ class ProductRepository {
           'file': await MultipartFile.fromFile(imagePath),
           'sort': ?sort,
         }),
+        onSendProgress: onProgress == null ? null : (sent, total) => onProgress(total > 0 ? sent / total : 0),
       );
       return ProductMediaItem.fromJson((response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {
@@ -231,6 +241,7 @@ class ProductRepository {
     required String thumbnailPath,
     required int durationSeconds,
     int? sort,
+    void Function(double progress)? onProgress,
   }) async {
     try {
       final response = await _dio.post(
@@ -242,6 +253,7 @@ class ProductRepository {
           'duration': durationSeconds,
           'sort': ?sort,
         }),
+        onSendProgress: onProgress == null ? null : (sent, total) => onProgress(total > 0 ? sent / total : 0),
       );
       return ProductMediaItem.fromJson((response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {
@@ -252,6 +264,18 @@ class ProductRepository {
   Future<void> deleteMedia({required int productId, required int mediaId}) async {
     try {
       await _api.deleteMedia(productId, mediaId);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Part 3 (client feedback): "reordering so the seller chooses the
+  /// cover image" — [orderedMediaIds] must be the product's *complete*
+  /// set of media ids in their new order (see
+  /// Api\ProductMediaController::reorder()'s own docblock for why).
+  Future<void> reorderMedia({required int productId, required List<int> orderedMediaIds}) async {
+    try {
+      await _api.reorderMedia(productId, {'order': orderedMediaIds});
     } catch (e) {
       throw mapDioError(e);
     }
