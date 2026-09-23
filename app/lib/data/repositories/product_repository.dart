@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -105,10 +106,20 @@ class ProductRepository {
     }
   }
 
+  /// Part 1 (client feedback): "A screen must never load indefinitely" —
+  /// a hard, client-side ceiling on top of Dio's own 45s receive timeout
+  /// (dio_client.dart), specifically for this one screen: a product's own
+  /// detail data is small and should never legitimately need anywhere
+  /// close to 45s, so this fails fast into a retryable error well before
+  /// that, regardless of the exact cause of a stall.
+  static const _detailFetchTimeout = Duration(seconds: 20);
+
   Future<Product> product(int id) async {
     try {
-      final json = await _api.product(id);
+      final json = await _api.product(id).timeout(_detailFetchTimeout);
       return Product.fromJson(json['data'] as Map<String, dynamic>);
+    } on TimeoutException {
+      throw const RequestTimeoutException();
     } catch (e) {
       throw mapDioError(e);
     }

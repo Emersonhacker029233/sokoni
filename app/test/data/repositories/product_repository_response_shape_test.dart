@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sokoni/core/network/api_exception.dart';
@@ -32,6 +34,19 @@ class _ScriptedAdapter implements HttpClientAdapter {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
     );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// Never resolves — simulates a genuinely stuck connection, so the
+/// timeout added below (rather than a fast rejection) is what's actually
+/// exercised.
+class _HangingAdapter implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) {
+    return Completer<ResponseBody>().future;
   }
 
   @override
@@ -94,6 +109,31 @@ void main() {
       });
 
       await expectLater(repo.products(), throwsA(isA<ApiException>()));
+    },
+  );
+
+  test(
+    'Part 1 (client feedback), "a screen must never load indefinitely": a '
+    'genuinely stuck product-detail request times out into a retryable '
+    'ApiException rather than staying pending forever',
+    () {
+      fakeAsync((async) {
+        final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))..httpClientAdapter = _HangingAdapter();
+        final repo = ProductRepository(api: CatalogApi(dio), cache: null, dio: dio);
+
+        Object? caught;
+        // ignore: unawaited_futures
+        repo.product(1).then((_) {}, onError: (Object e) {
+          caught = e;
+        });
+
+        // Well past the 20s ceiling ProductRepository.product() enforces —
+        // proves this resolves on its own rather than staying pending
+        // for as long as Dio's own much longer global timeout allows.
+        async.elapse(const Duration(seconds: 25));
+
+        expect(caught, isA<RequestTimeoutException>());
+      });
     },
   );
 }

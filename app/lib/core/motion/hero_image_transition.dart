@@ -33,10 +33,19 @@ class SokoniHeroImage extends StatelessWidget {
         fromContext,
         toContext,
       ) {
-        final fromHero = fromContext.widget as Hero;
-        final toHero = toContext.widget as Hero;
-        final fromImage = fromHero.child as SokoniHeroImage;
-        final toImage = toHero.child as SokoniHeroImage;
+        // Bug (client feedback, part of the type-cast family): this used
+        // to read `(fromContext.widget as Hero).child as SokoniHeroImage`
+        // — but a Hero's own `.child` is the `ClipRRect` this class wraps
+        // its child in below, never the `SokoniHeroImage` itself, so that
+        // cast threw a real `TypeError` ("type 'ClipRRect' is not a
+        // subtype of type 'SokoniHeroImage'") on every single Hero
+        // flight through this class, confirmed via a widget test driving
+        // an actual push. `fromContext`/`toContext` are the *Hero*
+        // element's own context; `SokoniHeroImage` is that Hero's direct
+        // parent in the tree, so its own widget — not its already-built
+        // child — is found by walking one step up from there instead.
+        final fromImage = fromContext.findAncestorWidgetOfExactType<SokoniHeroImage>()!;
+        final toImage = toContext.findAncestorWidgetOfExactType<SokoniHeroImage>()!;
         final radiusTween = Tween<double>(
           begin: fromImage.borderRadius,
           end: toImage.borderRadius,
