@@ -24,6 +24,13 @@ class UserResource extends JsonResource
             'account_intent' => $this->account_intent,
             'terms_accepted' => $this->terms_accepted_at !== null,
             'created_at' => $this->created_at,
+            // Part 4 (client feedback): Settings' Notifications section —
+            // "marketing" is the pre-existing marketing_consent column
+            // (collected at registration), not a new field.
+            'notify_orders' => $this->notify_orders,
+            'notify_messages' => $this->notify_messages,
+            'notify_offers' => $this->notify_offers,
+            'notify_marketing' => $this->marketing_consent,
         ];
     }
 }

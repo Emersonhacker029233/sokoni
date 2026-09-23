@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../core/network/dio_client.dart';
 import '../../core/storage/secure_storage.dart';
 import '../api/auth_api.dart';
@@ -8,12 +10,16 @@ import '../models/user.dart';
 /// touches [SokoniSecureStorage] directly, since every other repository
 /// gets its auth handled transparently by the Dio auth interceptor.
 class AuthRepository {
-  AuthRepository({required AuthApi api, required SokoniSecureStorage storage})
+  AuthRepository({required AuthApi api, required SokoniSecureStorage storage, required Dio dio})
     : _api = api,
-      _storage = storage;
+      _storage = storage,
+      _dio = dio;
 
   final AuthApi _api;
   final SokoniSecureStorage _storage;
+  // Avatar upload is multipart and goes straight through Dio — same
+  // reasoning as ProductRepository's media uploads.
+  final Dio _dio;
 
   /// [isNewAccount]: true if this phone number has never signed in
   /// before — lets the UI say plainly, right when the code is sent,
@@ -176,6 +182,75 @@ class AuthRepository {
   Future<void> resendVerificationEmail() async {
     try {
       await _api.resendVerificationEmail();
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Part 4 (client feedback): Settings' Profile section — photo
+  /// upload/change. [onProgress] mirrors ProductRepository's own media
+  /// upload progress callback (0.0-1.0, bytes actually sent).
+  Future<SokoniUser> uploadAvatar({required String imagePath, void Function(double progress)? onProgress}) async {
+    try {
+      final response = await _dio.post(
+        '/auth/avatar',
+        data: FormData.fromMap({'avatar': await MultipartFile.fromFile(imagePath)}),
+        onSendProgress: onProgress == null ? null : (sent, total) => onProgress(total > 0 ? sent / total : 0),
+      );
+      return SokoniUser.fromJson((response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  Future<SokoniUser> removeAvatar() async {
+    try {
+      final json = await _api.removeAvatar();
+      return SokoniUser.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Part 4 (client feedback): Settings' Notifications section — every
+  /// argument is optional so a single toggle flip only ever sends that
+  /// one field, matching UpdateNotificationPreferencesRequest server-side.
+  Future<SokoniUser> updateNotificationPreferences({
+    bool? notifyOrders,
+    bool? notifyMessages,
+    bool? notifyOffers,
+    bool? notifyMarketing,
+  }) async {
+    try {
+      final json = await _api.updateNotificationPreferences({
+        'notify_orders': ?notifyOrders,
+        'notify_messages': ?notifyMessages,
+        'notify_offers': ?notifyOffers,
+        'notify_marketing': ?notifyMarketing,
+      });
+      return SokoniUser.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Part 4 (client feedback): "phone number ... changing it needs
+  /// re-verification" — step 1, sends an OTP to the new number.
+  /// [expiresAt]: same real-server-timestamp pattern as [requestOtp].
+  Future<DateTime> requestPhoneChange(String newPhoneE164) async {
+    try {
+      final json = await _api.requestPhoneChange({'phone': newPhoneE164});
+      return DateTime.parse((json as Map<String, dynamic>)['expires_at'] as String);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Step 2 — verifies the OTP and applies the new number.
+  Future<SokoniUser> verifyPhoneChange({required String newPhoneE164, required String code}) async {
+    try {
+      final json = await _api.verifyPhoneChange({'phone': newPhoneE164, 'code': code});
+      return SokoniUser.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {
       throw mapDioError(e);
     }

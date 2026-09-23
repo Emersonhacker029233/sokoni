@@ -57,12 +57,15 @@ class MessageController extends Controller
             ? $conversation->seller->user
             : $conversation->buyer;
 
-        $this->push->notify(
-            $recipient,
-            'New message',
-            $message->body ?? 'Sent an image',
-            ['conversation_id' => $conversation->id],
-        );
+        // Part 4 (client feedback): Settings' Notifications section — "messages" toggle.
+        if ($recipient->notify_messages) {
+            $this->push->notify(
+                $recipient,
+                'New message',
+                $message->body ?? 'Sent an image',
+                ['conversation_id' => $conversation->id],
+            );
+        }
 
         return new MessageResource($message->load('sender'));
     }

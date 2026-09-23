@@ -140,4 +140,17 @@ class ChatTest extends TestCase
             'attachment' => UploadedFile::fake()->create('script.exe', 200, 'application/x-msdownload'),
         ])->assertUnprocessable();
     }
+
+    /** Part 4 (client feedback): Settings' Notifications section — the "messages" toggle. */
+    public function test_sending_a_message_respects_the_recipients_notify_messages_preference(): void
+    {
+        $seller = SellerProfile::factory()->create(['user_id' => User::factory()->create(['notify_messages' => false])]);
+        $conversation = Conversation::factory()->create(['seller_id' => $seller->id]);
+
+        $this->actingAs($conversation->buyer)
+            ->postJson("/api/conversations/{$conversation->id}/messages", ['body' => 'Hello!'])
+            ->assertCreated();
+
+        $this->assertDatabaseMissing('app_notifications', ['user_id' => $seller->user_id, 'title' => 'New message']);
+    }
 }

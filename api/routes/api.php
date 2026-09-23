@@ -94,6 +94,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::post('/auth/email/resend', [AuthController::class, 'resendVerificationEmail']);
 
+    // Part 4 (client feedback): Settings' Profile section.
+    Route::post('/auth/avatar', [AuthController::class, 'updateAvatar']);
+    Route::delete('/auth/avatar', [AuthController::class, 'removeAvatar']);
+    Route::patch('/auth/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
+
+    // Part 4 (client feedback): "phone number ... changing it needs
+    // re-verification" — same purpose-sized throttle buckets as sign-up's
+    // own OTP routes (AppServiceProvider), for the same reasons.
+    Route::post('/auth/phone/change/request', [AuthController::class, 'requestPhoneChange'])
+        ->middleware(['throttle:otp', 'throttle:otp-ip']);
+    Route::post('/auth/phone/change/verify', [AuthController::class, 'verifyPhoneChange'])
+        ->middleware(['throttle:otp-verify', 'throttle:otp-ip']);
+
     Route::post('/devices', [DeviceController::class, 'store']);
 
     Route::get('/notifications', [NotificationController::class, 'index']);

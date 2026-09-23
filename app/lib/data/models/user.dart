@@ -20,6 +20,11 @@ abstract class SokoniUser with _$SokoniUser {
     @JsonKey(name: 'account_intent') String? accountIntent,
     @JsonKey(name: 'terms_accepted') required bool termsAccepted,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    // Part 4 (client feedback): Settings' Notifications section.
+    @JsonKey(name: 'notify_orders') @Default(true) bool notifyOrders,
+    @JsonKey(name: 'notify_messages') @Default(true) bool notifyMessages,
+    @JsonKey(name: 'notify_offers') @Default(true) bool notifyOffers,
+    @JsonKey(name: 'notify_marketing') @Default(false) bool notifyMarketing,
   }) = _SokoniUser;
 
   factory SokoniUser.fromJson(Map<String, dynamic> json) => _$SokoniUserFromJson(json);

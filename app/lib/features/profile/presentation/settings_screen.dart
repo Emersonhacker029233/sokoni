@@ -1,18 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/l10n/locale_controller.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/providers.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
+import '../../../core/theme/theme_mode_controller.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
+import '../../../data/models/user.dart';
+import '../../../shared/widgets/sokoni_avatar.dart';
+import '../../auth/presentation/auth_entry_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
+import 'change_phone_sheet.dart';
 
-/// Profile settings (C5) — name + optional email, with a verification
-/// status/resend affordance once an email is set. Mirrors the website's
-/// own `/account/settings` page so the same fields behave identically on
-/// both surfaces.
+/// Part 4 (client feedback): "Settings currently offers only full name,
+/// email and language ... build it out into a real account area", grouped
+/// into clear sections with headers, both languages. Mirrors the
+/// website's own `/account/settings` page's *fields*, but this screen is
+/// the app's single account hub — the website spreads the equivalent
+/// across several separate pages.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -27,6 +44,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _initialized = false;
   bool _saving = false;
   bool _resending = false;
+  bool _uploadingAvatar = false;
   String? _error;
   String? _status;
 
@@ -76,6 +94,81 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _pickAvatar(ImageSource source) async {
+    final picked = await ImagePicker().pickImage(source: source, imageQuality: 90);
+    if (picked == null) return;
+
+    setState(() => _uploadingAvatar = true);
+    try {
+      final targetDir = await getTemporaryDirectory();
+      final targetPath = p.join(targetDir.path, 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final compressed = await FlutterImageCompress.compressAndGetFile(
+        picked.path,
+        targetPath,
+        quality: 85,
+        minWidth: 512,
+        minHeight: 512,
+      );
+      await ref.read(authRepositoryProvider).uploadAvatar(imagePath: compressed?.path ?? picked.path);
+      ref.invalidate(currentUserProvider);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  Future<void> _removeAvatar() async {
+    setState(() => _uploadingAvatar = true);
+    try {
+      await ref.read(authRepositoryProvider).removeAvatar();
+      ref.invalidate(currentUserProvider);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  void _showAvatarSheet(String? currentAvatar) {
+    final l10n = AppLocalizations.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: Text(l10n.productFormAddPhotoCamera),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _pickAvatar(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.productFormAddPhotoGallery),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _pickAvatar(ImageSource.gallery);
+              },
+            ),
+            if (currentAvatar != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: SokoniColors.danger),
+                title: Text(l10n.settingsRemovePhoto, style: const TextStyle(color: SokoniColors.danger)),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _removeAvatar();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -93,77 +186,187 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _initialized = true;
           }
 
-          return SingleChildScrollView(
+          return ListView(
             padding: const EdgeInsets.all(SokoniDimens.space20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(labelText: l10n.settingsNameLabel),
-                    validator: (v) => v == null || v.trim().isEmpty ? l10n.settingsNameLabel : null,
-                  ),
-                  const SizedBox(height: SokoniDimens.space16),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(labelText: l10n.settingsEmailLabel, hintText: l10n.settingsEmailHint),
-                    validator: SokoniValidators.optionalEmail,
-                  ),
-                  if (user.email != null) ...[
-                    const SizedBox(height: SokoniDimens.space8),
-                    Row(
-                      children: [
-                        Icon(
-                          user.emailVerified ? Icons.check_circle_rounded : Icons.error_outline_rounded,
-                          size: 16,
-                          color: user.emailVerified ? SokoniColors.success : SokoniColors.sokoniBlack.withValues(alpha: 0.5),
+            children: [
+              _SectionHeader(l10n.settingsSectionProfile),
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: GestureDetector(
+                        onTap: _uploadingAvatar ? null : () => _showAvatarSheet(user.avatar),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SokoniAvatar(imageUrl: user.avatar, radius: 40, fallbackIcon: Icons.person_rounded),
+                            if (_uploadingAvatar)
+                              const CircularProgressIndicator()
+                            else
+                              const Align(
+                                alignment: Alignment.bottomRight,
+                                child: CircleAvatar(radius: 14, child: Icon(Icons.edit_rounded, size: 14)),
+                              ),
+                          ],
                         ),
-                        const SizedBox(width: SokoniDimens.space4),
+                      ),
+                    ),
+                    const SizedBox(height: SokoniDimens.space20),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(labelText: l10n.settingsNameLabel),
+                      validator: (v) => v == null || v.trim().isEmpty ? l10n.settingsNameLabel : null,
+                    ),
+                    const SizedBox(height: SokoniDimens.space16),
+                    // Part 4 (client feedback): "phone number (display
+                    // only, changing it needs re-verification)".
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
                         Expanded(
-                          child: Text(
-                            user.emailVerified ? l10n.settingsEmailVerified : l10n.settingsEmailUnverified,
-                            style: Theme.of(context).textTheme.bodySmall,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.settingsPhoneLabel,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.copyWith(color: SokoniColors.sokoniBlack.withValues(alpha: 0.6)),
+                              ),
+                              Text(
+                                user.phone != null ? SokoniFormat.phoneLocal(user.phone!) : '—',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ],
                           ),
+                        ),
+                        TextButton(
+                          onPressed: () => showChangePhoneSheet(context),
+                          child: Text(l10n.settingsPhoneChange),
                         ),
                       ],
                     ),
-                    if (!user.emailVerified)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: _resending ? null : _resendVerification,
-                          child: Text(l10n.settingsResendVerification),
-                        ),
+                    const SizedBox(height: SokoniDimens.space16),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(labelText: l10n.settingsEmailLabel, hintText: l10n.settingsEmailHint),
+                      validator: SokoniValidators.optionalEmail,
+                    ),
+                    if (user.email != null) ...[
+                      const SizedBox(height: SokoniDimens.space8),
+                      Row(
+                        children: [
+                          Icon(
+                            user.emailVerified ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+                            size: 16,
+                            color: user.emailVerified ? SokoniColors.success : SokoniColors.sokoniBlack.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(width: SokoniDimens.space4),
+                          Expanded(
+                            child: Text(
+                              user.emailVerified ? l10n.settingsEmailVerified : l10n.settingsEmailUnverified,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
                       ),
+                      if (!user.emailVerified)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: _resending ? null : _resendVerification,
+                            child: Text(l10n.settingsResendVerification),
+                          ),
+                        ),
+                    ],
+                    if (_error != null) ...[
+                      const SizedBox(height: SokoniDimens.space8),
+                      Text(_error!, style: const TextStyle(color: SokoniColors.danger)),
+                    ],
+                    if (_status != null) ...[
+                      const SizedBox(height: SokoniDimens.space8),
+                      Text(_status!, style: const TextStyle(color: SokoniColors.success)),
+                    ],
+                    const SizedBox(height: SokoniDimens.space16),
+                    FilledButton(
+                      onPressed: _saving ? null : _save,
+                      child: _saving
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          : Text(l10n.settingsSave),
+                    ),
                   ],
-                  if (_error != null) ...[
-                    const SizedBox(height: SokoniDimens.space8),
-                    Text(_error!, style: const TextStyle(color: SokoniColors.danger)),
-                  ],
-                  if (_status != null) ...[
-                    const SizedBox(height: SokoniDimens.space8),
-                    Text(_status!, style: const TextStyle(color: SokoniColors.success)),
-                  ],
-                  const SizedBox(height: SokoniDimens.space24),
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(l10n.settingsSave),
-                  ),
-                  const SizedBox(height: SokoniDimens.space24),
-                  const Divider(),
-                  const SizedBox(height: SokoniDimens.space8),
-                  const _LanguageRow(),
-                ],
+                ),
               ),
-            ),
+
+              _SectionHeader(l10n.settingsSectionAppearance),
+              const _AppearanceSection(),
+
+              _SectionHeader(l10n.settingsSectionLanguage),
+              const _LanguageRow(),
+
+              _SectionHeader(l10n.settingsSectionNotifications),
+              _NotificationsSection(user: user),
+
+              _SectionHeader(l10n.settingsSectionAccount),
+              const _AccountSection(),
+
+              _SectionHeader(l10n.settingsSectionSupport),
+              const _SupportLegalSection(),
+            ],
           );
         },
       ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: SokoniDimens.space24, bottom: SokoniDimens.space12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(color: SokoniColors.sokoniBlack.withValues(alpha: 0.5)),
+          ),
+          const SizedBox(height: SokoniDimens.space8),
+          const Divider(height: 1),
+        ],
+      ),
+    );
+  }
+}
+
+/// Part 4 (client feedback): "Light, Dark, and System theme — the app
+/// already has a dark theme with no way to choose it."
+class _AppearanceSection extends ConsumerWidget {
+  const _AppearanceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final mode = ref.watch(themeModeControllerProvider).value ?? ThemeMode.system;
+
+    return SegmentedButton<ThemeMode>(
+      segments: [
+        ButtonSegment(value: ThemeMode.light, label: Text(l10n.settingsAppearanceLight)),
+        ButtonSegment(value: ThemeMode.system, label: Text(l10n.settingsAppearanceSystem)),
+        ButtonSegment(value: ThemeMode.dark, label: Text(l10n.settingsAppearanceDark)),
+      ],
+      selected: {mode},
+      onSelectionChanged: (selection) => ref.read(themeModeControllerProvider.notifier).setThemeMode(selection.first),
     );
   }
 }
@@ -195,6 +398,247 @@ class _LanguageRow extends ConsumerWidget {
           ],
           onChanged: (code) {
             if (code != null) ref.read(localeControllerProvider.notifier).setLocale(code);
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Part 4 (client feedback): "Toggles for orders, messages, offers from
+/// followed shops, and marketing. Reflected server-side so push respects
+/// them." Optimistic — flips immediately on tap, reverts + shows an
+/// error only if the server call actually fails, since a toggle should
+/// feel instant.
+class _NotificationsSection extends ConsumerStatefulWidget {
+  const _NotificationsSection({required this.user});
+
+  final SokoniUser user;
+
+  @override
+  ConsumerState<_NotificationsSection> createState() => _NotificationsSectionState();
+}
+
+class _NotificationsSectionState extends ConsumerState<_NotificationsSection> {
+  late bool _orders = widget.user.notifyOrders;
+  late bool _messages = widget.user.notifyMessages;
+  late bool _offers = widget.user.notifyOffers;
+  late bool _marketing = widget.user.notifyMarketing;
+  String? _error;
+
+  Future<void> _toggle({
+    required bool value,
+    required void Function(bool) apply,
+    required Future<SokoniUser> Function() call,
+  }) async {
+    final previous = value;
+    setState(() {
+      apply(!previous);
+      _error = null;
+    });
+    try {
+      await call();
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          apply(previous);
+          _error = e.message;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final repo = ref.read(authRepositoryProvider);
+
+    return Column(
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.settingsNotifyOrders),
+          value: _orders,
+          onChanged: (_) => _toggle(
+            value: _orders,
+            apply: (v) => _orders = v,
+            call: () => repo.updateNotificationPreferences(notifyOrders: !_orders),
+          ),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.settingsNotifyMessages),
+          value: _messages,
+          onChanged: (_) => _toggle(
+            value: _messages,
+            apply: (v) => _messages = v,
+            call: () => repo.updateNotificationPreferences(notifyMessages: !_messages),
+          ),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.settingsNotifyOffers),
+          value: _offers,
+          onChanged: (_) => _toggle(
+            value: _offers,
+            apply: (v) => _offers = v,
+            call: () => repo.updateNotificationPreferences(notifyOffers: !_offers),
+          ),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.settingsNotifyMarketing),
+          value: _marketing,
+          onChanged: (_) => _toggle(
+            value: _marketing,
+            apply: (v) => _marketing = v,
+            call: () => repo.updateNotificationPreferences(notifyMarketing: !_marketing),
+          ),
+        ),
+        if (_error != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(_error!, style: const TextStyle(color: SokoniColors.danger)),
+          ),
+      ],
+    );
+  }
+}
+
+/// Part 4 (client feedback): "Switch account, add account, sign out;
+/// saved items; my orders; Start selling, or My Shop for sellers." Same
+/// switcher UI/logic as ProfileScreen's own account section — duplicated
+/// rather than shared, since ProfileScreen's version is `private` to that
+/// file and Settings is a distinct entry point a user may reach directly.
+class _AccountSection extends ConsumerWidget {
+  const _AccountSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final userAsync = ref.watch(currentUserProvider);
+    final accountsAsync = ref.watch(storedAccountsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        accountsAsync.maybeWhen(
+          data: (accounts) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final account in accounts)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: SokoniAvatar(imageUrl: account.avatar, radius: 20, fallbackIcon: Icons.person_rounded),
+                  title: Text(account.name),
+                  subtitle: account.handle != null ? Text('@${account.handle}') : null,
+                  trailing: userAsync.value?.id == account.userId
+                      ? Chip(
+                          label: Text(l10n.profileAccountCurrent, style: const TextStyle(color: SokoniColors.onYellow)),
+                          visualDensity: VisualDensity.compact,
+                          backgroundColor: SokoniColors.sokoniYellow,
+                          side: BorderSide.none,
+                        )
+                      : const Icon(Icons.chevron_right_rounded),
+                  onTap: userAsync.value?.id == account.userId
+                      ? null
+                      : () => ref.read(authStateProvider.notifier).switchAccount(account.userId),
+                ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(child: Icon(Icons.add_rounded)),
+                title: Text(l10n.profileAddAccount),
+                onTap: () => showAuthEntrySheet(context),
+              ),
+            ],
+          ),
+          orElse: () => const SizedBox.shrink(),
+        ),
+        const Divider(),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.favorite_border_rounded),
+          title: Text(l10n.favoritesTitle),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => context.push(SokoniRoutes.favorites),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.receipt_long_outlined),
+          title: Text(l10n.ordersMyOrdersTab),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => context.push(SokoniRoutes.orders),
+        ),
+        if (userAsync.value != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.storefront_outlined),
+            title: Text(userAsync.value!.isSeller ? l10n.myShopTitle : l10n.profileStartSelling),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            // Not push(): SokoniRoutes.sell is a StatefulShellRoute
+            // branch, same reasoning as ProfileScreen's own button.
+            onTap: () => userAsync.value!.isSeller
+                ? context.go(SokoniRoutes.sell)
+                : context.push(SokoniRoutes.sellerOnboarding),
+          ),
+        const SizedBox(height: SokoniDimens.space8),
+        TextButton(
+          onPressed: () => ref.read(authStateProvider.notifier).signOut(),
+          child: Text(l10n.profileSignOut),
+        ),
+      ],
+    );
+  }
+}
+
+/// Part 4 (client feedback): "Help, contact, Terms, Privacy, app version."
+class _SupportLegalSection extends StatelessWidget {
+  const _SupportLegalSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.help_outline_rounded),
+          title: Text(l10n.settingsHelp),
+          trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+          onTap: () => launchUrl(Uri.parse('https://sokoni.co.tz/how-it-works'), mode: LaunchMode.externalApplication),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.mail_outline_rounded),
+          title: Text(l10n.settingsContact),
+          onTap: () => launchUrl(Uri.parse('mailto:support@sokoni.co.tz')),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.description_outlined),
+          title: Text(l10n.legalTermsTitle),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => context.push(SokoniRoutes.terms),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.privacy_tip_outlined),
+          title: Text(l10n.legalPrivacyTitle),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => context.push(SokoniRoutes.privacy),
+        ),
+        FutureBuilder<PackageInfo>(
+          future: PackageInfo.fromPlatform(),
+          builder: (context, snapshot) {
+            final info = snapshot.data;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.info_outline_rounded),
+              title: Text(l10n.settingsAppVersion),
+              trailing: Text(info == null ? '' : '${info.version}+${info.buildNumber}'),
+            );
           },
         ),
       ],

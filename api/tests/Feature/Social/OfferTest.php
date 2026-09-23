@@ -125,4 +125,39 @@ class OfferTest extends TestCase
         $this->actingAs($seller->user)->deleteJson("/api/offers/{$offer->id}")->assertOk();
         $this->assertDatabaseMissing('offers', ['id' => $offer->id]);
     }
+
+    /** Part 4 (client feedback): Settings' Notifications section — "offers from followed shops" toggle. */
+    public function test_creating_an_offer_respects_a_followers_notify_offers_preference(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id, 'price' => 20000]);
+        $follower = User::factory()->create(['notify_offers' => false]);
+        $seller->followers()->attach($follower->id);
+
+        $this->actingAs($seller->user)->postJson('/api/offers', [
+            'product_id' => $product->id,
+            'discount_type' => 'percent',
+            'discount_value' => 25,
+            'duration_days' => 3,
+        ])->assertCreated();
+
+        $this->assertDatabaseMissing('app_notifications', ['user_id' => $follower->id, 'title' => 'New offer from '.$seller->shop_name]);
+    }
+
+    public function test_creating_an_offer_notifies_a_follower_who_has_not_opted_out(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id, 'price' => 20000]);
+        $follower = User::factory()->create(['notify_offers' => true]);
+        $seller->followers()->attach($follower->id);
+
+        $this->actingAs($seller->user)->postJson('/api/offers', [
+            'product_id' => $product->id,
+            'discount_type' => 'percent',
+            'discount_value' => 25,
+            'duration_days' => 3,
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('app_notifications', ['user_id' => $follower->id, 'title' => 'New offer from '.$seller->shop_name]);
+    }
 }

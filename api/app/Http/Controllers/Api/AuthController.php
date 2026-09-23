@@ -7,10 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AcceptTermsRequest;
 use App\Http\Requests\RegisterAccountRequest;
 use App\Http\Requests\RequestOtpRequest;
+use App\Http\Requests\RequestPhoneChangeRequest;
 use App\Http\Requests\SocialLoginRequest;
+use App\Http\Requests\UpdateAvatarRequest;
 use App\Http\Requests\UpdateIntentRequest;
+use App\Http\Requests\UpdateNotificationPreferencesRequest;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\VerifyOtpRequest;
+use App\Http\Requests\VerifyPhoneChangeRequest;
 use App\Http\Resources\UserResource;
 use App\Models\SellerProfile;
 use App\Models\User;
@@ -21,6 +25,7 @@ use App\Support\HandlesEmailChange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -205,6 +210,86 @@ class AuthController extends Controller
             ...($request->has('locale') ? ['locale' => $request->string('locale')->toString()] : []),
         ]);
         HandlesEmailChange::apply($user, $request->filled('email') ? $request->string('email')->toString() : null);
+
+        return new UserResource($user->fresh());
+    }
+
+    /**
+     * Part 4 (client feedback): profile photo upload/change — same
+     * store-then-swap-then-delete-old-file pattern as a seller's shop
+     * logo (SellerProfileController::updateLogo()).
+     */
+    public function updateAvatar(UpdateAvatarRequest $request): UserResource
+    {
+        $user = $request->user();
+        $previousAvatar = $user->avatar;
+
+        $url = Storage::disk('public')->url($request->file('avatar')->store('avatars', 'public'));
+        $user->update(['avatar' => $url]);
+
+        if ($previousAvatar !== null) {
+            $relative = str($previousAvatar)->after(Storage::disk('public')->url(''));
+            Storage::disk('public')->delete($relative);
+        }
+
+        return new UserResource($user->fresh());
+    }
+
+    /** Part 4 (client feedback): "remove" — profile photo is optional, unlike a seller's shop logo. */
+    public function removeAvatar(Request $request): UserResource
+    {
+        $user = $request->user();
+
+        if ($user->avatar !== null) {
+            $relative = str($user->avatar)->after(Storage::disk('public')->url(''));
+            Storage::disk('public')->delete($relative);
+            $user->update(['avatar' => null]);
+        }
+
+        return new UserResource($user->fresh());
+    }
+
+    /** Part 4 (client feedback): Settings' Notifications section. */
+    public function updateNotificationPreferences(UpdateNotificationPreferencesRequest $request): UserResource
+    {
+        $user = $request->user();
+
+        $user->update([
+            ...($request->has('notify_orders') ? ['notify_orders' => $request->boolean('notify_orders')] : []),
+            ...($request->has('notify_messages') ? ['notify_messages' => $request->boolean('notify_messages')] : []),
+            ...($request->has('notify_offers') ? ['notify_offers' => $request->boolean('notify_offers')] : []),
+            // "Marketing" reuses the pre-existing marketing_consent column
+            // rather than a redundant new one — see UserResource.
+            ...($request->has('notify_marketing') ? ['marketing_consent' => $request->boolean('notify_marketing')] : []),
+        ]);
+
+        return new UserResource($user->fresh());
+    }
+
+    /**
+     * Part 4 (client feedback): "phone number ... changing it needs
+     * re-verification" — step 1, sends an OTP to the new number. Doesn't
+     * touch the account yet; see verifyPhoneChange() for the actual change.
+     */
+    public function requestPhoneChange(RequestPhoneChangeRequest $request): JsonResponse
+    {
+        $expiresAt = $this->otp->requestCode($request->string('phone'), $request->user()->locale ?? 'en');
+
+        return response()->json([
+            'message' => 'OTP sent.',
+            'expires_at' => $expiresAt->toIso8601String(),
+        ]);
+    }
+
+    /** Step 2 of a phone number change — verifies the OTP and applies the new number. */
+    public function verifyPhoneChange(VerifyPhoneChangeRequest $request): UserResource
+    {
+        if (! $this->otp->verifyCode($request->string('phone'), $request->string('code'))) {
+            throw ValidationException::withMessages(['code' => 'Invalid or expired code.']);
+        }
+
+        $user = $request->user();
+        $user->update(['phone' => $request->string('phone')->toString()]);
 
         return new UserResource($user->fresh());
     }

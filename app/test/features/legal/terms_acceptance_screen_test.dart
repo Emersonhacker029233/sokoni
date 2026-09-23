@@ -21,7 +21,7 @@ import 'package:sokoni/features/legal/presentation/terms_acceptance_screen.dart'
 /// succeeds or fails.
 class _FakeAuthRepository extends AuthRepository {
   _FakeAuthRepository({required this.shouldSucceed})
-    : super(api: AuthApi(Dio()), storage: SokoniSecureStorage());
+    : super(api: AuthApi(Dio()), storage: SokoniSecureStorage(), dio: Dio());
 
   final bool shouldSucceed;
 

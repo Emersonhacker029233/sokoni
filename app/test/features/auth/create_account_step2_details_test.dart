@@ -24,7 +24,7 @@ import 'package:sokoni/features/seller/providers/seller_providers.dart';
 /// widget never catches whatever the repository throws", not the
 /// specific exception type.
 class _ThrowingAuthRepository extends AuthRepository {
-  _ThrowingAuthRepository() : super(api: AuthApi(Dio()), storage: SokoniSecureStorage());
+  _ThrowingAuthRepository() : super(api: AuthApi(Dio()), storage: SokoniSecureStorage(), dio: Dio());
 
   @override
   Future<bool> checkPhoneExists(String phoneE164) => Future.error(Exception('404 route not found'));
@@ -37,14 +37,14 @@ class _ThrowingAuthRepository extends AuthRepository {
 /// including the `.timeout()` this screen applies — as `tester.pump`
 /// advances virtual time, so no real 6-second wait is needed.
 class _HangingAuthRepository extends AuthRepository {
-  _HangingAuthRepository() : super(api: AuthApi(Dio()), storage: SokoniSecureStorage());
+  _HangingAuthRepository() : super(api: AuthApi(Dio()), storage: SokoniSecureStorage(), dio: Dio());
 
   @override
   Future<bool> checkPhoneExists(String phoneE164) => Completer<bool>().future;
 }
 
 class _ScriptedAuthRepository extends AuthRepository {
-  _ScriptedAuthRepository({required this.registeredPhone}) : super(api: AuthApi(Dio()), storage: SokoniSecureStorage());
+  _ScriptedAuthRepository({required this.registeredPhone}) : super(api: AuthApi(Dio()), storage: SokoniSecureStorage(), dio: Dio());
 
   final String registeredPhone;
 

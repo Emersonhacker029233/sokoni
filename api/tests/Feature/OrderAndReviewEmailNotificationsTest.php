@@ -135,6 +135,34 @@ class OrderAndReviewEmailNotificationsTest extends TestCase
         ]);
     }
 
+    /** Part 4 (client feedback): Settings' Notifications section — the "orders" toggle gates the push (and its in-app notification), not the email, which has always been driven by whether an email exists at all rather than this preference. */
+    public function test_placing_an_order_respects_the_sellers_notify_orders_preference(): void
+    {
+        $seller = SellerProfile::factory()->verified()->create(['user_id' => User::factory()->create(['notify_orders' => false])]);
+        $product = Product::factory()->create(['seller_id' => $seller->id, 'price' => 20000]);
+        $buyer = User::factory()->create();
+
+        $response = $this->actingAs($buyer)->postJson('/api/orders', [
+            'items' => [['product_id' => $product->id, 'qty' => 1]],
+            'delivery_method' => 'pickup',
+            'payment_method' => 'pay_on_pickup',
+        ])->assertCreated();
+
+        $this->assertDatabaseMissing('app_notifications', ['user_id' => $seller->user_id, 'title' => 'New order '.$response->json('data.code')]);
+    }
+
+    public function test_advancing_order_status_respects_the_recipients_notify_orders_preference(): void
+    {
+        $buyer = User::factory()->create(['notify_orders' => false]);
+        $seller = SellerProfile::factory()->create();
+        $order = Order::factory()->create(['buyer_id' => $buyer->id, 'seller_id' => $seller->id, 'status' => 'pending']);
+
+        $this->actingAs($seller->user)->patchJson("/api/orders/{$order->id}/status", ['status' => 'accepted'])
+            ->assertOk();
+
+        $this->assertDatabaseMissing('app_notifications', ['user_id' => $buyer->id, 'title' => 'Order '.$order->code.' updated']);
+    }
+
     /** The reviewer's own confirmation is a web-only concern (a flash message) — covered in ReviewSubmissionTest. */
     public function test_leaving_a_review_from_the_website_also_creates_an_in_app_notification_for_the_seller(): void
     {

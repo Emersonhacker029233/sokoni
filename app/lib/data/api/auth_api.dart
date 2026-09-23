@@ -58,4 +58,25 @@ abstract class AuthApi {
   /// email is set but unverified.
   @POST('/auth/email/resend')
   Future<dynamic> resendVerificationEmail();
+
+  /// Part 4 (client feedback): Settings' "remove" action — the upload
+  /// side goes through raw Dio in AuthRepository (multipart), same
+  /// reasoning as ProductRepository's media uploads.
+  @DELETE('/auth/avatar')
+  Future<dynamic> removeAvatar();
+
+  /// Part 4 (client feedback): Settings' Notifications section. Every
+  /// field optional — the client only ever sends the one toggle just
+  /// flipped, per UpdateNotificationPreferencesRequest.
+  @PATCH('/auth/notification-preferences')
+  Future<dynamic> updateNotificationPreferences(@Body() Map<String, dynamic> body);
+
+  /// Part 4 (client feedback): "phone number ... changing it needs
+  /// re-verification" — step 1, sends an OTP to the new number.
+  @POST('/auth/phone/change/request')
+  Future<dynamic> requestPhoneChange(@Body() Map<String, dynamic> body);
+
+  /// Step 2 — verifies the OTP and applies the new number.
+  @POST('/auth/phone/change/verify')
+  Future<dynamic> verifyPhoneChange(@Body() Map<String, dynamic> body);
 }

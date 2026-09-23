@@ -70,6 +70,10 @@ dependencies:
   intl: ^0.20.3
   share_plus: ^13.3.0
   url_launcher: ^6.3.2
+  # Part 4 (client feedback): Settings' "app version" row — was already a
+  # transitive dependency pinned in dependency_overrides below (win32
+  # version conflict) but never a direct one until now.
+  package_info_plus: ^9.0.0
   image_picker: ^1.2.3
   file_picker: ^11.0.3
   firebase_core: ^4.13.0
@@ -91,9 +95,9 @@ dependencies:
 # package_info_plus is pinned below its normally-resolved 10.x for the same
 # reason, in the opposite direction: 10.x requires win32 ^6.0.1, which is
 # incompatible with the 5.x pin above. 9.0.0 targets win32 ^5.5.3 and is
-# otherwise a drop-in — nothing in this app calls package_info_plus
-# directly, it's pulled in transitively by other packages' Windows/desktop
-# support code, so the version bump has no functional effect on Android/iOS.
+# otherwise a drop-in — the pin has no functional effect on Android/iOS
+# regardless of whether the package is called directly (Settings' app
+# version row, Part 4) or only pulled in transitively.
 dependency_overrides:
   win32: ^5.9.0
   package_info_plus: ^9.0.0

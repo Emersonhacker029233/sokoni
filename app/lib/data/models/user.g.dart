@@ -22,6 +22,10 @@ _SokoniUser _$SokoniUserFromJson(Map<String, dynamic> json) => _SokoniUser(
   createdAt: json['created_at'] == null
       ? null
       : DateTime.parse(json['created_at'] as String),
+  notifyOrders: json['notify_orders'] as bool? ?? true,
+  notifyMessages: json['notify_messages'] as bool? ?? true,
+  notifyOffers: json['notify_offers'] as bool? ?? true,
+  notifyMarketing: json['notify_marketing'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$SokoniUserToJson(_SokoniUser instance) =>
@@ -39,4 +43,8 @@ Map<String, dynamic> _$SokoniUserToJson(_SokoniUser instance) =>
       'account_intent': instance.accountIntent,
       'terms_accepted': instance.termsAccepted,
       'created_at': instance.createdAt?.toIso8601String(),
+      'notify_orders': instance.notifyOrders,
+      'notify_messages': instance.notifyMessages,
+      'notify_offers': instance.notifyOffers,
+      'notify_marketing': instance.notifyMarketing,
     };

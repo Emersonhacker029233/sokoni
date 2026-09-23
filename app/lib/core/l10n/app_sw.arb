@@ -130,6 +130,35 @@
   "settingsSaved": "Wasifu umesasishwa.",
   "settingsLanguageLabel": "Lugha",
   "settingsVerificationResent": "Barua pepe ya uthibitisho imetumwa — angalia sanduku lako la barua pepe.",
+  "settingsPhoneLabel": "Nambari ya simu",
+  "settingsPhoneChange": "Badilisha",
+  "settingsRemovePhoto": "Ondoa picha",
+
+  "settingsSectionProfile": "Wasifu",
+  "settingsSectionAppearance": "Mwonekano",
+  "settingsSectionLanguage": "Lugha",
+  "settingsSectionNotifications": "Arifa",
+  "settingsSectionAccount": "Akaunti",
+  "settingsSectionSupport": "Msaada na sheria",
+
+  "settingsAppearanceLight": "Mwangavu",
+  "settingsAppearanceDark": "Giza",
+  "settingsAppearanceSystem": "Kama kifaa",
+
+  "settingsNotifyOrders": "Oda",
+  "settingsNotifyMessages": "Ujumbe",
+  "settingsNotifyOffers": "Ofa kutoka maduka unayofuata",
+  "settingsNotifyMarketing": "Habari na matangazo",
+
+  "settingsHelp": "Msaada",
+  "settingsContact": "Wasiliana nasi",
+  "settingsAppVersion": "Toleo la programu",
+
+  "changePhoneTitle": "Badilisha nambari ya simu",
+  "changePhoneBody": "Weka nambari yako mpya — tutakutumia msimbo kuithibitisha.",
+  "changePhoneCodeBody": "Weka msimbo tuliokutumia kwa {phone}.",
+  "changePhoneSendCode": "Tuma msimbo",
+  "changePhoneConfirm": "Thibitisha",
 
   "sellSignInPrompt": "Ingia ili kuanza kuuza kwenye Sokoni.",
 

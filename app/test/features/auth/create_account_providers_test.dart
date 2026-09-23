@@ -25,7 +25,7 @@ import 'package:sokoni/features/seller/providers/seller_providers.dart';
 /// shape without any platform channel (the real one persists the token via
 /// `SokoniSecureStorage`, unavailable in this plain test environment).
 class _ScriptedAuthRepository extends AuthRepository {
-  _ScriptedAuthRepository() : super(api: AuthApi(Dio()), storage: _NoopSecureStorage());
+  _ScriptedAuthRepository() : super(api: AuthApi(Dio()), storage: _NoopSecureStorage(), dio: Dio());
 
   final List<String> checkedPhones = [];
   final List<Map<String, dynamic>> registerCalls = [];

@@ -117,12 +117,15 @@ class OrderController extends Controller
             return $order;
         });
 
-        $this->push->notify(
-            $order->seller->user,
-            'New order '.$order->code,
-            'You have a new order worth TSh '.number_format($order->total).'.',
-            ['order_id' => $order->id],
-        );
+        // Part 4 (client feedback): Settings' Notifications section — "orders" toggle.
+        if ($order->seller->user->notify_orders) {
+            $this->push->notify(
+                $order->seller->user,
+                'New order '.$order->code,
+                'You have a new order worth TSh '.number_format($order->total).'.',
+                ['order_id' => $order->id],
+            );
+        }
         if ($order->seller->user->email !== null) {
             SafeMail::send($order->seller->user, new OrderPlacedNotification($order));
         }
@@ -159,12 +162,14 @@ class OrderController extends Controller
         ])->save();
 
         $notifyUser = $request->user()->id === $order->buyer_id ? $order->seller->user : $order->buyer;
-        $this->push->notify(
-            $notifyUser,
-            'Order '.$order->code.' updated',
-            "Status is now: {$status}.",
-            ['order_id' => $order->id],
-        );
+        if ($notifyUser->notify_orders) {
+            $this->push->notify(
+                $notifyUser,
+                'Order '.$order->code.' updated',
+                "Status is now: {$status}.",
+                ['order_id' => $order->id],
+            );
+        }
         if ($notifyUser->email !== null) {
             SafeMail::send($notifyUser, new OrderStatusUpdatedNotification($order, $status));
         }

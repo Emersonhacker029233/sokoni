@@ -24,7 +24,7 @@ use Laravel\Sanctum\HasApiTokens;
 #[Fillable([
     'name', 'email', 'phone', 'password', 'avatar', 'provider', 'provider_id',
     'locale', 'fcm_token', 'terms_accepted_at', 'terms_version', 'account_intent',
-    'marketing_consent',
+    'marketing_consent', 'notify_orders', 'notify_messages', 'notify_offers',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, HasLocalePreference, MustVerifyEmailContract
@@ -49,6 +49,9 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
             'is_admin' => 'boolean',
             'email_verified_at' => 'datetime',
             'marketing_consent' => 'boolean',
+            'notify_orders' => 'boolean',
+            'notify_messages' => 'boolean',
+            'notify_offers' => 'boolean',
         ];
     }
 

@@ -13,6 +13,7 @@ import 'core/router/routes.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/colors.dart';
 import 'core/theme/dimens.dart';
+import 'core/theme/theme_mode_controller.dart';
 
 Timer? _globalStartupWatchdog;
 bool _firstFrameConfirmed = false;
@@ -175,13 +176,19 @@ class SokoniApp extends ConsumerWidget {
     // Flutter's own default (which picks the FIRST supportedLocales
     // entry on no match — fragile, and not "explicitly English").
     final savedLocale = ref.watch(localeControllerProvider).value;
+    // Part 4 (client feedback): Settings' Appearance section — same
+    // "an explicit saved choice always wins, default to system" shape as
+    // the locale above; AsyncValue.value is null both while the DB read
+    // is in flight and if it fails, and ThemeMode.system is the right
+    // fallback for both cases, not just the "not yet chosen" one.
+    final themeMode = ref.watch(themeModeControllerProvider).value ?? ThemeMode.system;
 
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,
       theme: SokoniTheme.light,
       darkTheme: SokoniTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: savedLocale,

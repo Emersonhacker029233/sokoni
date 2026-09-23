@@ -72,10 +72,13 @@ class OfferController extends Controller
         return response()->json(['message' => 'Offer ended.']);
     }
 
+    /** Part 4 (client feedback): Settings' Notifications section — "offers from followed shops" toggle. */
     private function notifyFollowers(SellerProfile $seller, string $title, string $body, array $data): void
     {
         foreach ($seller->followers as $follower) {
-            $this->push->notify($follower, $title, $body, $data);
+            if ($follower->notify_offers) {
+                $this->push->notify($follower, $title, $body, $data);
+            }
         }
     }
 }
