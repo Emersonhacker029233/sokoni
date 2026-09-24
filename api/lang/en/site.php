@@ -7,13 +7,13 @@ return [
     'nav_sign_in' => 'Sign in',
     'nav_my_account' => 'My account',
     'nav_sign_out' => 'Sign out',
-    'search_placeholder' => 'Search products, shops...',
+    'search_placeholder' => 'Search products, services, shops...',
     'search_region_all' => 'All regions',
     'search_submit' => 'Search',
 
     // Home
     'home_hero_title' => 'Buy and sell anything, near you.',
-    'home_hero_subtitle' => 'Verified sellers across Tanzania. Real photos, real ratings, real people.',
+    'home_hero_subtitle' => 'Verified sellers and service providers across Tanzania. Real photos, real ratings, real people.',
     'home_categories' => 'Browse categories',
     'home_near_you' => 'Near you',
     'home_near_you_fallback' => 'Popular in Dar es Salaam',

@@ -31,6 +31,52 @@ class HomePageTest extends TestCase
     }
 
     /**
+     * Part 3 (client feedback): "the site now carries services as well
+     * as goods, and the copy should say so" — the hero subtitle and
+     * search placeholder both come from a single lang key each
+     * (`home_hero_subtitle`/`search_placeholder`), so updating them once
+     * should already reach every surface the task named: the hero
+     * itself, the header's search field (desktop and its aria-label),
+     * the mobile search field, the page's own meta description, and
+     * both Open Graph/Twitter descriptions (HomeController passes the
+     * same subtitle through as `description`, which the layout uses for
+     * all of those). Asserted directly rather than assumed, in both
+     * languages, since a key rename typo would otherwise only show up
+     * as a silently-missing string, not a failure.
+     */
+    public function test_the_updated_hero_and_search_copy_reaches_every_surface_in_english(): void
+    {
+        $response = $this->get('/?lang=en');
+
+        $response->assertOk();
+        // Hero heading + footer tagline (same key, two placements).
+        $response->assertSee('Verified sellers and service providers across Tanzania.', false);
+        // Header search field (desktop) + its aria-label + mobile search field.
+        $response->assertSeeInOrder([
+            'placeholder="Search products, services, shops..."',
+            'aria-label="Search products, services, shops..."',
+        ], false);
+        // Hero search field, header search field + its aria-label, mobile search field.
+        $this->assertSame(4, substr_count($response->getContent(), 'Search products, services, shops...'));
+        // Meta description + Open Graph + Twitter description — all three
+        // read from the same `description` value the layout received.
+        $response->assertSee('<meta name="description" content="Verified sellers and service providers across Tanzania.', false);
+        $response->assertSee('<meta property="og:description" content="Verified sellers and service providers across Tanzania.', false);
+        $response->assertSee('<meta name="twitter:description" content="Verified sellers and service providers across Tanzania.', false);
+    }
+
+    public function test_the_updated_hero_and_search_copy_reaches_every_surface_in_swahili(): void
+    {
+        $response = $this->get('/?lang=sw');
+
+        $response->assertOk();
+        $response->assertSee('Wauzaji na watoa huduma waliothibitishwa kote Tanzania.', false);
+        $this->assertSame(4, substr_count($response->getContent(), 'Tafuta bidhaa, huduma, maduka...'));
+        $response->assertSee('<meta name="description" content="Wauzaji na watoa huduma waliothibitishwa kote Tanzania.', false);
+        $response->assertSee('<meta property="og:description" content="Wauzaji na watoa huduma waliothibitishwa kote Tanzania.', false);
+    }
+
+    /**
      * B2 (tester feedback): "Near you" is the first product grid on the
      * page — its first row sits at/near the fold, so lazy-loading it like
      * every other card just defers the very photos a visitor sees first.

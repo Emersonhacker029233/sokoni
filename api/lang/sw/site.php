@@ -7,13 +7,13 @@ return [
     'nav_sign_in' => 'Ingia',
     'nav_my_account' => 'Akaunti yangu',
     'nav_sign_out' => 'Toka',
-    'search_placeholder' => 'Tafuta bidhaa, maduka...',
+    'search_placeholder' => 'Tafuta bidhaa, huduma, maduka...',
     'search_region_all' => 'Mikoa yote',
     'search_submit' => 'Tafuta',
 
     // Home
     'home_hero_title' => 'Nunua na uza chochote, karibu nawe.',
-    'home_hero_subtitle' => 'Wauzaji waliothibitishwa kote Tanzania. Picha halisi, tathmini halisi, watu halisi.',
+    'home_hero_subtitle' => 'Wauzaji na watoa huduma waliothibitishwa kote Tanzania. Picha halisi, tathmini halisi, watu halisi.',
     'home_categories' => 'Vinjari makundi',
     'home_near_you' => 'Karibu nawe',
     'home_near_you_fallback' => 'Maarufu Dar es Salaam',
