@@ -80,4 +80,49 @@ class CategoryResourceTest extends TestCase
 
         $this->assertStringContainsString('/categories/existing.jpg', $category->fresh()->image);
     }
+
+    /**
+     * Part 2 (client feedback): "once an image is uploaded to a
+     * category in the admin, there's no way to delete it — the only
+     * delete button removes the whole category." The photo field's own
+     * default "x" thumbnail button only cleared the form's live state
+     * (still required a separate Save to actually persist) — this
+     * dedicated hint action clears the stored file and the DB column
+     * immediately, so it's genuinely gone (and the icon-tile fallback
+     * takes over) the moment it's clicked, not after a second step.
+     */
+    public function test_an_admin_can_remove_an_existing_categorys_photo_via_the_dedicated_action(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('categories/existing.jpg', 'fake-image-content');
+        $admin = User::factory()->admin()->create();
+        $category = Category::factory()->create(['image' => Storage::disk('public')->url('categories/existing.jpg')]);
+
+        Livewire::actingAs($admin)
+            ->test(EditCategory::class, ['record' => $category->getRouteKey()])
+            ->callFormComponentAction('image', 'removeCategoryImage');
+
+        $this->assertNull($category->fresh()->image);
+        Storage::disk('public')->assertMissing('categories/existing.jpg');
+    }
+
+    public function test_removing_a_categorys_photo_falls_back_to_the_icon_tile_on_the_website(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('categories/existing.jpg', 'fake-image-content');
+        $admin = User::factory()->admin()->create();
+        $category = Category::factory()->create([
+            'image' => Storage::disk('public')->url('categories/existing.jpg'),
+            'icon' => 'devices',
+            'is_active' => true,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(EditCategory::class, ['record' => $category->getRouteKey()])
+            ->callFormComponentAction('image', 'removeCategoryImage');
+
+        $response = $this->get('/');
+        $response->assertOk();
+        $response->assertDontSee('categories/existing.jpg', false);
+    }
 }

@@ -149,6 +149,7 @@ Route::middleware(['auth:web', 'web.onboarded'])->group(function () {
     Route::post('/account/settings', [SettingsController::class, 'update'])->name('web.account.settings.update');
     Route::post('/account/settings/resend-verification', [SettingsController::class, 'resendVerification'])->name('web.account.settings.resend-verification');
     Route::post('/account/shop/{seller}/logo', [ShopLogoController::class, 'update'])->name('web.account.shop.logo');
+    Route::delete('/account/shop/{seller}/logo', [ShopLogoController::class, 'destroy'])->name('web.account.shop.logo.destroy');
     Route::post('/account/shop/{seller}/hours', [ShopHoursController::class, 'update'])->name('web.account.shop.hours');
 
     Route::get('/account/shop/register', [SellerRegistrationController::class, 'show'])->name('web.account.shop.register');

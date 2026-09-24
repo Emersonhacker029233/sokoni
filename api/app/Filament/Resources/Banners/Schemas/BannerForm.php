@@ -39,6 +39,18 @@ class BannerForm
                     ->automaticallyResizeImagesToWidth('1920')
                     ->automaticallyUpscaleImagesWhenResizing(false)
                     ->maxSize(2048)
+                    // Part 2 (client feedback): "the same applies
+                    // anywhere else an image can be uploaded but not
+                    // removed — check banners..." — no *remove* action
+                    // here on purpose: this field is `->required()`, a
+                    // banner with no image isn't a valid banner (unlike
+                    // a Category, which has a real icon-tile fallback to
+                    // remove down to). "Replace" already works as-is —
+                    // dropping a new file over an existing one in this
+                    // same slot swaps it, no separate action needed.
+                    // Explicit preview, same reasoning as CategoryForm.
+                    ->previewable()
+                    ->imagePreviewHeight('160')
                     ->helperText(
                         'Recommended sizes — Home hero/mid, Category top: 1600×500px wide banner. '
                         .'Sidebar: 300×600px. Search background: 1600×400px, keep the important '

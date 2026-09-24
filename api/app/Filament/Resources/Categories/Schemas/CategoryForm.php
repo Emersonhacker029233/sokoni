@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Categories\Schemas;
 
+use App\Models\Category;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -45,6 +47,15 @@ class CategoryForm
                     ->automaticallyResizeImagesToWidth('600')
                     ->automaticallyUpscaleImagesWhenResizing(false)
                     ->maxSize(1024)
+                    // Part 2 (client feedback): "no way to remove a
+                    // category image... add a preview of the current
+                    // image [and] a remove action." Both already default
+                    // to true on FileUpload, but made explicit here since
+                    // that default was clearly not obvious/discoverable
+                    // enough on its own — paired with a bigger preview
+                    // and the hint action below, which removal is now.
+                    ->previewable()
+                    ->imagePreviewHeight('160')
                     ->helperText('Square works best — the tile crops to a circle/rounded square. Recommended 600×600px. Max 1MB — larger images are resized automatically. Leave empty to use the icon above instead.')
                     // Same full-URL convention as Banner.image_path and
                     // SellerProfile.logo — see BannerForm's own docblock
@@ -57,7 +68,33 @@ class CategoryForm
                         $base = Storage::disk('public')->url('');
                         $component->state(str_starts_with($state, $base) ? substr($state, strlen($base)) : $state);
                     })
-                    ->dehydrateStateUsing(fn (?string $state) => $state ? Storage::disk('public')->url($state) : null),
+                    ->dehydrateStateUsing(fn (?string $state) => $state ? Storage::disk('public')->url($state) : null)
+                    // Part 2 (client feedback): FileUpload's own default
+                    // "x" thumbnail button only clears the FORM's live
+                    // state — an admin still has to remember to hit the
+                    // page's general Save afterwards for it to actually
+                    // take effect, and until then the field shows empty
+                    // rather than "actually removed." This hint action
+                    // clears the stored file and the DB column
+                    // immediately, so "removed, falls back to the icon
+                    // tile" is true the moment it's clicked, not after a
+                    // second, separate step.
+                    ->hintAction(
+                        Action::make('removeCategoryImage')
+                            ->label('Remove photo')
+                            ->icon('heroicon-o-trash')
+                            ->color('danger')
+                            ->visible(fn (?string $state, ?Category $record): bool => filled($state) || filled($record?->image))
+                            ->requiresConfirmation()
+                            ->action(function (FileUpload $component, ?Category $record) {
+                                if ($record?->image) {
+                                    $relative = str($record->image)->after(Storage::disk('public')->url(''));
+                                    Storage::disk('public')->delete($relative);
+                                    $record->update(['image' => null]);
+                                }
+                                $component->state(null);
+                            })
+                    ),
                 TextInput::make('sort_order')
                     ->required()
                     ->numeric()

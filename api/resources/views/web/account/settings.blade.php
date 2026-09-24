@@ -26,10 +26,19 @@
                         <span class="text-xs font-semibold text-white" x-text="progress + '%'"></span>
                     </div>
                 </div>
-                <label class="btn-secondary cursor-pointer text-sm">
-                    {{ __('site.account_shop_logo_change') }}
-                    <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onFileSelected($event.target.files); $event.target.value = ''">
-                </label>
+                <div class="flex flex-col gap-8">
+                    <label class="btn-secondary cursor-pointer text-sm">
+                        {{ __('site.account_shop_logo_change') }}
+                        <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onFileSelected($event.target.files); $event.target.value = ''">
+                    </label>
+                    {{-- Part 2 (client feedback): "an image can be
+                         uploaded but not removed" — only visible once
+                         there's actually a logo to remove; falls back to
+                         the initial-letter placeholder above once gone. --}}
+                    <button type="button" x-show="logoUrl" x-cloak @click="removeLogo()" class="text-xs font-medium text-sokoni-danger hover:underline">
+                        {{ __('site.account_shop_logo_remove') }}
+                    </button>
+                </div>
             </div>
             <p x-show="error" x-cloak class="mt-8 text-xs text-sokoni-danger" x-text="error"></p>
         </div>

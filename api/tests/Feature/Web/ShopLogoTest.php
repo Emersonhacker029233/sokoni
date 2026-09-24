@@ -88,4 +88,77 @@ class ShopLogoTest extends TestCase
             'logo' => UploadedFile::fake()->image('logo.jpg'),
         ])->assertForbidden();
     }
+
+    /**
+     * Bug, found while fixing Part 2 (client feedback): uploading a new
+     * logo never deleted the previous file — every change just left an
+     * orphaned file on disk forever, matching the exact "upload works,
+     * nothing ever gets removed" family of bug this round is about.
+     */
+    public function test_uploading_a_new_logo_deletes_the_previous_file(): void
+    {
+        Storage::fake('public');
+        [$user, $seller] = $this->onboardedSellerOwner();
+
+        $this->actingAsWebUser($user)->postJson(route('web.account.shop.logo', $seller), [
+            'logo' => UploadedFile::fake()->image('first.jpg'),
+        ])->assertOk();
+        $firstPath = str($seller->fresh()->logo)->after(Storage::disk('public')->url(''))->toString();
+        Storage::disk('public')->assertExists($firstPath);
+
+        $this->actingAsWebUser($user)->postJson(route('web.account.shop.logo', $seller), [
+            'logo' => UploadedFile::fake()->image('second.jpg'),
+        ])->assertOk();
+
+        Storage::disk('public')->assertMissing($firstPath);
+    }
+
+    /**
+     * Part 2 (client feedback): "an image can be uploaded but not
+     * removed — check ... seller logos." Only "Change" existed before.
+     */
+    public function test_the_owner_can_remove_their_shop_logo(): void
+    {
+        Storage::fake('public');
+        [$user, $seller] = $this->onboardedSellerOwner();
+        $this->actingAsWebUser($user)->postJson(route('web.account.shop.logo', $seller), [
+            'logo' => UploadedFile::fake()->image('logo.jpg'),
+        ]);
+        $path = str($seller->fresh()->logo)->after(Storage::disk('public')->url(''))->toString();
+
+        $response = $this->actingAsWebUser($user)->deleteJson(route('web.account.shop.logo.destroy', $seller));
+
+        $response->assertOk();
+        $this->assertNull($response->json('logo'));
+        $this->assertNull($seller->fresh()->logo);
+        Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_a_stranger_cannot_remove_another_sellers_logo(): void
+    {
+        Storage::fake('public');
+        [$user, $seller] = $this->onboardedSellerOwner();
+        $this->actingAsWebUser($user)->postJson(route('web.account.shop.logo', $seller), [
+            'logo' => UploadedFile::fake()->image('logo.jpg'),
+        ]);
+        $stranger = User::factory()->create([
+            'terms_accepted_at' => now(),
+            'terms_version' => Legal::TERMS_VERSION,
+            'account_intent' => 'buy',
+        ]);
+
+        $this->actingAsWebUser($stranger)->deleteJson(route('web.account.shop.logo.destroy', $seller))
+            ->assertForbidden();
+        $this->assertNotNull($seller->fresh()->logo);
+    }
+
+    public function test_removing_a_logo_that_was_never_set_is_a_harmless_no_op(): void
+    {
+        [$user, $seller] = $this->onboardedSellerOwner();
+
+        $response = $this->actingAsWebUser($user)->deleteJson(route('web.account.shop.logo.destroy', $seller));
+
+        $response->assertOk();
+        $this->assertNull($response->json('logo'));
+    }
 }

@@ -183,6 +183,7 @@ class AppServiceProvider extends ServiceProvider
                 'locationFilledIn' => __('site.js_location_filled_in'),
                 'locationNoAddress' => __('site.js_location_no_address'),
                 'logoUpdateFailed' => __('site.js_logo_update_failed'),
+                'logoRemoveFailed' => __('site.js_logo_remove_failed'),
                 'photoProcessFailed' => __('site.js_photo_process_failed'),
                 'uploadFailed' => __('site.js_upload_failed'),
                 'networkError' => __('site.js_network_error'),

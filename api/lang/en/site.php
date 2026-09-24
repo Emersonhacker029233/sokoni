@@ -248,6 +248,7 @@ return [
     'js_location_filled_in' => "Filled in from your location — please check it's correct.",
     'js_location_no_address' => "Got your location, but couldn't look up the address — please fill in the fields below.",
     'js_logo_update_failed' => 'Could not update your logo.',
+    'js_logo_remove_failed' => 'Could not remove your logo.',
     'js_photo_process_failed' => 'Could not process this photo.',
     'js_upload_failed' => 'Upload failed.',
     'js_network_error' => 'Network error — check your connection and try again.',
@@ -262,6 +263,7 @@ return [
     'account_settings' => 'Profile settings',
     'account_shop_logo' => 'Shop logo',
     'account_shop_logo_change' => 'Change logo',
+    'account_shop_logo_remove' => 'Remove logo',
     'account_shop' => 'My shop',
     // Language audit (client feedback): shop-dashboard.blade.php was
     // almost entirely hardcoded English.

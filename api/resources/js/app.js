@@ -343,6 +343,25 @@ Alpine.data('shopLogoUploader', (sellerId, currentLogoUrl) => ({
             xhr.send(formData);
         });
     },
+
+    // Part 2 (client feedback): "an image can be uploaded but not
+    // removed" — only "Change" existed. Immediate, no confirm step,
+    // matching removeItem()'s own product-photo pattern below.
+    removeLogo() {
+        this.error = null;
+        const previousUrl = this.logoUrl;
+        this.logoUrl = null;
+
+        fetch(`/account/shop/${sellerId}/logo`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': this.csrf, Accept: 'application/json' },
+        }).then((response) => {
+            if (!response.ok) throw new Error(window.sokoniI18n.logoRemoveFailed);
+        }).catch((e) => {
+            this.error = e.message || window.sokoniI18n.logoRemoveFailed;
+            this.logoUrl = previousUrl;
+        });
+    },
 }));
 
 Alpine.data('productMediaManager', (productId, maxItems, initialMedia) => ({
