@@ -56,7 +56,27 @@
             @foreach ($searchBgBanners as $banner)
                 @php($banner->recordImpression())
             @endforeach
-            <div class="absolute inset-0">
+            {{-- Bug (client feedback): "on a phone, the banner renders
+                 only its dark centre section... behaves as though it
+                 were still at desktop width." Root cause: this layer used
+                 to be `absolute inset-0`, stretching to match the
+                 SECTION's own height — which desktop's content (a
+                 single-row search form) happens to keep close to this
+                 banner's authored 4:1 ratio, but mobile's stacked
+                 `flex-col` form (below, `sm:flex-row`) pushes the section
+                 much taller relative to its width, forcing `object-cover`
+                 to crop nearly the entire image down to a thin vertical
+                 sliver — which lands exactly on the dimmed centre third,
+                 since that's where 50% (the crop's default centre point)
+                 falls. Capping this layer's own height independently of
+                 the section's content-driven height keeps the crop
+                 close to the image's real aspect ratio at every width;
+                 `lg:` reverts to the original full-height behaviour,
+                 unchanged from before this fix (desktop was never
+                 reported broken). Any section height beyond this layer's
+                 own (a taller mobile form) simply shows the section's
+                 own solid `bg-sokoni-black` underneath, not a crop. --}}
+            <div class="absolute inset-x-0 top-0 h-[220px] sm:h-[260px] lg:inset-0 lg:h-auto">
                 @foreach ($searchBgBanners as $index => $banner)
                     <a
                         href="{{ route('web.banners.click', $banner) }}"
@@ -65,30 +85,34 @@
                         :class="active === {{ $index }} ? 'opacity-100' : 'opacity-0 pointer-events-none'"
                         {{ $index > 0 ? 'aria-hidden="true"' : '' }}
                     >
-                        <img src="{{ $banner->image_path }}" alt="" class="h-full w-full object-cover">
+                        <img src="{{ $banner->image_path }}" alt="" class="h-full w-full object-cover object-center">
                     </a>
                 @endforeach
+                {{-- One shared scrim above every rotating layer — the
+                     search field must stay readable over whichever
+                     banner is currently showing, and this dims all of
+                     them identically without needing to duplicate it per
+                     image. Inside the same height-capped wrapper so it
+                     always matches the image's own bounds, at every width. --}}
+                <div
+                    class="absolute inset-0"
+                    style="background: linear-gradient(to right, transparent 0%, rgba(10,10,10,.88) 32%, rgba(10,10,10,.88) 68%, transparent 100%)"
+                    aria-hidden="true"
+                ></div>
             </div>
-            {{-- One shared scrim above every rotating layer — the search
-                 field must stay readable over whichever banner is
-                 currently showing, and this dims all of them identically
-                 without needing to duplicate it per image. --}}
-            <div
-                class="absolute inset-0"
-                style="background: linear-gradient(to right, transparent 0%, rgba(10,10,10,.88) 32%, rgba(10,10,10,.88) 68%, transparent 100%)"
-                aria-hidden="true"
-            ></div>
         @elseif ($searchBgBanners->isNotEmpty())
             @php($searchBg = $searchBgBanners->first())
             @php($searchBg->recordImpression())
-            <a href="{{ route('web.banners.click', $searchBg) }}" class="absolute inset-0 block" aria-label="{{ $searchBg->title }}">
-                <img src="{{ $searchBg->image_path }}" alt="" class="h-full w-full object-cover">
-            </a>
-            <div
-                class="absolute inset-0"
-                style="background: linear-gradient(to right, transparent 0%, rgba(10,10,10,.88) 32%, rgba(10,10,10,.88) 68%, transparent 100%)"
-                aria-hidden="true"
-            ></div>
+            <div class="absolute inset-x-0 top-0 h-[220px] sm:h-[260px] lg:inset-0 lg:h-auto">
+                <a href="{{ route('web.banners.click', $searchBg) }}" class="absolute inset-0 block" aria-label="{{ $searchBg->title }}">
+                    <img src="{{ $searchBg->image_path }}" alt="" class="h-full w-full object-cover object-center">
+                </a>
+                <div
+                    class="absolute inset-0"
+                    style="background: linear-gradient(to right, transparent 0%, rgba(10,10,10,.88) 32%, rgba(10,10,10,.88) 68%, transparent 100%)"
+                    aria-hidden="true"
+                ></div>
+            </div>
         @else
             <div class="absolute inset-0" style="background-image: url('{{ asset('images/hero-pattern.svg') }}'); background-repeat: repeat;" aria-hidden="true"></div>
             <div class="absolute inset-0 bg-gradient-to-b from-sokoni-black/60 via-sokoni-black/80 to-sokoni-black" aria-hidden="true"></div>

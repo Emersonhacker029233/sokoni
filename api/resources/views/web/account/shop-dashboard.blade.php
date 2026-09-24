@@ -31,7 +31,10 @@
         </div>
     @endif
 
-    <div class="mt-24 grid grid-cols-3 gap-16">
+    {{-- 2-up below `sm`: a fixed 3-column grid left each stat card only
+         ~99px wide at 360px — too narrow for a `text-2xl` view/order
+         count once it reaches four digits (client feedback, 360px audit). --}}
+    <div class="mt-24 grid grid-cols-2 gap-16 sm:grid-cols-3">
         <div class="card p-16 text-center"><p class="text-2xl font-bold">{{ $productsCount }}</p><p class="text-xs text-sokoni-black/50">{{ __('site.shop_dashboard_products_stat') }}</p></div>
         <div class="card p-16 text-center"><p class="text-2xl font-bold">{{ $stats['total_views'] }}</p><p class="text-xs text-sokoni-black/50">{{ __('site.shop_dashboard_views_stat') }}</p></div>
         <div class="card p-16 text-center"><p class="text-2xl font-bold">{{ $stats['orders_last_30_days'] }}</p><p class="text-xs text-sokoni-black/50">{{ __('site.shop_dashboard_orders_30d_stat') }}</p></div>

@@ -91,6 +91,37 @@ class BannerTest extends TestCase
         $response->assertSee('linear-gradient(to right, transparent 0%', false);
     }
 
+    /**
+     * Bug (client feedback): "on a phone, the banner renders only its
+     * dark centre section" — the image/scrim layer used to be
+     * `absolute inset-0`, stretching to match the section's own
+     * content-driven height, which a stacked mobile search form pushes
+     * far past the banner's authored 4:1 ratio, forcing a near-total
+     * crop. Fixed by capping that layer's own height independently
+     * (responsive, `lg:` reverts to the original full-height behaviour)
+     * — asserts the fix's actual markup is present, not just that page
+     * renders OK, since this bug never touched status codes.
+     */
+    public function test_the_search_background_image_layer_has_a_responsive_height_cap_not_desktop_only_full_bleed(): void
+    {
+        Banner::factory()->create(['position' => 'search_background']);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('h-[220px] sm:h-[260px] lg:inset-0 lg:h-auto', false);
+    }
+
+    public function test_the_rotating_search_background_layer_also_has_the_same_responsive_height_cap(): void
+    {
+        Banner::factory()->count(2)->create(['position' => 'search_background']);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('h-[220px] sm:h-[260px] lg:inset-0 lg:h-auto', false);
+    }
+
     public function test_with_no_search_background_banner_the_band_keeps_its_plain_pattern_backdrop(): void
     {
         $response = $this->get('/');

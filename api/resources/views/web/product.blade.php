@@ -137,8 +137,11 @@
                 </div>
             </a>
 
-            {{-- Contact actions --}}
-            <div class="mt-16 grid grid-cols-3 gap-8">
+            {{-- Contact actions — 2-up below `sm`: a fixed 3-column grid
+                 left every button ~104px wide at 360px, visibly cramping
+                 wrapped label text ("Tap to reveal number" et al.)
+                 against the icon above it (client feedback, 360px audit). --}}
+            <div class="mt-16 grid grid-cols-2 gap-8 sm:grid-cols-3">
                 {{-- Previously always linked to the conversation list with no way to
                      actually start a thread with this seller (tester feedback A2) —
                      now creates/resumes the real per-product conversation, matching
