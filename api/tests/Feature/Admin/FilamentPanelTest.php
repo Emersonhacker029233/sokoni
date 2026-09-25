@@ -35,6 +35,102 @@ class FilamentPanelTest extends TestCase
         $this->actingAsAdmin($admin)->get('/admin')->assertOk();
     }
 
+    /**
+     * Part 5 (client feedback): "the admin has no way to switch between
+     * light and dark... add Filament's light/dark toggle, defaulting to
+     * system preference." Checked against the actual panel config
+     * (App\Providers\Filament\AdminPanelProvider) rather than assumed:
+     * Filament's own `HasDarkMode`/`HasTheme` concerns already default
+     * `hasDarkMode`/`hasThemeSwitcher` to `true` and `defaultThemeMode`
+     * to `ThemeMode::System`, and nothing in this panel's config
+     * overrides any of the three — so the toggle already exists (inside
+     * the account/user menu in the topbar, per Filament's own
+     * `user-menu.blade.php`), it just isn't a separate, more obviously
+     * visible control. Nothing to add; this guards against it ever
+     * being silently disabled (e.g. a future `->darkMode(false)` or
+     * `->themeSwitcher(false)` call on the panel).
+     */
+    public function test_the_theme_switcher_is_present_and_defaults_to_system_preference(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAsAdmin($admin)->get('/admin');
+
+        $response->assertOk();
+        $response->assertSee('fi-theme-switcher', false);
+        $response->assertSee("localStorage.getItem('theme') || 'system'", false);
+    }
+
+    /**
+     * Part 5 (client feedback): "admin interface strings are English by
+     * default" — stopped being reliably true the moment the language
+     * round (Part 1) made `'sw'` the global app default; with nothing
+     * admin-specific overriding it, the panel silently inherited that.
+     * `SetAdminLocale` makes English an explicit, deliberate default
+     * again for the admin specifically, independent of the shared
+     * `locale` column an ordinary buyer/seller now defaults to `'sw'`
+     * on.
+     */
+    public function test_the_admin_panel_renders_in_english_by_default_even_though_the_app_wide_default_is_swahili(): void
+    {
+        $this->assertSame('sw', config('app.locale'));
+        $admin = User::factory()->admin()->create(['admin_locale' => null]);
+
+        $response = $this->actingAsAdmin($admin)->get('/admin');
+
+        $response->assertOk();
+        $response->assertSee('lang="en"', false);
+    }
+
+    /**
+     * Part 5 (client feedback): "add a language selector... the
+     * switcher should change the locale properly rather than being
+     * decorative." Filament genuinely ships a real Swahili translation
+     * of its own panel chrome (confirmed by reading
+     * vendor/filament/*\/resources/lang/sw/, not assumed) — this proves
+     * an admin's choice is both persisted and actually changes what
+     * renders, not just a cosmetic dropdown.
+     */
+    public function test_an_admin_can_switch_the_panel_to_swahili_and_it_actually_renders_in_swahili(): void
+    {
+        $admin = User::factory()->admin()->create(['admin_locale' => null]);
+
+        $switch = $this->actingAsAdmin($admin)->get('/admin/locale/sw');
+        $switch->assertRedirect();
+        $this->assertSame('sw', $admin->fresh()->admin_locale);
+
+        $response = $this->actingAsAdmin($admin)->get('/admin');
+        $response->assertOk();
+        $response->assertSee('lang="sw"', false);
+        // Filament's own bundled Swahili translation of its topbar chrome.
+        $response->assertSee('Menyu ya Mtumiaji', false);
+    }
+
+    public function test_switching_back_to_english_restores_the_english_chrome(): void
+    {
+        $admin = User::factory()->admin()->create(['admin_locale' => 'sw']);
+
+        $this->actingAsAdmin($admin)->get('/admin/locale/en');
+
+        $this->assertSame('en', $admin->fresh()->admin_locale);
+        $response = $this->actingAsAdmin($admin)->get('/admin');
+        $response->assertSee('lang="en"', false);
+    }
+
+    public function test_the_locale_switch_route_rejects_an_unsupported_locale(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAsAdmin($admin)->get('/admin/locale/fr')->assertNotFound();
+    }
+
+    public function test_a_signed_out_visitor_sees_the_login_page_in_english(): void
+    {
+        $this->assertSame('sw', config('app.locale'));
+
+        $this->get('/admin/login')->assertSee('lang="en"', false);
+    }
+
     public function test_an_admin_can_load_the_seller_verification_queue(): void
     {
         $admin = User::factory()->admin()->create();

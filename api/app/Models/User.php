@@ -23,7 +23,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
     'name', 'email', 'phone', 'password', 'avatar', 'provider', 'provider_id',
-    'locale', 'fcm_token', 'terms_accepted_at', 'terms_version', 'account_intent',
+    'locale', 'admin_locale', 'fcm_token', 'terms_accepted_at', 'terms_version', 'account_intent',
     'marketing_consent', 'notify_orders', 'notify_messages', 'notify_offers',
 ])]
 #[Hidden(['password', 'remember_token'])]

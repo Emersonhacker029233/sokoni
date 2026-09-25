@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\SetAdminLocale;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -10,12 +12,14 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -120,9 +124,42 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                // Part 5 (client feedback): must run after StartSession
+                // (needs the authenticated user, where there is one) but
+                // applies panel-wide, including the login page — see the
+                // middleware's own docblock for why this exists at all
+                // and why it reads `admin_locale`, not the shared `locale`.
+                SetAdminLocale::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
+            ])
+            // Part 5 (client feedback): "add a language selector...
+            // covering the same languages as the rest of the platform."
+            // A plain link-based route (not a Livewire action) so it
+            // works identically from every page the user menu appears
+            // on, not just one; registered via authenticatedRoutes()
+            // specifically so `auth()->user()` is guaranteed non-null
+            // inside it, already under this panel's own `/admin` prefix
+            // and auth middleware.
+            ->authenticatedRoutes(function (Panel $panel) {
+                Route::get('/locale/{locale}', function (string $locale) {
+                    abort_unless(in_array($locale, ['en', 'sw'], true), 404);
+                    auth()->user()->update(['admin_locale' => $locale]);
+
+                    return redirect(url()->previous());
+                })->name('locale.update');
+            })
+            ->userMenuItems([
+                Action::make('language')
+                    ->label(fn () => match (auth()->user()?->admin_locale) {
+                        'sw' => 'Lugha: Kiswahili',
+                        default => 'Language: English',
+                    })
+                    ->icon(Heroicon::Language)
+                    ->url(fn () => route('filament.admin.locale.update', [
+                        'locale' => auth()->user()?->admin_locale === 'sw' ? 'en' : 'sw',
+                    ])),
             ]);
     }
 }
