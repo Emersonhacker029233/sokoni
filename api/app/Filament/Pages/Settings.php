@@ -85,6 +85,21 @@ class Settings extends Page
                             ->minValue(1)
                             ->maxValue(20),
                     ]),
+                // Part 4 (client feedback): "the search-background
+                // rotation is currently fixed at 7 seconds — make it a
+                // setting the client controls... show it in seconds, not
+                // milliseconds." Global (see config/sokoni.php's own
+                // docblock on why not per-position yet).
+                Section::make('Banners')
+                    ->schema([
+                        TextInput::make('banner_rotation_seconds')
+                            ->label('Search-background rotation speed (seconds)')
+                            ->helperText('How long each search-background banner shows before crossfading to the next, when more than one is active.')
+                            ->numeric()
+                            ->required()
+                            ->minValue(3)
+                            ->maxValue(30),
+                    ]),
             ])
             ->statePath('data');
     }

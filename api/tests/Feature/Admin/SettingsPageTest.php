@@ -40,6 +40,7 @@ class SettingsPageTest extends TestCase
                 'max_media_per_product' => 6,
                 'offer_max_duration_days' => 5,
                 'report_auto_hide_threshold' => 2,
+                'banner_rotation_seconds' => 12,
             ])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -48,6 +49,58 @@ class SettingsPageTest extends TestCase
         $this->assertSame(6, SokoniSettings::maxMediaPerProduct());
         $this->assertSame(5, SokoniSettings::offerMaxDurationDays());
         $this->assertSame(2, SokoniSettings::reportAutoHideThreshold());
+        $this->assertSame(12, SokoniSettings::bannerRotationSeconds());
+    }
+
+    /** Part 4 (client feedback): "make it a setting the client controls... with a sensible range, say 3 to 30 seconds, and 7 as the default." */
+    public function test_banner_rotation_seconds_defaults_to_seven(): void
+    {
+        $this->assertSame(7, SokoniSettings::bannerRotationSeconds());
+    }
+
+    public function test_banner_rotation_seconds_rejects_a_value_outside_3_to_30(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAsAdmin($admin);
+
+        Livewire::test(Settings::class)
+            ->fillForm([
+                'search_radius_km' => 5,
+                'max_media_per_product' => 8,
+                'offer_max_duration_days' => 7,
+                'report_auto_hide_threshold' => 3,
+                'banner_rotation_seconds' => 2,
+            ])
+            ->call('save')
+            ->assertHasFormErrors(['banner_rotation_seconds']);
+
+        Livewire::test(Settings::class)
+            ->fillForm([
+                'search_radius_km' => 5,
+                'max_media_per_product' => 8,
+                'offer_max_duration_days' => 7,
+                'report_auto_hide_threshold' => 3,
+                'banner_rotation_seconds' => 31,
+            ])
+            ->call('save')
+            ->assertHasFormErrors(['banner_rotation_seconds']);
+    }
+
+    /**
+     * Part 4 (client feedback): "show it in seconds, not milliseconds" —
+     * the admin-facing value is seconds; the homepage's own rotation
+     * timer needs milliseconds, so this proves the conversion (not just
+     * the raw setting value) actually reaches the rendered page.
+     */
+    public function test_the_configured_rotation_speed_reaches_the_homepages_rotation_timer_in_milliseconds(): void
+    {
+        SokoniSettings::set('banner_rotation_seconds', 15);
+        \App\Models\Banner::factory()->count(2)->create(['position' => 'search_background']);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('}, 15000);', false);
     }
 
     public function test_the_media_upload_cap_actually_enforces_the_configured_setting(): void

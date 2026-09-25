@@ -45,7 +45,12 @@
                     if (this.reduceMotion) return;
                     setInterval(() => {
                         if (! this.paused) this.active = (this.active + 1) % this.total;
-                    }, 7000);
+                    // Part 4 (client feedback): "make it a setting the
+                    // client controls" — App\Support\Settings, admin-
+                    // editable, 3-30s. Rendered here as milliseconds,
+                    // the units the actual timer needs, not the seconds
+                    // the admin form and this comment describe it in.
+                    }, {{ \App\Support\Settings::bannerRotationSeconds() * 1000 }});
                 },
             }"
             @mouseenter="paused = true"

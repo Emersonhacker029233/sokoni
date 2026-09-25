@@ -43,6 +43,12 @@ class Settings
         return (int) static::get('max_sms_blast_size');
     }
 
+    /** Part 4 (client feedback): how long the search-background banner rotation holds each image before crossfading to the next. */
+    public static function bannerRotationSeconds(): int
+    {
+        return (int) static::get('banner_rotation_seconds');
+    }
+
     public static function get(string $key): mixed
     {
         $override = Setting::query()->find($key);
@@ -64,6 +70,7 @@ class Settings
             'offer_max_duration_days' => static::offerMaxDurationDays(),
             'report_auto_hide_threshold' => static::reportAutoHideThreshold(),
             'max_sms_blast_size' => static::maxSmsBlastSize(),
+            'banner_rotation_seconds' => static::bannerRotationSeconds(),
         ];
     }
 }

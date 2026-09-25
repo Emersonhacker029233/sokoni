@@ -12,6 +12,17 @@ return [
     'report_auto_hide_threshold' => env('SOKONI_REPORT_AUTO_HIDE_THRESHOLD', 3),
     'max_sms_blast_size' => env('SOKONI_MAX_SMS_BLAST_SIZE', 500),
 
+    // Part 4 (client feedback): "the search-background rotation is
+    // currently fixed at 7 seconds — make it a setting the client
+    // controls." Global, not per-position — search_background is the
+    // only position that ever rotates a single slot between banners
+    // (in_focus shows several posters at once, side-by-side, not one
+    // at a time; every other position renders at most one banner with
+    // nothing to rotate through in the first place), so there is
+    // nothing for a second, position-specific value to actually apply
+    // to yet. Seconds, not milliseconds — see Settings::bannerRotationSeconds().
+    'banner_rotation_seconds' => env('SOKONI_BANNER_ROTATION_SECONDS', 7),
+
     // Infra throttle, not an admin-facing policy (see Settings.php) — how
     // many recipients ProcessSmsBlasts sends per cron minute-tick, so a
     // large blast is spread over several minutes rather than risking a
