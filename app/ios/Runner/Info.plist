@@ -46,6 +46,10 @@
 		     also missing from AndroidManifest.xml — see that file. -->
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Sokoni uses your location to show nearby shops and products, and to help sellers set their shop's map location.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Sokoni needs access to your photo library so you can upload product photos when listing items for sale.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Sokoni uses your location to show nearby shops and products, and to help sellers set their shop's map location.</string>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>
