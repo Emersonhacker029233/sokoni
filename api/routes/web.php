@@ -29,6 +29,7 @@ use App\Http\Controllers\Web\ProductController;
 use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\SeoController;
 use App\Http\Controllers\Web\ShopController;
+use App\Http\Controllers\Web\SmsDeliveryCallbackController;
 use App\Http\Controllers\Web\StoresController;
 use App\Http\Controllers\Web\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
@@ -88,6 +89,11 @@ Route::get('/sell', [PageController::class, 'sell'])->name('web.sell');
 Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)
     ->middleware(['signed', 'throttle:6,1'])
     ->name('verification.verify');
+
+// Kibonet's delivery-report callback (KIBONET_DELIVERY_REPORT_URL,
+// KibonetSmsGateway) — see SmsDeliveryCallbackController's own docblock for
+// why this is unauthenticated and CSRF-exempt (bootstrap/app.php).
+Route::post('/sms/delivery-callback', SmsDeliveryCallbackController::class)->name('web.sms.delivery-callback');
 
 Route::get('/sitemap.xml', [SeoController::class, 'sitemapIndex'])->name('web.sitemap');
 Route::get('/sitemap-products.xml', [SeoController::class, 'sitemapProducts'])->name('web.sitemap.products');

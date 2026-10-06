@@ -22,6 +22,12 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'phone' => '+255'.fake()->unique()->numerify('7########'),
             'password' => null,
+            // Set explicitly rather than left to the DB-level default —
+            // an attribute that relied purely on the DB default would
+            // read back as null in PHP on the just-created instance until
+            // a fresh query, the same gotcha User::canAccessPanel()'s own
+            // comment documents for `is_admin`.
+            'two_factor_enabled' => false,
             'provider' => fake()->randomElement(['google', 'phone']),
             'provider_id' => fake()->uuid(),
             'locale' => fake()->randomElement(['en', 'sw']),

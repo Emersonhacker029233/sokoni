@@ -12,7 +12,13 @@ import '../../../shared/widgets/resend_code_button.dart';
 import '../providers/auth_providers.dart';
 import 'post_sign_in.dart';
 
-/// "Sign in" — for an existing account only: phone, then the code, done.
+/// The old phone+code sign-in — phone, then the code, done, no password.
+/// No longer the primary "Sign in" entry point (`showPasswordSignInSheet`
+/// is, as of the Part D username/password rework) — reachable from there
+/// via "Sign in with phone number instead", kept fully working for any
+/// account that hasn't set a password yet (CLAUDE.md 2.6: "keep old
+/// phone-and-code path available until all accounts migrate").
+///
 /// Never asks for a name (CLAUDE.md restructure, 2026-08-25 — the actual
 /// reported bug: a returning user was shown a "full name" field as though
 /// the account didn't exist, even though the server always found the

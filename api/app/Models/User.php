@@ -22,7 +22,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
-    'name', 'email', 'phone', 'password', 'avatar', 'provider', 'provider_id',
+    'name', 'email', 'phone', 'username', 'password', 'two_factor_enabled', 'avatar', 'provider', 'provider_id',
     'locale', 'admin_locale', 'fcm_token', 'terms_accepted_at', 'terms_version', 'account_intent',
     'marketing_consent', 'notify_orders', 'notify_messages', 'notify_offers',
 ])]
@@ -34,6 +34,16 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     // Product's own SoftDeletes note for the same reasoning.
     use HasApiTokens, HasFactory, MustVerifyEmail, Notifiable, SoftDeletes;
 
+    /** Username/password rework (Part D) — same shape as SellerProfile::HANDLE_PATTERN, a separate constant since a username and a shop handle are different concepts that happen to share a format today. */
+    public const USERNAME_PATTERN = '/^[a-z0-9_]{3,20}$/';
+
+    /** Usernames nobody may register — platform/system words, not shop handles (see SellerProfile::RESERVED_HANDLES for that separate list). */
+    public const RESERVED_USERNAMES = [
+        'admin', 'administrator', 'api', 'sokoni', 'support', 'help', 'about', 'contact',
+        'terms', 'privacy', 'login', 'logout', 'signin', 'signup', 'register', 'settings',
+        'null', 'undefined', 'root', 'system', 'moderator', 'staff', 'password', 'security',
+    ];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -43,6 +53,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     {
         return [
             'password' => 'hashed',
+            'two_factor_enabled' => 'boolean',
             'terms_accepted_at' => 'datetime',
             'banned_at' => 'datetime',
             'banned_until' => 'datetime',
@@ -107,6 +118,25 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     public function devices(): HasMany
     {
         return $this->hasMany(Device::class);
+    }
+
+    /** "Recognised devices" for sign-in (CLAUDE.md Part 2.2) — see TrustedDevice's own docblock. Distinct from `devices()` above, which is FCM push registration, an unrelated concept that happens to share the word "device". */
+    public function trustedDevices(): HasMany
+    {
+        return $this->hasMany(TrustedDevice::class);
+    }
+
+    /**
+     * Part D (username/password rework), 2.6: an account created before
+     * this feature shipped, or one that's never completed the one-time
+     * upgrade prompt. Checked as `password === null` rather than a
+     * separate migration flag — the two are equivalent (nothing else ever
+     * sets `password` to null again after it's first set) and this avoids
+     * a redundant column that could drift out of sync with the real state.
+     */
+    public function needsCredentialSetup(): bool
+    {
+        return $this->password === null;
     }
 
     public function appNotifications(): HasMany

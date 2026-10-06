@@ -4,6 +4,7 @@ namespace Tests\Unit\Services\Sms;
 
 use App\Services\Sms\AfricasTalkingSmsGateway;
 use App\Services\Sms\BeemSmsGateway;
+use App\Services\Sms\KibonetSmsGateway;
 use App\Services\Sms\LogSmsGateway;
 use App\Services\Sms\SmsGateway;
 use App\Services\Sms\TextifySmsGateway;
@@ -29,6 +30,20 @@ class SmsGatewayBindingTest extends TestCase
         config(['services.sms_driver' => 'twilio']);
 
         $this->assertInstanceOf(LogSmsGateway::class, $this->app->make(SmsGateway::class));
+    }
+
+    public function test_uses_kibonet_when_selected(): void
+    {
+        config([
+            'services.sms_driver' => 'kibonet',
+            'services.kibonet.api_key' => 'key',
+            'services.kibonet.api_secret' => 'secret',
+            'services.kibonet.sender_id' => 'SOKONI',
+            'services.kibonet.endpoint' => 'https://sms.kibonet.co.tz/api/v1/vendor/message/send',
+            'services.kibonet.number_format' => '255',
+        ]);
+
+        $this->assertInstanceOf(KibonetSmsGateway::class, $this->app->make(SmsGateway::class));
     }
 
     public function test_uses_textify_when_selected(): void

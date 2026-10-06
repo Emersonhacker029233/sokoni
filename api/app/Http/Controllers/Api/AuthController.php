@@ -18,6 +18,7 @@ use App\Http\Requests\VerifyPhoneChangeRequest;
 use App\Http\Resources\UserResource;
 use App\Models\SellerProfile;
 use App\Models\User;
+use App\Services\Account\AccountDeletionService;
 use App\Services\Otp\PhoneOtpService;
 use App\Services\SocialAuth\SocialAuthVerifier;
 use App\Services\SocialAuth\SocialUserResolver;
@@ -34,6 +35,7 @@ class AuthController extends Controller
         private readonly PhoneOtpService $otp,
         private readonly SocialAuthVerifier $socialVerifier,
         private readonly SocialUserResolver $socialUserResolver,
+        private readonly AccountDeletionService $accountDeletion,
     ) {}
 
     /**
@@ -126,6 +128,8 @@ class AuthController extends Controller
             $user = User::create([
                 'phone' => $request->string('phone'),
                 'name' => $request->string('name'),
+                'username' => $request->string('username')->lower()->toString(),
+                'password' => $request->string('password')->toString(),
                 'email' => $request->filled('email') ? $request->string('email')->toString() : null,
                 'marketing_consent' => $request->boolean('marketing_consent'),
                 'provider' => 'phone',
@@ -311,6 +315,19 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out.']);
+    }
+
+    /**
+     * Apple Guideline 5.1.1(v): account creation happens in-app, so
+     * deletion must too — not by email, not through a website. See
+     * AccountDeletionService's own docblock for exactly what this does
+     * and deliberately doesn't touch (orders are preserved).
+     */
+    public function destroy(Request $request): JsonResponse
+    {
+        $this->accountDeletion->delete($request->user());
+
+        return response()->json(['message' => 'Account deleted.']);
     }
 
     /** Record Terms & Privacy acceptance with a timestamp + version, per CLAUDE.md feature 11. */

@@ -23,6 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'web.onboarded' => \App\Http\Middleware\EnsureWebOnboarded::class,
         ]);
+        // Kibonet's delivery-report callback is posted by Kibonet itself,
+        // not a browser with a Sokoni session — see
+        // SmsDeliveryCallbackController's own docblock.
+        $middleware->validateCsrfTokens(except: [
+            'sms/delivery-callback',
+        ]);
         // Laravel's Authenticate middleware redirects an unauthenticated
         // web request to a route literally named `login` by default — this
         // app's is named `web.login` (every web route is namespaced

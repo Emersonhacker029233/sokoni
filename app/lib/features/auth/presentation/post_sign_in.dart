@@ -7,6 +7,7 @@ import '../../../core/router/routes.dart';
 import '../../../data/models/auth_response.dart';
 import '../../../main.dart' show restartApp;
 import '../../legal/presentation/legal_gate.dart';
+import 'credential_setup_prompt.dart';
 
 /// Shared completion flow for every sign-in method (phone OTP, Google,
 /// Apple) — one path so the buy/sell/decide-later intent screen (CLAUDE.md
@@ -44,6 +45,15 @@ Future<void> completeSignIn(BuildContext context, WidgetRef ref, AuthResponse re
 
   await ensureTermsAccepted(context, response.user);
   if (!context.mounted) return;
+
+  // Part D (username/password rework), 2.6 — shown right after any
+  // sign-in (old-flow or new) for an account that hasn't set a password
+  // yet. Skippable, so it reappears next time rather than ever blocking
+  // the rest of this flow.
+  if (response.user.needsCredentialSetup) {
+    await showCredentialSetupPrompt(context);
+    if (!context.mounted) return;
+  }
 
   if (wasAlreadySignedIn) {
     restartApp();

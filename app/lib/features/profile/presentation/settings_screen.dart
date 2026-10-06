@@ -310,11 +310,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SectionHeader(l10n.settingsSectionNotifications),
               _NotificationsSection(user: user),
 
+              _SectionHeader(l10n.settingsSectionSecurity),
+              _SecuritySection(user: user),
+
               _SectionHeader(l10n.settingsSectionAccount),
               const _AccountSection(),
 
               _SectionHeader(l10n.settingsSectionSupport),
               const _SupportLegalSection(),
+              _SectionHeader(l10n.settingsSectionDangerZone),
+              const _DangerZoneSection(),
             ],
           );
         },
@@ -410,6 +415,62 @@ class _LanguageRow extends ConsumerWidget {
 /// them." Optimistic — flips immediately on tap, reverts + shows an
 /// error only if the server call actually fails, since a toggle should
 /// feel instant.
+/// CLAUDE.md Part D 2.4 — "Require a code every time I sign in," off by
+/// default. Same optimistic-toggle shape as [_NotificationsSection] below.
+class _SecuritySection extends ConsumerStatefulWidget {
+  const _SecuritySection({required this.user});
+
+  final SokoniUser user;
+
+  @override
+  ConsumerState<_SecuritySection> createState() => _SecuritySectionState();
+}
+
+class _SecuritySectionState extends ConsumerState<_SecuritySection> {
+  late bool _twoFactorEnabled = widget.user.twoFactorEnabled;
+  String? _error;
+
+  Future<void> _toggle(bool value) async {
+    final previous = _twoFactorEnabled;
+    setState(() {
+      _twoFactorEnabled = value;
+      _error = null;
+    });
+    try {
+      await ref.read(authRepositoryProvider).updateTwoFactor(value);
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _twoFactorEnabled = previous;
+          _error = e.message;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Column(
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.settingsTwoFactorTitle),
+          subtitle: Text(l10n.settingsTwoFactorSubtitle),
+          value: _twoFactorEnabled,
+          onChanged: _toggle,
+        ),
+        if (_error != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(_error!, style: const TextStyle(color: SokoniColors.danger)),
+          ),
+      ],
+    );
+  }
+}
+
 class _NotificationsSection extends ConsumerStatefulWidget {
   const _NotificationsSection({required this.user});
 
@@ -641,6 +702,85 @@ class _SupportLegalSection extends StatelessWidget {
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+/// Apple Guideline 5.1.1(v): "if a user can create an account in the app,
+/// they can delete it in the app" — not by email, not through a website.
+/// A real, irreversible server-side mutation (AccountDeletionService), so
+/// this goes through `authRepositoryProvider` directly rather than
+/// `AuthStateController` (unlike sign-out/switch-account, which only ever
+/// touch local storage) — a failure must surface as a real error, never
+/// be swallowed into "signed out locally while the account still exists."
+class _DangerZoneSection extends ConsumerStatefulWidget {
+  const _DangerZoneSection();
+
+  @override
+  ConsumerState<_DangerZoneSection> createState() => _DangerZoneSectionState();
+}
+
+class _DangerZoneSectionState extends ConsumerState<_DangerZoneSection> {
+  bool _deleting = false;
+  String? _error;
+
+  Future<void> _confirmAndDelete() async {
+    final l10n = AppLocalizations.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.settingsDeleteAccountConfirmTitle),
+        content: Text(l10n.settingsDeleteAccountConfirmBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.commonCancel)),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.settingsDeleteAccount, style: const TextStyle(color: SokoniColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() {
+      _deleting = true;
+      _error = null;
+    });
+    try {
+      await ref.read(authRepositoryProvider).deleteAccount();
+      if (!mounted) return;
+      await ref.read(authStateProvider.notifier).onAccountDeleted();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.delete_forever_outlined, color: SokoniColors.danger),
+          title: Text(l10n.settingsDeleteAccount, style: const TextStyle(color: SokoniColors.danger)),
+          subtitle: Text(l10n.settingsDeleteAccountSubtitle),
+          trailing: _deleting
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : null,
+          onTap: _deleting ? null : _confirmAndDelete,
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: SokoniDimens.space8),
+            child: Text(_error!, style: const TextStyle(color: SokoniColors.danger)),
+          ),
       ],
     );
   }

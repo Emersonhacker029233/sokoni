@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PasswordAuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductMediaController;
 use App\Http\Controllers\Api\ReportController;
@@ -56,6 +57,22 @@ Route::post('/auth/check-phone', [AuthController::class, 'checkPhone'])
 Route::post('/auth/register', [AuthController::class, 'register'])
     ->middleware(['throttle:otp-verify', 'throttle:otp-ip']);
 
+// Username/password rework (CLAUDE.md Part D) — the primary sign-in path
+// going forward; /auth/otp/request+verify above stay exactly as they are
+// for any account that hasn't set a password yet (see
+// PasswordAuthController's own docblock for why these are all deliberately
+// enumeration-safe).
+Route::post('/auth/username/check', [PasswordAuthController::class, 'checkUsername'])
+    ->middleware(['throttle:otp-check', 'throttle:otp-ip']);
+Route::post('/auth/login', [PasswordAuthController::class, 'login'])
+    ->middleware(['throttle:login', 'throttle:otp-ip']);
+Route::post('/auth/login/verify', [PasswordAuthController::class, 'verifyLogin'])
+    ->middleware(['throttle:login-verify', 'throttle:otp-ip']);
+Route::post('/auth/forgot-password/request', [PasswordAuthController::class, 'forgotPasswordRequest'])
+    ->middleware(['throttle:password-reset', 'throttle:otp-ip']);
+Route::post('/auth/forgot-password/reset', [PasswordAuthController::class, 'forgotPasswordReset'])
+    ->middleware(['throttle:login-verify', 'throttle:otp-ip']);
+
 Route::get('/categories', [CategoryController::class, 'index']);
 
 Route::get('/products', [ProductController::class, 'index']);
@@ -89,6 +106,12 @@ Route::get('/showcases/{showcase}', [ShowcaseController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    // Apple Guideline 5.1.1(v): account creation happens in-app, so
+    // deletion must too — see AccountDeletionService's own docblock.
+    Route::delete('/auth/me', [AuthController::class, 'destroy']);
+    // CLAUDE.md Part D 2.6/2.4.
+    Route::post('/auth/credentials', [PasswordAuthController::class, 'setCredentials']);
+    Route::patch('/auth/two-factor', [PasswordAuthController::class, 'updateTwoFactor']);
     Route::post('/auth/terms/accept', [AuthController::class, 'acceptTerms']);
     Route::post('/auth/intent', [AuthController::class, 'updateIntent']);
     Route::patch('/auth/profile', [AuthController::class, 'updateProfile']);

@@ -45,6 +45,8 @@ class _ScriptedAuthRepository extends AuthRepository {
     required String phoneE164,
     required String code,
     required String name,
+    required String username,
+    required String password,
     required String accountIntent,
     required String termsVersion,
     String? email,
@@ -61,6 +63,7 @@ class _ScriptedAuthRepository extends AuthRepository {
       'phone': phoneE164,
       'code': code,
       'name': name,
+      'username': username,
       'email': email,
       'marketing_consent': marketingConsent,
       'account_intent': accountIntent,
@@ -168,7 +171,7 @@ void main() {
     );
 
     await ref.read(createAccountProvider.notifier).chooseIntent('buy');
-    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina', phone: '+255700000002');
+    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina', phone: '+255700000002', username: 'amina', password: 'password123');
     await tester.pump();
 
     // Directly inspect the underlying persisted row, simulating "the app
@@ -196,7 +199,7 @@ void main() {
     final repo = ref.read(authRepositoryProvider) as _ScriptedAuthRepository;
 
     await ref.read(createAccountProvider.notifier).chooseIntent('buy');
-    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina Buyer', phone: '+255700000002');
+    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina Buyer', phone: '+255700000002', username: 'amina_buyer', password: 'password123');
     await ref.read(createAccountProvider.notifier).acceptTerms('1.0');
     await ref.read(createAccountProvider.notifier).submit('123456');
 
@@ -216,7 +219,7 @@ void main() {
     await ref.read(createAccountProvider.notifier).chooseIntent('buy');
     await ref
         .read(createAccountProvider.notifier)
-        .submitDetails(name: 'Amina Buyer', phone: '+255700000002', email: 'amina@example.com');
+        .submitDetails(name: 'Amina Buyer', phone: '+255700000002', username: 'amina_buyer', password: 'password123', email: 'amina@example.com');
     await ref.read(createAccountProvider.notifier).acceptTerms('1.0');
     await ref.read(createAccountProvider.notifier).submit('123456');
 
@@ -228,7 +231,7 @@ void main() {
     final repo = ref.read(authRepositoryProvider) as _ScriptedAuthRepository;
 
     await ref.read(createAccountProvider.notifier).chooseIntent('buy');
-    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina Buyer', phone: '+255700000002');
+    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina Buyer', phone: '+255700000002', username: 'amina_buyer', password: 'password123');
     await ref.read(createAccountProvider.notifier).acceptTerms('1.0');
     await ref.read(createAccountProvider.notifier).submit('123456');
 
@@ -240,7 +243,7 @@ void main() {
     final repo = ref.read(authRepositoryProvider) as _ScriptedAuthRepository;
 
     await ref.read(createAccountProvider.notifier).chooseIntent('buy');
-    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina Buyer', phone: '+255700000002');
+    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina Buyer', phone: '+255700000002', username: 'amina_buyer', password: 'password123');
     await ref.read(createAccountProvider.notifier).acceptTerms('1.0');
     await ref.read(createAccountProvider.notifier).setMarketingConsent(true);
     await ref.read(createAccountProvider.notifier).submit('123456');
@@ -253,7 +256,7 @@ void main() {
     final repo = ref.read(authRepositoryProvider) as _ScriptedAuthRepository;
 
     await ref.read(createAccountProvider.notifier).chooseIntent('buy');
-    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina Buyer', phone: '+255700000002');
+    await ref.read(createAccountProvider.notifier).submitDetails(name: 'Amina Buyer', phone: '+255700000002', username: 'amina_buyer', password: 'password123');
     await ref.read(createAccountProvider.notifier).acceptTerms('1.0');
     await ref.read(createAccountProvider.notifier).submit('123456');
 
@@ -272,6 +275,8 @@ void main() {
           .submitDetails(
             name: 'Baraka Seller',
             phone: '+255700000003',
+            username: 'baraka_seller',
+            password: 'password123',
             shopName: 'Baraka Electronics',
             handle: 'baraka_electronics',
             categoryId: 1,

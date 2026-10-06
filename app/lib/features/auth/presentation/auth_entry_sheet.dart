@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/social_auth_config.dart';
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
-import 'sign_in_sheet.dart';
+import 'password_sign_in_sheet.dart';
 import 'social_sign_in_buttons.dart';
 
 /// The single entry point every "guest needs to sign in" call site in the
 /// app opens (renamed from the old `showPhoneSignInSheet` — CLAUDE.md
 /// restructure, 2026-08-25). Shows social sign-in up top (unchanged —
 /// Google/Apple already transparently handle both a new and a returning
-/// account in one tap) plus the two phone-based paths testers found
-/// confusing when they were one combined screen: "Sign in" (existing
-/// accounts only — phone, then code, done) and "Create an account" (the
-/// full buy/sell wizard, a separate full-screen route since it's
-/// materially bigger than anything else a bottom sheet here holds).
+/// account in one tap) plus two paths testers found confusing when they
+/// were one combined screen: "Sign in" (existing accounts — username/phone
+/// + password, SMS only when needed; see `showPasswordSignInSheet`, Part
+/// D) and "Create an account" (the full buy/sell wizard, a separate
+/// full-screen route since it's materially bigger than anything else a
+/// bottom sheet here holds).
 Future<void> showAuthEntrySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -49,26 +51,33 @@ class _AuthEntrySheetContent extends StatelessWidget {
         children: [
           Text(l10n.phoneSignInHeader, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: SokoniDimens.space16),
-          const SocialSignInButtons(),
-          const SizedBox(height: SokoniDimens.space16),
-          Row(
-            children: [
-              const Expanded(child: Divider()),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space12),
-                child: Text(l10n.signInOr, style: Theme.of(context).textTheme.bodySmall),
-              ),
-              const Expanded(child: Divider()),
-            ],
-          ),
-          const SizedBox(height: SokoniDimens.space16),
+          // Both the buttons and the divider that introduces them are
+          // omitted together when neither social provider is configured
+          // — a divider reading "or" above nothing would be as confusing
+          // as the disabled-button approach this replaced (BLOCKERS.md
+          // item 3, the Guideline 2.1(a) rejection).
+          if (SokoniSocialAuthConfig.anySocialConfigured) ...[
+            const SocialSignInButtons(),
+            const SizedBox(height: SokoniDimens.space16),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: SokoniDimens.space12),
+                  child: Text(l10n.signInOr, style: Theme.of(context).textTheme.bodySmall),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: SokoniDimens.space16),
+          ],
           _EntryOption(
             icon: Icons.login_rounded,
             title: l10n.authEntrySignInAction,
             subtitle: l10n.authEntrySignInDescription,
             onTap: () {
               Navigator.of(context).pop();
-              showSignInSheet(context);
+              showPasswordSignInSheet(context);
             },
           ),
           const SizedBox(height: SokoniDimens.space12),

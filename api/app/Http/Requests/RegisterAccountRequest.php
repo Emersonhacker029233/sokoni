@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\SellerProfile;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -33,6 +34,15 @@ class RegisterAccountRequest extends FormRequest
             'phone' => ['required', 'string', 'regex:/^\+255[67]\d{8}$/'],
             'code' => ['required', 'string', 'size:6'],
             'name' => ['required', 'string', 'max:255'],
+            // CLAUDE.md Part D 2.1: collected alongside everything else
+            // at sign-up, not bolted on afterwards.
+            'username' => [
+                'required', 'string',
+                'regex:'.User::USERNAME_PATTERN,
+                Rule::notIn(User::RESERVED_USERNAMES),
+                Rule::unique('users', 'username'),
+            ],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
             'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')],
             'marketing_consent' => ['sometimes', 'boolean'],
             'account_intent' => ['required', 'string', Rule::in(['buy', 'sell'])],
@@ -50,6 +60,17 @@ class RegisterAccountRequest extends FormRequest
             'district' => [$sellerOnly, 'string', 'max:100'],
             'address' => [$sellerOnly, 'string', 'max:255'],
             'whatsapp' => ['nullable', 'string', 'regex:/^\+255[67]\d{8}$/'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'username.regex' => '3-20 characters, lowercase letters, numbers and underscores only.',
+            'username.not_in' => 'That username is reserved — please choose another.',
+            'username.unique' => 'That username is already taken.',
+            'password.min' => 'Password must be at least 8 characters.',
+            'password.confirmed' => 'Passwords do not match.',
         ];
     }
 }

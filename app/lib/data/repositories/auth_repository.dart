@@ -4,6 +4,7 @@ import '../../core/network/dio_client.dart';
 import '../../core/storage/secure_storage.dart';
 import '../api/auth_api.dart';
 import '../models/auth_response.dart';
+import '../models/login_challenge.dart';
 import '../models/user.dart';
 
 /// Wraps [AuthApi] with token persistence — the only repository that
@@ -75,6 +76,8 @@ class AuthRepository {
     required String phoneE164,
     required String code,
     required String name,
+    required String username,
+    required String password,
     required String accountIntent,
     required String termsVersion,
     String? email,
@@ -92,6 +95,9 @@ class AuthRepository {
         'phone': phoneE164,
         'code': code,
         'name': name,
+        'username': username,
+        'password': password,
+        'password_confirmation': password,
         'email': ?email,
         'marketing_consent': marketingConsent,
         'account_intent': accountIntent,
@@ -115,6 +121,119 @@ class AuthRepository {
     try {
       final response = await _api.socialLogin({'provider': provider, 'token': token});
       await _persistAccount(response);
+      return response;
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Username/password rework (CLAUDE.md Part D) — live availability
+  /// check while typing.
+  Future<bool> checkUsernameAvailable(String username) async {
+    try {
+      final json = await _api.checkUsername({'username': username});
+      return json['available'] as bool? ?? false;
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Step 1 of sign-in (CLAUDE.md 2.2) — looks up a remembered
+  /// "recognised device" token for this exact login string first, so a
+  /// correct password on a device that's already completed the SMS step
+  /// once can sign in without it again.
+  Future<LoginChallenge> login({required String login, required String password}) async {
+    try {
+      final deviceToken = await _storage.readDeviceToken(login);
+      final json = await _api.login({
+        'login': login,
+        'password': password,
+        'device_token': ?deviceToken,
+      });
+
+      if (json['requires_code'] == true) {
+        return LoginChallenge.requiresCode(DateTime.parse(json['expires_at'] as String));
+      }
+
+      final response = AuthResponse.fromJson(json as Map<String, dynamic>);
+      await _persistAccount(response);
+
+      return LoginChallenge.signedIn(response);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Step 2 — the SMS code. Stores the fresh "recognised device" token
+  /// against this exact login string, so the next `login()` call for it
+  /// can skip this step.
+  Future<AuthResponse> verifyLogin({required String login, required String code}) async {
+    try {
+      final json = await _api.verifyLogin({'login': login, 'code': code});
+      final response = AuthResponse.fromJson(json as Map<String, dynamic>);
+      await _persistAccount(response);
+      if (json['device_token'] is String) {
+        await _storage.writeDeviceToken(login, json['device_token'] as String);
+      }
+
+      return response;
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// CLAUDE.md 2.6 — an existing account's one-time upgrade to a
+  /// username+password, or a new account's first-time setup.
+  Future<SokoniUser> setCredentials({required String username, required String password}) async {
+    try {
+      final json = await _api.setCredentials({
+        'username': username,
+        'password': password,
+        'password_confirmation': password,
+      });
+      return SokoniUser.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Settings' "Require a code every time I sign in" toggle (CLAUDE.md 2.4).
+  Future<SokoniUser> updateTwoFactor(bool enabled) async {
+    try {
+      final json = await _api.updateTwoFactor({'enabled': enabled});
+      return SokoniUser.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// CLAUDE.md 2.5, step 1 — always resolves the same way regardless of
+  /// whether the account exists; the server's response is deliberately
+  /// identical either way.
+  Future<void> forgotPasswordRequest(String login) async {
+    try {
+      await _api.forgotPasswordRequest({'login': login});
+    } catch (e) {
+      throw mapDioError(e);
+    }
+  }
+
+  /// Step 2 — code + new password together. A success here signs this
+  /// device in fresh and (server-side) revokes every other session.
+  Future<AuthResponse> forgotPasswordReset({required String login, required String code, required String password}) async {
+    try {
+      final json = await _api.forgotPasswordReset({
+        'login': login,
+        'code': code,
+        'password': password,
+        'password_confirmation': password,
+      });
+      final response = AuthResponse.fromJson(json as Map<String, dynamic>);
+      await _persistAccount(response);
+      if (json['device_token'] is String) {
+        await _storage.writeDeviceToken(login, json['device_token'] as String);
+      }
+
       return response;
     } catch (e) {
       throw mapDioError(e);
@@ -266,6 +385,19 @@ class AuthRepository {
     } finally {
       await _storage.clearSession();
     }
+  }
+
+  /// Apple Guideline 5.1.1(v): account creation happens in-app, so
+  /// deletion must too. Unlike [logout] above, a failed server call is
+  /// never swallowed here — clearing the local session on a failure would
+  /// tell the user their account is gone when it still exists server-side.
+  Future<void> deleteAccount() async {
+    try {
+      await _api.deleteAccount();
+    } catch (e) {
+      throw mapDioError(e);
+    }
+    await _storage.clearSession();
   }
 
   /// Part 5 (client feedback): every account this device currently

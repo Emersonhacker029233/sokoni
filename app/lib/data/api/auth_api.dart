@@ -34,6 +34,41 @@ abstract class AuthApi {
   @POST('/auth/social')
   Future<AuthResponse> socialLogin(@Body() Map<String, dynamic> body);
 
+  /// Username/password rework (CLAUDE.md Part D) — live availability
+  /// check while typing.
+  @POST('/auth/username/check')
+  Future<dynamic> checkUsername(@Body() Map<String, dynamic> body);
+
+  /// Step 1 of sign-in: username-or-phone + password. Returns either a
+  /// full `AuthResponse`-shaped body (recognised device, no 2FA) or
+  /// `{requires_code: true, expires_at}` — `dynamic`, not `AuthResponse`,
+  /// since the shape genuinely varies; AuthRepository branches on it.
+  @POST('/auth/login')
+  Future<dynamic> login(@Body() Map<String, dynamic> body);
+
+  /// Step 2 — the SMS code. Response also carries `device_token`
+  /// (`AuthResponse` itself doesn't model that field — see AuthRepository).
+  @POST('/auth/login/verify')
+  Future<dynamic> verifyLogin(@Body() Map<String, dynamic> body);
+
+  /// CLAUDE.md 2.6 — an existing account's one-time upgrade, or a new
+  /// account's first-time credential setup.
+  @POST('/auth/credentials')
+  Future<dynamic> setCredentials(@Body() Map<String, dynamic> body);
+
+  /// Settings' "Require a code every time I sign in" toggle.
+  @PATCH('/auth/two-factor')
+  Future<dynamic> updateTwoFactor(@Body() Map<String, dynamic> body);
+
+  /// CLAUDE.md 2.5, step 1 — always the same response regardless of
+  /// whether the account exists.
+  @POST('/auth/forgot-password/request')
+  Future<dynamic> forgotPasswordRequest(@Body() Map<String, dynamic> body);
+
+  /// Step 2 — code + new password in one request.
+  @POST('/auth/forgot-password/reset')
+  Future<dynamic> forgotPasswordReset(@Body() Map<String, dynamic> body);
+
   @POST('/auth/intent')
   Future<dynamic> updateIntent(@Body() Map<String, dynamic> body);
 
@@ -46,6 +81,11 @@ abstract class AuthApi {
 
   @POST('/auth/logout')
   Future<void> logout();
+
+  /// Apple Guideline 5.1.1(v): account creation happens in-app, so
+  /// deletion must too — not by email, not through a website.
+  @DELETE('/auth/me')
+  Future<void> deleteAccount();
 
   @POST('/auth/terms/accept')
   Future<dynamic> acceptTerms(@Body() Map<String, dynamic> body);

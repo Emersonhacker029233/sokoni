@@ -89,6 +89,9 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => $code,
             'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'account_intent' => 'buy',
             'terms_version' => '1.0',
         ])->assertOk();
@@ -96,6 +99,7 @@ class AccountRegistrationTest extends TestCase
         $this->assertDatabaseHas('users', [
             'phone' => self::PHONE,
             'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
             'account_intent' => 'buy',
         ]);
         $user = User::where('phone', self::PHONE)->firstOrFail();
@@ -115,6 +119,9 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => $code,
             'name' => 'Baraka Seller',
+            'username' => 'baraka_seller',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'account_intent' => 'sell',
             'terms_version' => '1.0',
             'shop_name' => 'Baraka Electronics',
@@ -147,6 +154,9 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => $code,
             'name' => 'Baraka Seller',
+            'username' => 'baraka_seller',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'account_intent' => 'sell',
             'terms_version' => '1.0',
             'shop_name' => 'Baraka Electronics',
@@ -169,6 +179,9 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => $code,
             'name' => 'Baraka Seller',
+            'username' => 'baraka_seller',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'account_intent' => 'sell',
             'terms_version' => '1.0',
         ])->assertStatus(422);
@@ -182,6 +195,9 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => '000000',
             'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'account_intent' => 'buy',
             'terms_version' => '1.0',
         ])->assertStatus(422);
@@ -199,6 +215,46 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => $code,
             'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'account_intent' => 'buy',
+            'terms_version' => '1.0',
+        ])->assertStatus(422);
+    }
+
+    public function test_registering_with_a_taken_username_is_rejected_and_creates_nothing(): void
+    {
+        User::factory()->create(['username' => 'amina_buyer']);
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE]);
+        $code = Cache::get('otp:'.self::PHONE);
+
+        $this->postJson('/api/auth/register', [
+            'phone' => self::PHONE,
+            'code' => $code,
+            'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'account_intent' => 'buy',
+            'terms_version' => '1.0',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('users', ['phone' => self::PHONE]);
+    }
+
+    public function test_registering_with_an_unconfirmed_password_is_rejected(): void
+    {
+        $this->postJson('/api/auth/otp/request', ['phone' => self::PHONE]);
+        $code = Cache::get('otp:'.self::PHONE);
+
+        $this->postJson('/api/auth/register', [
+            'phone' => self::PHONE,
+            'code' => $code,
+            'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
+            'password' => 'password123',
+            'password_confirmation' => 'does-not-match',
             'account_intent' => 'buy',
             'terms_version' => '1.0',
         ])->assertStatus(422);
@@ -214,6 +270,9 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => $code,
             'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'marketing_consent' => true,
             'account_intent' => 'buy',
             'terms_version' => '1.0',
@@ -231,6 +290,9 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => $code,
             'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'account_intent' => 'buy',
             'terms_version' => '1.0',
         ])->assertOk();
@@ -247,6 +309,9 @@ class AccountRegistrationTest extends TestCase
             'phone' => self::PHONE,
             'code' => $code,
             'name' => 'Amina Buyer',
+            'username' => 'amina_buyer',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'account_intent' => 'buy',
             'terms_version' => '1.0',
             'shop_name' => 'Should not be here',

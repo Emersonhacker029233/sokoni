@@ -16,6 +16,15 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'email_verified' => $this->email_verified_at !== null,
             'phone' => $this->phone,
+            'username' => $this->username,
+            // Part D (username/password rework) 2.6: true for any account
+            // that hasn't set a password yet — an old account that's never
+            // been prompted, or one that dismissed the prompt last time.
+            // The client shows the one-time upgrade prompt whenever this is
+            // true, on any screen that receives a user object, not just
+            // right after signing in.
+            'needs_credential_setup' => $this->needsCredentialSetup(),
+            'two_factor_enabled' => $this->two_factor_enabled,
             'avatar' => $this->avatar,
             'locale' => $this->locale,
             'is_seller' => $this->isSeller(),

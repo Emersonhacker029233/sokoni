@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 import 'formatters.dart';
 
 /// Form field validators returning a user-facing error string, or null
@@ -33,6 +35,32 @@ abstract final class SokoniValidators {
       return '3-20 characters: lowercase letters, numbers, underscore';
     }
     return null;
+  }
+
+  /// Username/password rework (CLAUDE.md Part D) — same shape as [handle]
+  /// (`User::USERNAME_PATTERN` server-side), a separate validator since a
+  /// username and a shop handle are different concepts that happen to
+  /// share a format today.
+  static String? username(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Choose a username';
+    if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(value)) {
+      return '3-20 characters: lowercase letters, numbers, underscore';
+    }
+    return null;
+  }
+
+  static String? password(String? value) {
+    if (value == null || value.isEmpty) return 'Choose a password';
+    if (value.length < 8) return 'At least 8 characters';
+    return null;
+  }
+
+  static String? Function(String?) passwordConfirmation(TextEditingController password) {
+    return (value) {
+      if (value == null || value.isEmpty) return 'Confirm your password';
+      if (value != password.text) return 'Passwords do not match';
+      return null;
+    };
   }
 
   static String? nidaNumber(String? value) {

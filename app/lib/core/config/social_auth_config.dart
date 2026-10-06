@@ -6,10 +6,13 @@
 ///
 /// The sign-in *code paths* below are fully real — real SDK calls, real
 /// tokens, real POSTs to `/auth/social` — this module only gates whether
-/// each button is enabled, since attempting a provider flow with a
-/// placeholder ID fails or hangs in the native SDK rather than failing
-/// cleanly. Replace these placeholders and every provider lights up with
-/// no other code changes.
+/// each button *renders at all* (`SocialSignInButtons` — a provider whose
+/// credential is still a placeholder is omitted entirely, not shown
+/// disabled, per Apple App Review's Guideline 2.1(a) rejection: a button
+/// that cannot work must not render, since even a disabled button with a
+/// tooltip reads as "unresponsive" on a touch device with no hover state).
+/// Replace these placeholders and every provider lights up with no other
+/// code changes.
 abstract final class SokoniSocialAuthConfig {
   static const googleServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
@@ -29,4 +32,10 @@ abstract final class SokoniSocialAuthConfig {
   static bool get isGoogleConfigured => !googleServerClientId.startsWith('REPLACE_ME');
 
   static bool get isAppleConfigured => !appleServiceId.startsWith('REPLACE_ME');
+
+  /// Whether the "or continue with" divider above phone sign-in has
+  /// anything to divide — both the divider and the whole social section
+  /// are omitted together when neither provider is configured, rather
+  /// than leaving a divider above an empty gap.
+  static bool get anySocialConfigured => isGoogleConfigured || isAppleConfigured;
 }

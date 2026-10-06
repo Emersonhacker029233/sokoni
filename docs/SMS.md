@@ -1,20 +1,58 @@
 # SMS delivery (phone OTP)
 
+## App Review bypass — one fixed-code demo account
+
+Apple App Review rejected an earlier submission because the reviewer has no
+Tanzanian phone number and can't receive a real OTP. `PhoneOtpService`
+(`api/app/Services/Otp/PhoneOtpService.php`) has a narrow bypass for exactly
+this: when `REVIEW_ACCOUNT_PHONE` and `REVIEW_ACCOUNT_CODE` are both set in
+`.env`, requesting an OTP for that **exact** phone number sends no SMS at
+all and starts no real one-time code — `verifyCode()` for that number
+accepts only the configured fixed code, which (unlike a real code) isn't
+consumed after one use, since the reviewer needs to sign in repeatedly
+across a review session. Every other phone number is completely
+unaffected — the real random-code-plus-SMS path runs exactly as before.
+
+```
+REVIEW_ACCOUNT_PHONE=
+REVIEW_ACCOUNT_CODE=
+```
+
+**Both must be set for the bypass to exist at all** — `isReviewAccount()`
+requires non-empty values for both before anything is compared, so a
+production `.env` that never sets these (every environment except the one
+designated review account) never takes this branch. Leave both blank
+locally and in CI.
+
+Every use — a request, a correct verify, or a wrong-code attempt — is
+logged to the `sms` channel (`Log::channel('sms')->info(...)`, same
+channel every gateway uses), so the bypass being exercised is visible even
+though no real send happens. The existing `otp`/`otp-verify` rate limiters
+(`AppServiceProvider`, phone-keyed, 3 per 15 minutes) apply to this number
+exactly like any other — nothing here runs outside them.
+
+**Do not use a real user's phone number for this.** It's meant for one
+designated App Store Connect demo account only — see `docs/DEMO.md` for
+what to put in Review Notes.
+
 Sokoni's phone sign-in sends a 6-digit OTP through the `SmsGateway` interface
 (`api/app/Services/Sms/SmsGateway.php`). The active implementation is picked
 by `SMS_DRIVER` in `.env` (`AppServiceProvider::register()`), not by which
 credentials happen to be set:
 
-- `SMS_DRIVER=textify` — `TextifySmsGateway`, Sokoni's **active** SMS
-  provider.
-- `SMS_DRIVER=africastalking` — `AfricasTalkingSmsGateway`, kept as a
-  selectable alternative. This was the active provider until the client
-  switched to Textify — left in place in case it's ever useful again, not
-  because it's expected to be used.
+- `SMS_DRIVER=kibonet` — `KibonetSmsGateway`, Sokoni's **active** SMS
+  provider (swapped in from Textify, 2026-10).
+- `SMS_DRIVER=textify` — `TextifySmsGateway`, kept as a selectable
+  alternative. This was the active provider until the client switched to
+  Kibonet — left in place in case it's ever useful again, not because it's
+  expected to be used.
+- `SMS_DRIVER=africastalking` — `AfricasTalkingSmsGateway`, also kept as a
+  selectable alternative. An earlier active provider, before Textify.
 - `SMS_DRIVER=beem` — `BeemSmsGateway`, also kept as a selectable
   alternative. This has never been the client's actual provider — an
   earlier version of this doc assumed it would be, before the client's real
-  account was confirmed (first as Africa's Talking, now as Textify).
+  account was confirmed (first as Africa's Talking, then Textify, now
+  Kibonet).
 - Anything else, including `SMS_DRIVER` left unset — `LogSmsGateway`, which
   writes the code to the log instead of sending it. This is what local dev
   and CI always use.
@@ -22,7 +60,95 @@ credentials happen to be set:
 No code change is needed to switch drivers — set `SMS_DRIVER` and the
 credentials it needs, nothing else.
 
-## Textify Africa — the active provider
+## Kibonet — the active provider
+
+**Docs**: https://sms.kibonet.co.tz — the vendor's own documentation does
+not state a request/response shape as explicitly as Textify's does; the
+contract below reflects what the vendor confirmed directly, not a published
+spec, so `KibonetSmsGateway` is deliberately defensive about response shape
+(see below).
+
+```
+SMS_DRIVER=kibonet
+KIBONET_API_KEY=
+KIBONET_API_SECRET=
+KIBONET_SENDER_ID=SOKONI
+KIBONET_ENDPOINT=https://sms.kibonet.co.tz/api/v1/vendor/message/send
+KIBONET_NUMBER_FORMAT=255
+KIBONET_DELIVERY_REPORT_URL=https://sokoni.co.tz/sms/delivery-callback
+```
+
+### API contract
+
+`KibonetSmsGateway` posts a JSON body to `KIBONET_ENDPOINT`, authenticated
+via two plain headers (not Bearer, not Basic Auth):
+
+```
+Content-Type: application/json
+api_key: <KIBONET_API_KEY>
+api_secret: <KIBONET_API_SECRET>
+
+{
+  "senderId": "SOKONI",
+  "messageType": "text",
+  "message": "Your Sokoni code: 482913. Do not share it.",
+  "contacts": "255754123456",
+  "deliveryReportUrl": "https://sokoni.co.tz/sms/delivery-callback"
+}
+```
+
+**`contacts` is a comma-separated string, not a JSON array.** Every current
+caller (`sendOtp`, and the bulk-SMS admin tool's own per-recipient loop in
+`ProcessSmsBlasts`) only ever sends one number per call, but the gateway's
+internal `send()` method takes a list and joins it, so a future caller that
+wants one call per batch doesn't need a second code path.
+
+**`deliveryReportUrl` is omitted entirely when `KIBONET_DELIVERY_REPORT_URL`
+is unset** — rather than send a dead callback URL — and the field is a
+plain config value specifically so it can point somewhere else (staging, a
+different domain) without a code change.
+
+**Numbers — format undocumented by the vendor.** Kibonet's own
+documentation describes only "recipient phone numbers," with no stated
+shape. The app stores E.164 (`+255XXXXXXXXX`); `KIBONET_NUMBER_FORMAT`
+(default `255`, no leading `+`) is a config value rather than a hardcoded
+conversion specifically because this is a guess at the common convention
+among Tanzanian SMS panels, not a confirmed contract — if it turns out
+wrong, it changes without a redeploy. Both the original and converted
+number are always logged to the `sms` channel so a mis-format is visible
+immediately.
+
+**No documented response body — only an explicit failure value is treated
+as a failure, on any HTTP status.** Unlike Textify (which requires an
+explicit `success` field and treats its absence as malformed), Kibonet's
+docs show no response body at all, so `KibonetSmsGateway` reads a 2xx with
+no recognisable `success`/`status` field as success — that's the expected
+shape, not a malformed one. Specifically:
+
+- Any non-2xx HTTP status is always a failure, regardless of body.
+- A 2xx with `"success": false`, or `"status"` equal to `failed`/
+  `failure`/`error` (case-insensitive), is a failure even though the HTTP
+  call itself succeeded.
+- A 2xx with no such field, or an empty body, is success.
+
+Every failure throws a `RuntimeException` carrying the vendor's own
+`message`/`error` field when present, never a generic string.
+
+### Delivery reports
+
+Kibonet POSTs a delivery report to `KIBONET_DELIVERY_REPORT_URL` out of
+band, after a send. `SmsDeliveryCallbackController`
+(`app/Http/Controllers/Web/SmsDeliveryCallbackController.php`, routed at
+`POST /sms/delivery-callback` in `routes/web.php`) logs the entire payload
+verbatim to the `sms` channel — Kibonet doesn't document this payload's
+shape either, so nothing is parsed into named fields that might not match;
+this is diagnostics, not a status update anything else in the app currently
+reads. The route is outside CSRF protection
+(`bootstrap/app.php`'s `validateCsrfTokens(except: [...])`) and
+unauthenticated, since Kibonet — not a browser with a Sokoni session — is
+the caller.
+
+## Textify Africa — kept as a selectable alternative
 
 **Docs**: https://docs.textify.africa
 
@@ -100,7 +226,9 @@ Manager, with no shell access needed:
 - One `error` line for any failed send.
 - One `critical` line for a failure mode that stops *every* send until
   someone notices — Textify's `invalid_token`, Africa's Talking's
-  `InsufficientBalance`.
+  `InsufficientBalance`. Kibonet has no equivalent documented failure
+  string, so an auth/balance failure there currently logs at the routine
+  `error` level — revisit if the vendor documents one.
 
 ## Message text
 
@@ -229,27 +357,52 @@ username, secret key as password); a successful response includes
   every feature test reads the code straight out of
   `Cache::get("otp:{$phone}")` rather than depending on which gateway is
   bound (see `tests/Feature/Auth/PhoneOtpTest.php`).
-- **Gateway unit tests**: `tests/Unit/Services/Sms/TextifySmsGatewayTest.php`,
-  `AfricasTalkingSmsGatewayTest.php` and `BeemSmsGatewayTest.php` use
-  `Http::fake()` to assert the request shape and every failure path for
-  each gateway — no network call, no real account, for any of the three.
-  Textify's cover: a successful send with the expected JSON shape and
+- **Gateway unit tests**: `tests/Unit/Services/Sms/KibonetSmsGatewayTest.php`,
+  `TextifySmsGatewayTest.php`, `AfricasTalkingSmsGatewayTest.php` and
+  `BeemSmsGatewayTest.php` use `Http::fake()` to assert the request shape
+  and every failure path for each gateway — no network call, no real
+  account, for any of the four. Kibonet's cover: the expected
+  `api_key`/`api_secret` headers and JSON body shape, the comma-joined
+  `contacts` field, the Swahili message, the configurable number-format
+  conversion, `deliveryReportUrl` included when configured and omitted
+  entirely when not, a non-2xx response treated as a failure, an explicit
+  `success: false` or `status: failed` treated as a failure even on a 200,
+  and — unlike Textify — a 2xx with *no* recognisable success/status field
+  at all treated as success, since Kibonet's own docs show no response
+  body. Textify's cover: a successful send with the expected JSON shape and
   local-format number conversion, the Swahili message, `success: false`
   treated as a failure regardless of HTTP status, `invalid_token` logged
   at `critical` and named explicitly in the thrown message, and a
   malformed response (no `success` field, or a non-JSON body) also
   throwing rather than being silently read as success.
+- **Driver-level feature tests**: `tests/Feature/Auth/PhoneOtpKibonetDriverTest.php`
+  exercises the real `/api/auth/otp/request` route with `SMS_DRIVER=kibonet`
+  and `Http::fake()` — confirming the route actually reaches Kibonet with
+  the right shape, that an auth failure from Kibonet surfaces as a server
+  error rather than a silent 200, and that the rate limiter (below) still
+  applies when Kibonet is the active driver.
+  `tests/Feature/Web/SmsDeliveryCallbackTest.php` confirms the delivery-report
+  route accepts a POST without a CSRF token and logs the payload verbatim.
+  `tests/Feature/Auth/ReviewAccountOtpBypassTest.php` covers the App Review
+  bypass above: no SMS/cached code for the review number, the fixed code
+  signing it in and being reusable (unlike a real code), a wrong code for
+  that same number still rejected, the fixed code *not* working for any
+  other number, every use logged, the bypass genuinely not existing when
+  either env value is blank, and the rate limiter still applying to the
+  review number like any other.
 - **Binding test**: `tests/Unit/Services/Sms/SmsGatewayBindingTest.php` locks
   in that an unset or unrecognised `SMS_DRIVER` always resolves to
-  `LogSmsGateway`, and that each of `textify`/`africastalking`/`beem`
-  resolves to its own gateway class, so a misconfigured environment can
-  never silently start sending real SMS through the wrong provider.
+  `LogSmsGateway`, and that each of `kibonet`/`textify`/`africastalking`/
+  `beem` resolves to its own gateway class, so a misconfigured environment
+  can never silently start sending real SMS through the wrong provider.
 - **Rate limit**: `PhoneOtpTest`'s rate-limit tests confirm the 4th request
   for the same number within 15 minutes is rejected with 429, and that the
   limit is scoped per phone number, not global — this is enforced above the
-  gateway layer, so it applies identically no matter which driver is active.
+  gateway layer, so it applies identically no matter which driver is active;
+  `PhoneOtpKibonetDriverTest` confirms the same thing specifically with
+  Kibonet as the active driver.
 - **Staging with a real Africa's Talking account**: set `AT_SANDBOX=true` —
   Africa's Talking's sandbox mode accepts real-looking requests without
-  delivering to a real handset or spending live credit. Textify's API has
-  no equivalent sandbox flag documented; test against it with a real,
-  low-balance account instead.
+  delivering to a real handset or spending live credit. Neither Kibonet's
+  nor Textify's API has an equivalent sandbox flag documented; test against
+  either with a real, low-balance account instead.

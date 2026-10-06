@@ -160,6 +160,38 @@ class SokoniSecureStorage {
     return null;
   }
 
+  /// "Recognised device" tokens (CLAUDE.md Part D 2.2), keyed by the exact
+  /// normalized login string (lowercased username, or E.164 phone) rather
+  /// than a user ID — at the point `login()` needs to look one up, the
+  /// server hasn't resolved the typed string to an account yet, so a
+  /// userId is never available to key by. A device can hold a trust
+  /// relationship for a login string without that account ever appearing
+  /// in the multi-account switcher (e.g. it was never "stay signed in"
+  /// there, just previously verified once).
+  static const _deviceTokensKey = 'sokoni.device_tokens';
+
+  Future<String?> readDeviceToken(String login) async {
+    final tokens = await _readDeviceTokens();
+    return tokens[login.toLowerCase()];
+  }
+
+  Future<void> writeDeviceToken(String login, String deviceToken) async {
+    final tokens = await _readDeviceTokens();
+    tokens[login.toLowerCase()] = deviceToken;
+    await _guardedWrite(_deviceTokensKey, jsonEncode(tokens));
+  }
+
+  Future<Map<String, String>> _readDeviceTokens() async {
+    final raw = await _guardedRead(_deviceTokensKey);
+    if (raw == null) return {};
+    try {
+      return (jsonDecode(raw) as Map<String, dynamic>).cast<String, String>();
+    } catch (e) {
+      developer.log('Secure storage: device-tokens blob failed to parse — treating as empty.', name: 'SokoniSecureStorage', error: e);
+      return {};
+    }
+  }
+
   /// Adds a freshly signed-in account (or updates one already
   /// remembered — a refreshed token for the same user) and makes it the
   /// active one. Used by every real sign-in path (OTP, social, register)

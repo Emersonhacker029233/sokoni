@@ -12,6 +12,12 @@ abstract class SokoniUser with _$SokoniUser {
     String? email,
     @JsonKey(name: 'email_verified') @Default(false) bool emailVerified,
     String? phone,
+    String? username,
+    // Part D (username/password rework): true for any account that
+    // hasn't set a password yet — drives the one-time upgrade prompt
+    // shown after an old-flow (phone+code) sign-in.
+    @JsonKey(name: 'needs_credential_setup') @Default(false) bool needsCredentialSetup,
+    @JsonKey(name: 'two_factor_enabled') @Default(false) bool twoFactorEnabled,
     String? avatar,
     String? locale,
     @JsonKey(name: 'is_seller') required bool isSeller,

@@ -23,15 +23,37 @@ Browsing (categories, products, sellers) works with no account at all. An accoun
 
 | Method | Path | Auth | Body | Notes |
 |---|---|---|---|---|
-| POST | `/auth/otp/request` | — | `{phone: "+255712345678"}` | Sends a 6-digit code — real SMS via `BeemSmsGateway` once `BEEM_SMS_API_KEY`/`BEEM_SMS_SECRET_KEY` are set, otherwise logged (see `docs/SMS.md`). Returns `{message, is_new_account}` — `is_new_account` is `true` when this phone has never signed in before, so the client can say plainly that verifying will create a new account. Rate-limited: 3 per 10 min per phone. |
+| POST | `/auth/otp/request` | — | `{phone: "+255712345678"}` | Sends a 6-digit code — real SMS via `KibonetSmsGateway` once `KIBONET_API_KEY`/`KIBONET_API_SECRET` are set, otherwise logged (see `docs/SMS.md`, which also documents the one-number App Review fixed-code bypass). Returns `{message, is_new_account}` — `is_new_account` is `true` when this phone has never signed in before, so the client can say plainly that verifying will create a new account. Rate-limited: 3 per 10 min per phone. |
 | POST | `/auth/otp/verify` | — | `{phone, code, name?}` | `name` required only for a brand-new account. Returns `{token, user, is_new_account}`. |
 | POST | `/auth/social` | — | `{provider: "google"\|"apple", token}` | `token` is the provider's own token (Google id_token, Apple identityToken) — verified server-side, never trusted as-is. Returns `{token, user, is_new_account}`. |
 | GET | `/auth/me` | ✓ | — | Current user. |
 | POST | `/auth/logout` | ✓ | — | Revokes the current token only. |
+| DELETE | `/auth/me` | ✓ | — | Apple Guideline 5.1.1(v): deletes the caller's own account — not an admin action. Revokes every token and forgets every registered push device immediately, soft-deletes the seller profile/products if any (so they disappear from the public feed at once), and overwrites name/email/phone/avatar rather than merely flagging them. Orders are deliberately preserved for record-keeping (see `AccountDeletionService`'s docblock) — the buyer/seller name on an old order reads as "Deleted user" afterward. |
 | POST | `/auth/terms/accept` | ✓ | `{version: "1.0"}` | Records `terms_accepted_at`/`terms_version`. |
 | POST | `/auth/intent` | ✓ | `{intent: "buy"\|"sell"\|"later"}` | The one-question intent screen shown once, right after a brand-new account's first sign-in (`is_new_account` above is what triggers showing it — never `account_intent IS NULL`, which would also match pre-existing accounts). Persisted purely as a record of the choice; doesn't gate anything else server-side. |
 
-**User object**: `id, name, email?, phone?, avatar?, locale, account_intent? ("buy"\|"sell"\|"later"), is_seller, seller_status?, seller_handle?, terms_accepted, created_at`.
+**User object**: `id, name, email?, phone?, username?, needs_credential_setup, two_factor_enabled, avatar?, locale, account_intent? ("buy"\|"sell"\|"later"), is_seller, seller_status?, seller_handle?, terms_accepted, created_at`.
+
+### Username/password (replaces send-code-first as the primary sign-in path)
+
+Admin/staff accounts are excluded from every route below — treated identically to a nonexistent account, same as a wrong password. See `docs/SMS.md`/`PasswordAuthController`'s own docblock for the full enumeration-safety reasoning.
+
+| Method | Path | Auth | Body | Notes |
+|---|---|---|---|---|
+| POST | `/auth/username/check` | — | `{username}` | Live availability check while typing. Returns `{available: bool}` — `false` for both a taken and a reserved username, so this alone never confirms which. |
+| POST | `/auth/login` | — | `{login, password, device_token?}` | `login` is a username or an E.164 phone. Returns **either** `{requires_code: true, expires_at}` (an unrecognised device, or the account has two-factor on) **or** a full `{token, user, is_new_account}` (a recognised device, no two-factor). A wrong password, a nonexistent login, and an account that's never set a password all return the exact same `422` — never distinguishable. Rate-limited: 5 per 15 min per login string. |
+| POST | `/auth/login/verify` | — | `{login, code}` | Completes a `requires_code` response. Returns `{token, user, is_new_account, device_token}` — store `device_token` and send it back on the next `/auth/login` call for this same login string to skip this step. Rate-limited: 10 per 15 min per login string. |
+| POST | `/auth/credentials` | ✓ | `{username, password, password_confirmation}` | One-time only — an existing account's upgrade, or a brand-new account's first-time setup. Rejected with `422` once a password already exists (changing an existing password goes through forgot-password instead, never this route). |
+| PATCH | `/auth/two-factor` | ✓ | `{enabled: bool}` | "Require a code every time I sign in." Off by default. |
+| POST | `/auth/forgot-password/request` | — | `{login}` | Always returns the exact same `{message}` whether or not the account exists; only a real, existing, non-admin account actually receives an SMS. Rate-limited: 3 per 15 min per login string (same budget as a real OTP send). |
+| POST | `/auth/forgot-password/reset` | — | `{login, code, password, password_confirmation}` | Revokes every existing session and trusted-device token for the account, then signs this request in fresh. Returns `{token, user, is_new_account, device_token}`. |
+
+### Registration — the "Create an account" wizard's final step
+
+| Method | Path | Auth | Body | Notes |
+|---|---|---|---|---|
+| POST | `/auth/check-phone` | — | `{phone}` | Check-only, no OTP side effect. Returns `{exists: bool}`. |
+| POST | `/auth/register` | — | `{phone, code, name, username, password, password_confirmation, account_intent: "buy"\|"sell", terms_version, email?, marketing_consent?, shop_name?, handle?, category_id?, region?, district?, address?, whatsapp?}` | Verifies the OTP and creates the account (and, for a seller, the `SellerProfile`) in one request. `username`/`password` are required for every new account, not just sellers — same format rules as `/auth/username/check`/`/auth/login` above. The `shop_*`/`category_id`/`region`/`district`/`address` fields are required together when `account_intent` is `"sell"`, prohibited otherwise. Returns `{token, user, is_new_account}`. |
 
 ## Categories
 

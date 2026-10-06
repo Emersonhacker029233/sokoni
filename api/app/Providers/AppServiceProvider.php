@@ -10,6 +10,7 @@ use App\Services\Push\LogPushNotifier;
 use App\Services\Push\PushNotifier;
 use App\Services\Sms\AfricasTalkingSmsGateway;
 use App\Services\Sms\BeemSmsGateway;
+use App\Services\Sms\KibonetSmsGateway;
 use App\Services\Sms\LogSmsGateway;
 use App\Services\Sms\SmsGateway;
 use App\Services\Sms\TextifySmsGateway;
@@ -38,6 +39,14 @@ class AppServiceProvider extends ServiceProvider
         // docs/SMS.md.
         $this->app->bind(SmsGateway::class, function () {
             return match (config('services.sms_driver')) {
+                'kibonet' => new KibonetSmsGateway(
+                    config('services.kibonet.api_key'),
+                    config('services.kibonet.api_secret'),
+                    config('services.kibonet.sender_id'),
+                    config('services.kibonet.endpoint'),
+                    config('services.kibonet.number_format'),
+                    config('services.kibonet.delivery_report_url'),
+                ),
                 'textify' => new TextifySmsGateway(
                     config('services.textify.api_key'),
                     config('services.textify.sender_name'),
@@ -135,6 +144,29 @@ class AppServiceProvider extends ServiceProvider
         // Writes (POST/PATCH/PUT/DELETE) get a tighter budget than reads.
         RateLimiter::for('api-write', function (Request $request) {
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Username/password rework (CLAUDE.md Part D 2.8) — keyed on the
+        // submitted `login` string (lowercased so "Amina"/"amina" share a
+        // budget), not the resolved account, so a nonexistent username
+        // still consumes the same bucket a real one would rather than
+        // getting an unlimited budget of its own.
+        RateLimiter::for('login', function (Request $request) {
+            return Limit::perMinutes(15, 5)->by(strtolower((string) $request->input('login')).'|'.$request->ip());
+        });
+
+        // The SMS-code step of login — generous like otp-verify above,
+        // for the same reason (a mistyped code or a legitimate resend
+        // must not trip this).
+        RateLimiter::for('login-verify', function (Request $request) {
+            return Limit::perMinutes(15, 10)->by(strtolower((string) $request->input('login')).'|'.$request->ip());
+        });
+
+        // Forgot-password's code-sending step actually sends a real SMS,
+        // so it gets the same tight budget `otp` itself uses, for the
+        // same reason (protects the phone and the SMS credit alike).
+        RateLimiter::for('password-reset', function (Request $request) {
+            return Limit::perMinutes(15, 3)->by(strtolower((string) $request->input('login')).'|'.$request->ip());
         });
 
         // Every web page's header needs the category nav — one composer

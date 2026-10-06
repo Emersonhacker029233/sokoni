@@ -18,6 +18,8 @@ class CreateAccountDraft {
     this.intent,
     this.name = '',
     this.phone = '',
+    this.username = '',
+    this.password = '',
     this.email = '',
     this.shopName = '',
     this.handle = '',
@@ -38,6 +40,14 @@ class CreateAccountDraft {
   /// E.164 — collected once at Step 2, never re-asked at Step 4 (which
   /// only sends/verifies the code to this same number).
   final String phone;
+
+  /// CLAUDE.md Part D 2.1 — collected alongside the rest of Step 2's
+  /// fields. The password is briefly persisted in this same local draft
+  /// like everything else here (so a dropped connection between steps
+  /// doesn't lose it, same reasoning as every other field) and cleared
+  /// the moment [CreateAccountController.submit] succeeds.
+  final String username;
+  final String password;
 
   /// Optional (C5) — an empty string means "not provided", same convention
   /// as [whatsapp] below, not a sentinel worth its own nullable field.
@@ -63,6 +73,8 @@ class CreateAccountDraft {
     String? intent,
     String? name,
     String? phone,
+    String? username,
+    String? password,
     String? email,
     String? shopName,
     String? handle,
@@ -80,6 +92,8 @@ class CreateAccountDraft {
       intent: intent ?? this.intent,
       name: name ?? this.name,
       phone: phone ?? this.phone,
+      username: username ?? this.username,
+      password: password ?? this.password,
       email: email ?? this.email,
       shopName: shopName ?? this.shopName,
       handle: handle ?? this.handle,
@@ -99,6 +113,8 @@ class CreateAccountDraft {
     'intent': intent,
     'name': name,
     'phone': phone,
+    'username': username,
+    'password': password,
     'email': email,
     'shop_name': shopName,
     'handle': handle,
@@ -118,6 +134,8 @@ class CreateAccountDraft {
       intent: json['intent'] as String?,
       name: json['name'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      password: json['password'] as String? ?? '',
       email: json['email'] as String? ?? '',
       shopName: json['shop_name'] as String? ?? '',
       handle: json['handle'] as String? ?? '',
@@ -166,6 +184,8 @@ class CreateAccountController extends AsyncNotifier<CreateAccountDraft> {
   Future<void> submitDetails({
     required String name,
     required String phone,
+    required String username,
+    required String password,
     String? email,
     String? shopName,
     String? handle,
@@ -180,6 +200,8 @@ class CreateAccountController extends AsyncNotifier<CreateAccountDraft> {
       current.copyWith(
         name: name,
         phone: phone,
+        username: username,
+        password: password,
         email: email ?? '',
         shopName: shopName ?? '',
         handle: handle ?? '',
@@ -215,6 +237,11 @@ class CreateAccountController extends AsyncNotifier<CreateAccountDraft> {
     return ref.read(sellerRepositoryProvider).checkHandleAvailable(handle);
   }
 
+  /// Step 2 live validation — CLAUDE.md Part D 2.1.
+  Future<bool> checkUsernameAvailable(String username) {
+    return ref.read(authRepositoryProvider).checkUsernameAvailable(username);
+  }
+
   /// Step 4 — sends the code to the phone number collected back at Step
   /// 2. Returns the code's real expiry instant (Part 3, client
   /// feedback) so the verify step can show it and drive its own resend
@@ -242,6 +269,8 @@ class CreateAccountController extends AsyncNotifier<CreateAccountDraft> {
           phoneE164: d.phone,
           code: code,
           name: d.name,
+          username: d.username,
+          password: d.password,
           email: d.email.isNotEmpty ? d.email : null,
           marketingConsent: d.marketingConsent,
           accountIntent: d.intent!,

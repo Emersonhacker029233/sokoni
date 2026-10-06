@@ -54,6 +54,9 @@ class _CreateAccountStep2DetailsState extends ConsumerState<CreateAccountStep2De
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _passwordConfirmController = TextEditingController();
   final _emailController = TextEditingController();
   final _shopNameController = TextEditingController();
   final _handleController = TextEditingController();
@@ -64,17 +67,23 @@ class _CreateAccountStep2DetailsState extends ConsumerState<CreateAccountStep2De
   int? _categoryId;
 
   Timer? _phoneDebounce;
+  Timer? _usernameDebounce;
   Timer? _handleDebounce;
   _CheckStatus _phoneStatus = _CheckStatus.idle;
+  _CheckStatus _usernameStatus = _CheckStatus.idle;
   _CheckStatus _handleStatus = _CheckStatus.idle;
   bool _submitting = false;
 
   @override
   void dispose() {
     _phoneDebounce?.cancel();
+    _usernameDebounce?.cancel();
     _handleDebounce?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _passwordConfirmController.dispose();
     _emailController.dispose();
     _shopNameController.dispose();
     _handleController.dispose();
@@ -100,6 +109,27 @@ class _CreateAccountStep2DetailsState extends ConsumerState<CreateAccountStep2De
       } catch (_) {
         // Fail open — see _CheckStatus.unknown's docs.
         if (mounted) setState(() => _phoneStatus = _CheckStatus.unknown);
+      }
+    });
+  }
+
+  void _onUsernameChanged(String value) {
+    _usernameDebounce?.cancel();
+    if (SokoniValidators.username(value) != null) {
+      setState(() => _usernameStatus = _CheckStatus.idle);
+      return;
+    }
+    setState(() => _usernameStatus = _CheckStatus.checking);
+    _usernameDebounce = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final available = await ref
+            .read(createAccountProvider.notifier)
+            .checkUsernameAvailable(value.trim())
+            .timeout(_checkTimeout);
+        if (mounted) setState(() => _usernameStatus = available ? _CheckStatus.ok : _CheckStatus.problem);
+      } catch (_) {
+        // Fail open — see _CheckStatus.unknown's docs.
+        if (mounted) setState(() => _usernameStatus = _CheckStatus.unknown);
       }
     });
   }
@@ -135,6 +165,7 @@ class _CreateAccountStep2DetailsState extends ConsumerState<CreateAccountStep2De
     // worst, never indefinitely. A failed/timed-out check resolves to
     // _CheckStatus.unknown, which — unlike problem — does NOT block here.
     if (_phoneStatus == _CheckStatus.problem || _phoneStatus == _CheckStatus.checking) return;
+    if (_usernameStatus == _CheckStatus.problem || _usernameStatus == _CheckStatus.checking) return;
     if (isSeller && (_handleStatus == _CheckStatus.problem || _handleStatus == _CheckStatus.checking)) return;
     if (isSeller && _categoryId == null) return;
 
@@ -149,6 +180,8 @@ class _CreateAccountStep2DetailsState extends ConsumerState<CreateAccountStep2De
         .submitDetails(
           name: _nameController.text.trim(),
           phone: e164Phone,
+          username: _usernameController.text.trim(),
+          password: _passwordController.text,
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           shopName: isSeller ? _shopNameController.text.trim() : null,
           handle: isSeller ? _handleController.text.trim() : null,
@@ -215,6 +248,36 @@ class _CreateAccountStep2DetailsState extends ConsumerState<CreateAccountStep2De
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(labelText: l10n.settingsEmailLabel, hintText: l10n.settingsEmailHint),
               validator: SokoniValidators.optionalEmail,
+            ),
+            const SizedBox(height: SokoniDimens.space16),
+            TextFormField(
+              controller: _usernameController,
+              decoration: InputDecoration(
+                labelText: l10n.usernameLabel,
+                hintText: l10n.usernameHint,
+                suffixIcon: _CheckIcon(status: _usernameStatus),
+              ),
+              validator: SokoniValidators.username,
+              onChanged: _onUsernameChanged,
+            ),
+            if (_usernameStatus == _CheckStatus.problem)
+              Padding(
+                padding: const EdgeInsets.only(top: SokoniDimens.space4),
+                child: Text(l10n.usernameTaken, style: const TextStyle(color: SokoniColors.danger, fontSize: 12)),
+              ),
+            const SizedBox(height: SokoniDimens.space16),
+            TextFormField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: InputDecoration(labelText: l10n.passwordLabel),
+              validator: SokoniValidators.password,
+            ),
+            const SizedBox(height: SokoniDimens.space16),
+            TextFormField(
+              controller: _passwordConfirmController,
+              obscureText: true,
+              decoration: InputDecoration(labelText: l10n.passwordConfirmLabel),
+              validator: SokoniValidators.passwordConfirmation(_passwordController),
             ),
             if (isSeller) ...[
               const SizedBox(height: SokoniDimens.space24),

@@ -140,11 +140,22 @@ Skip `config:cache`/`route:cache` while actively debugging a deploy — they mas
 
 The signed release APK/AAB is built locally (or in CI), not on the cPanel server — cPanel only hosts the API/admin. See the repo root `README.md` for the local build commands and `android/key.properties` (gitignored) for where the release keystore credentials live. Once built, the AAB goes to the Play Console; the APK can be distributed directly for a client demo.
 
-The app's API base URL (`app/lib/core/network/dio_client.dart`) defaults to a local-dev loopback address in debug/profile builds and to the live production API automatically in any `--release` build — no flag needed for the common case. `--dart-define=API_BASE_URL=...` still overrides either default, for a staging build or pointing a debug build at a real server:
+The app's API base URL (`app/lib/core/network/dio_client.dart`) defaults to a local-dev loopback address in debug/profile builds and to the live production API automatically in any `--release` build — no flag needed for the common case. `--dart-define=API_BASE_URL=...` still overrides either default, for a staging build or pointing a debug build at a real server.
+
+**Google/Apple sign-in (BLOCKERS.md item 3, the Guideline 2.1(a) fix) need two more `--dart-define`s on every release build, Android and iOS alike** — without them, `SokoniSocialAuthConfig.isGoogleConfigured`/`isAppleConfigured` stay false and both buttons are omitted entirely (not shown disabled — see that class's own docblock for why):
 
 ```bash
-flutter build appbundle --release --flavor prod
-flutter build apk --release --flavor prod
+flutter build appbundle --release --flavor prod \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=825257290618-pis0jcmn11bo5n3vpi5q0nchagrlhbuq.apps.googleusercontent.com \
+  --dart-define=APPLE_SERVICE_ID=tz.co.sokoni.signin
+flutter build apk --release --flavor prod \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=825257290618-pis0jcmn11bo5n3vpi5q0nchagrlhbuq.apps.googleusercontent.com \
+  --dart-define=APPLE_SERVICE_ID=tz.co.sokoni.signin
+flutter build ipa --release \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=825257290618-pis0jcmn11bo5n3vpi5q0nchagrlhbuq.apps.googleusercontent.com \
+  --dart-define=APPLE_SERVICE_ID=tz.co.sokoni.signin
 ```
 
-`--flavor prod` is required as of the `diagnostic` build variant (see DECISIONS.md) — any flavor being declared at all means Gradle no longer has a flavor-less default. Output paths gain the flavor name too: `build/app/outputs/flutter-apk/app-prod-release.apk`, `build/app/outputs/bundle/prodRelease/app-prod-release.aab`.
+**`GOOGLE_SERVER_CLIENT_ID` must be the Web application-type OAuth client, not the iOS or Android client from the same Firebase project** — Google's own SDK requires this specifically for `GoogleSignIn.instance.initialize(serverClientId: ...)` to mint a server-verifiable ID token, and it's also what `api/.env`'s `GOOGLE_CLIENT_ID` must match for the backend's `aud`-claim check to succeed (`HttpSocialAuthVerifier::verifyGoogle()`) — the value above (`...pis0jcmn11bo5n3vpi5q0nchagrlhbuq...`) is the Web client Firebase auto-created when the Android app's SHA-1 fingerprints were registered (visible as `client_type: 3` in `app/android/app/google-services.json`, or in Google Cloud Console → APIs & Services → Credentials). It is **not** the same value as `GoogleService-Info.plist`'s own `CLIENT_ID` field (that one's an iOS-type client, used only for the native iOS flow/URL scheme, never as `serverClientId`) — double-check this distinction before building if the Firebase/Cloud console project is ever regenerated, since reusing the wrong client type here fails silently as an "audience mismatch", not a clear error.
+
+`--flavor prod` is required as of the `diagnostic` build variant (see DECISIONS.md) — any flavor being declared at all means Gradle no longer has a flavor-less default. Output paths gain the flavor name too: `build/app/outputs/flutter-apk/app-prod-release.apk`, `build/app/outputs/bundle/prodRelease/app-prod-release.aab`. The iOS build has no flavor (iOS schemes aren't wired to Flutter's flavor mechanism in this project) — output goes to `build/ios/archive/Runner.xcarchive`, exported per Xcode/Transporter's usual flow.

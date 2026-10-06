@@ -129,6 +129,18 @@ class AuthStateController extends Notifier<AuthState> {
     await ref.read(secureStorageProvider).switchActiveAccount(userId);
     restartApp();
   }
+
+  /// Apple Guideline 5.1.1(v): called by the Settings screen right after
+  /// a *successful* `authRepositoryProvider.deleteAccount()` call (which
+  /// already cleared the stored session itself — see that method). This
+  /// only needs to do the same leftover-per-account-state cleanup
+  /// [signOut] does; the actual server call isn't made here, so this
+  /// avoids the circular import `switchAccount`'s own docblock describes
+  /// (`authRepositoryProvider` already depends on this file).
+  Future<void> onAccountDeleted() async {
+    await ref.read(appDatabaseProvider).clearAll();
+    restartApp();
+  }
 }
 
 final authStateProvider = NotifierProvider<AuthStateController, AuthState>(

@@ -15,10 +15,14 @@ enum _Provider { google, apple }
 /// Google / Apple buttons (CLAUDE.md feature 4) — real native SDK flows,
 /// each ending in a POST to `/auth/social` where the token is verified
 /// server-side (never trusted client-side, see `HttpSocialAuthVerifier`).
-/// A provider's button is disabled with a tooltip rather than removed
-/// when its credential (BLOCKERS.md item 3) isn't configured yet, since
-/// attempting the flow with a placeholder ID fails or hangs inside the
-/// native SDK instead of failing cleanly.
+/// A provider's button is omitted entirely — not shown disabled — when
+/// its credential (BLOCKERS.md item 3) isn't configured yet. Apple App
+/// Review rejected an earlier build under Guideline 2.1(a) ("Sign in with
+/// Apple and Continue with Google were unresponsive when tapped") for
+/// exactly the previous approach: a disabled button with a long-press
+/// tooltip has no visible affordance on a touch device with no hover
+/// state, so it simply reads as broken. A button that cannot work must
+/// not render at all.
 ///
 /// Facebook sign-in was removed entirely (not just left unconfigured) —
 /// `flutter_facebook_auth`'s Android plugin constructs a `FacebookAuth`
@@ -28,7 +32,16 @@ enum _Provider { google, apple }
 /// app before Flutter's first frame on at least one real device. See
 /// DECISIONS.md.
 class SocialSignInButtons extends ConsumerStatefulWidget {
-  const SocialSignInButtons({super.key});
+  /// `googleConfigured`/`appleConfigured` default to the real
+  /// `SokoniSocialAuthConfig` compile-time checks — overridable only so
+  /// widget tests can exercise both the "hidden" and "rendered" states
+  /// without needing a `--dart-define`d test binary.
+  const SocialSignInButtons({super.key, bool? googleConfigured, bool? appleConfigured})
+      : _googleConfiguredOverride = googleConfigured,
+        _appleConfiguredOverride = appleConfigured;
+
+  final bool? _googleConfiguredOverride;
+  final bool? _appleConfiguredOverride;
 
   @override
   ConsumerState<SocialSignInButtons> createState() => _SocialSignInButtonsState();
@@ -105,27 +118,33 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final googleConfigured = widget._googleConfiguredOverride ?? SokoniSocialAuthConfig.isGoogleConfigured;
+    final appleConfigured = widget._appleConfiguredOverride ?? SokoniSocialAuthConfig.isAppleConfigured;
+
+    if (!googleConfigured && !appleConfigured) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SocialButton(
-          icon: Icons.g_mobiledata_rounded,
-          label: l10n.signInWithGoogle,
-          loading: _loading == _Provider.google,
-          enabled: _loading == null && SokoniSocialAuthConfig.isGoogleConfigured,
-          notConfiguredMessage: l10n.signInNotConfigured,
-          onPressed: _signInWithGoogle,
-        ),
-        const SizedBox(height: SokoniDimens.space12),
-        _SocialButton(
-          icon: Icons.apple_rounded,
-          label: l10n.signInWithApple,
-          loading: _loading == _Provider.apple,
-          enabled: _loading == null && SokoniSocialAuthConfig.isAppleConfigured,
-          notConfiguredMessage: l10n.signInNotConfigured,
-          onPressed: _signInWithApple,
-        ),
+        if (googleConfigured)
+          _SocialButton(
+            icon: Icons.g_mobiledata_rounded,
+            label: l10n.signInWithGoogle,
+            loading: _loading == _Provider.google,
+            enabled: _loading == null,
+            onPressed: _signInWithGoogle,
+          ),
+        if (googleConfigured && appleConfigured) const SizedBox(height: SokoniDimens.space12),
+        if (appleConfigured)
+          _SocialButton(
+            icon: Icons.apple_rounded,
+            label: l10n.signInWithApple,
+            loading: _loading == _Provider.apple,
+            enabled: _loading == null,
+            onPressed: _signInWithApple,
+          ),
         if (_error != null) ...[
           const SizedBox(height: SokoniDimens.space8),
           Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
@@ -141,7 +160,6 @@ class _SocialButton extends StatelessWidget {
     required this.label,
     required this.loading,
     required this.enabled,
-    required this.notConfiguredMessage,
     required this.onPressed,
   });
 
@@ -149,24 +167,16 @@ class _SocialButton extends StatelessWidget {
   final String label;
   final bool loading;
   final bool enabled;
-  final String notConfiguredMessage;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final button = OutlinedButton.icon(
+    return OutlinedButton.icon(
       onPressed: enabled ? onPressed : null,
       icon: loading
           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
           : Icon(icon),
       label: Text(label),
-    );
-
-    if (enabled || loading) return button;
-
-    return Tooltip(
-      message: notConfiguredMessage,
-      child: button,
     );
   }
 }

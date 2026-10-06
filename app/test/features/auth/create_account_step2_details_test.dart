@@ -86,6 +86,9 @@ void main() {
 
       await tester.enterText(find.widgetWithText(TextFormField, 'Full name'), 'Amina Buyer');
       await tester.enterText(find.widgetWithText(TextFormField, 'Phone number'), '0754123456');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Username'), 'amina_buyer');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'password123');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Confirm password'), 'password123');
       // Flush the 500ms debounce, the failed request, and the catch's setState.
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pump();
@@ -108,6 +111,9 @@ void main() {
 
       await tester.enterText(find.widgetWithText(TextFormField, 'Full name'), 'Amina Buyer');
       await tester.enterText(find.widgetWithText(TextFormField, 'Phone number'), '0754123456');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Username'), 'amina_buyer');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'password123');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Confirm password'), 'password123');
 
       // Past the 500ms debounce but nowhere near the 6s check timeout yet.
       await tester.pump(const Duration(seconds: 1));

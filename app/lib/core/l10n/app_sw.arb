@@ -140,6 +140,7 @@
   "settingsSectionNotifications": "Arifa",
   "settingsSectionAccount": "Akaunti",
   "settingsSectionSupport": "Msaada na sheria",
+  "settingsSectionDangerZone": "Eneo la hatari",
 
   "settingsAppearanceLight": "Mwangavu",
   "settingsAppearanceDark": "Giza",
@@ -153,6 +154,11 @@
   "settingsHelp": "Msaada",
   "settingsContact": "Wasiliana nasi",
   "settingsAppVersion": "Toleo la programu",
+
+  "settingsDeleteAccount": "Futa akaunti",
+  "settingsDeleteAccountSubtitle": "Futa akaunti yako ya Sokoni kabisa",
+  "settingsDeleteAccountConfirmTitle": "Ungependa kufuta akaunti yako?",
+  "settingsDeleteAccountConfirmBody": "Hatua hii itafuta akaunti yako kabisa. Ikiwa una duka, duka lako na bidhaa zote zitafutwa pia. Oda zako za nyuma zitahifadhiwa kwa kumbukumbu lakini hazitaonyesha jina lako tena. Huwezi kutengua hatua hii.",
 
   "changePhoneTitle": "Badilisha nambari ya simu",
   "changePhoneBody": "Weka nambari yako mpya — tutakutumia msimbo kuithibitisha.",
@@ -245,7 +251,6 @@
   "signInWithPhone": "Endelea na simu",
   "signInOr": "au",
   "signInFailed": "Kuingia kumeshindwa. Tafadhali jaribu tena.",
-  "signInNotConfigured": "Bado haipatikani",
   "phoneSignInPhoneLabel": "Nambari ya simu",
   "phoneSignInPhoneHint": "0754 123 456",
   "phoneSignInSendCode": "Tuma msimbo",
@@ -264,6 +269,36 @@
   "signInNewNumberBody": "Hakuna akaunti yenye nambari hii bado.",
   "signInCreateAccountInstead": "Fungua akaunti badala yake",
   "signInTryAnotherNumber": "Jaribu nambari nyingine",
+
+  "loginFieldLabel": "Jina la mtumiaji au nambari ya simu",
+  "loginPasswordLabel": "Nenosiri",
+  "loginAction": "Ingia",
+  "loginForgotPassword": "Umesahau nenosiri?",
+  "loginUsePhoneInstead": "Ingia kwa nambari ya simu badala yake",
+  "loginCodeStepBody": "Weka namba uliyotumiwa kwa SMS.",
+
+  "credentialSetupTitle": "Weka jina la mtumiaji na nenosiri",
+  "credentialSetupBody": "Ingia haraka zaidi wakati mwingine kwa jina la mtumiaji na nenosiri, likithibitishwa kwa SMS inapohitajika pekee.",
+  "credentialSetupAction": "Weka sasa",
+  "credentialSetupSkip": "Ruka kwa sasa",
+
+  "forgotPasswordTitle": "Weka upya nenosiri lako",
+  "forgotPasswordBody": "Weka jina lako la mtumiaji au nambari ya simu na tutakutumia namba ya uthibitisho.",
+  "forgotPasswordSendCode": "Tuma namba",
+  "forgotPasswordGenericSent": "Ikiwa akaunti hiyo ipo, namba ya uthibitisho imetumwa.",
+  "forgotPasswordNewPasswordTitle": "Chagua nenosiri jipya",
+  "forgotPasswordResetAction": "Weka upya nenosiri",
+
+  "usernameLabel": "Jina la mtumiaji",
+  "usernameHint": "herufi ndogo, namba, mstari wa chini",
+  "usernameTaken": "Jina hilo la mtumiaji limechukuliwa tayari.",
+  "usernameAvailable": "Linapatikana",
+  "passwordLabel": "Nenosiri",
+  "passwordConfirmLabel": "Thibitisha nenosiri",
+
+  "settingsSectionSecurity": "Usalama",
+  "settingsTwoFactorTitle": "Hitaji namba kila ninapoingia",
+  "settingsTwoFactorSubtitle": "Inaongeza namba ya SMS kwenye kila kuingia, hata kutoka kifaa ulichotumia hapo awali.",
 
   "createAccountStepIntent": "Wewe",
   "createAccountStepDetails": "Maelezo",

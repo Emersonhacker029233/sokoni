@@ -28,7 +28,7 @@ Seed the API first (`php artisan migrate:fresh --seed`) so the feed isn't empty 
 ## 4. Sign in (Device A, if not already)
 
 - From Profile, sign in with phone OTP — enter a number, the code is logged server-side (`storage/logs/laravel.log`) rather than SMS-sent (BLOCKERS.md item — no SMS gateway configured yet). Read the code from the log, or from an admin's terminal, and enter it.
-- **Talking point**: Google/Apple buttons are real, working native flows, currently shown disabled with a tooltip — they light up the moment their blocked credentials (BLOCKERS.md) are supplied, no code changes needed. Facebook sign-in was removed entirely (not just disabled) after it was found hanging app startup on at least one real Android 16 device.
+- **Talking point**: Google/Apple buttons are real, working native flows — currently hidden entirely (not shown disabled) until their blocked credentials (BLOCKERS.md) are supplied, per Apple App Review's own Guideline 2.1(a) finding that a disabled button with a tooltip still reads as "unresponsive" on a touch device. They appear automatically the moment the credentials land, no code changes needed. Facebook sign-in was removed entirely (not just disabled) after it was found hanging app startup on at least one real Android 16 device.
 - First-ever sign-in shows the Terms & Privacy acceptance screen — can't be dismissed without accepting, matching CLAUDE.md's acceptance-recording requirement.
 
 ## 5. Become a seller (Device A)
@@ -83,3 +83,15 @@ Seed the API first (`php artisan migrate:fresh --seed`) so the feed isn't empty 
 ---
 
 **If something in the above doesn't work live**: every mocked external call (SMS, NIDA live verification, payment gateway, push delivery) is a deliberate, documented stub behind a real interface — see `BLOCKERS.md` for exactly which four credentials unlock which pieces, and `DECISIONS.md` for the reasoning behind every other implementation choice made along the way.
+
+## App Store Connect Review Notes
+
+Apple's own App Review rejected an earlier submission in part because the reviewer has no Tanzanian phone number and can't receive a real OTP (`docs/SMS.md`'s "App Review bypass" section has the full mechanism). Before resubmitting, set `REVIEW_ACCOUNT_PHONE`/`REVIEW_ACCOUNT_CODE` in the production `.env` to a chosen demo number/code (never a real user's number), then fill in App Store Connect's **App Review Information** section like this:
+
+- **Sign-in required**: Yes
+- **Username**: the phone number a reviewer would actually type into the app's sign-in field — the UI shows a fixed `+255` prefix, so this is just the 9-digit local part of whatever you set `REVIEW_ACCOUNT_PHONE` to (E.164 `+255700000001` → type `700 000 001`, with or without a leading `0`).
+- **Password**: whatever you set `REVIEW_ACCOUNT_CODE` to (the app calls it a "code", not a password — explained in Notes below).
+- **Notes** (fill in the two blanks with the actual values you set):
+  > Sokoni signs in with a phone number and a 6-digit verification code rather than a traditional username/password. To sign in as the reviewer account: tap "Sign in", enter `<the 9-digit number from Username above>` in the phone field (country code +255 is fixed in the UI), tap "Send code", then enter `<REVIEW_ACCOUNT_CODE>` as the verification code. This fixed code is configured server-side for this one designated review account only (`REVIEW_ACCOUNT_PHONE`/`REVIEW_ACCOUNT_CODE` in production configuration) and does not send a real SMS — every other phone number still receives a real one-time code normally.
+
+Browsing the product feed, shop profiles, and search all work fully without signing in at all — sign-in is only required to place an order, start a chat, or favourite/follow something (Guideline 5.1.1(i), confirmed compliant — `api/routes/api.php`'s own public-routes comment documents this design intent directly). If the reviewer doesn't want to sign in at all, point them to the feed and product/shop pages as the way to exercise the app's core browsing functionality without the demo account.
