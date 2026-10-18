@@ -13,6 +13,7 @@ use App\Http\Requests\VerifyLoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\TrustedDevice;
 use App\Models\User;
+use App\Services\Auth\ReviewAccount;
 use App\Services\Otp\PhoneOtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -44,7 +45,10 @@ class PasswordAuthController extends Controller
      */
     private const DUMMY_HASH = '$2y$12$/ESYy4cc8jPTLdS0pNYS3.lUv2qiJdT6TY9CfUzZgWCmZDQngxjji';
 
-    public function __construct(private readonly PhoneOtpService $otp) {}
+    public function __construct(
+        private readonly PhoneOtpService $otp,
+        private readonly ReviewAccount $reviewAccount,
+    ) {}
 
     public function checkUsername(CheckUsernameRequest $request): JsonResponse
     {
@@ -58,6 +62,17 @@ class PasswordAuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
+        // App Review demo account (see ReviewAccount) — a correct password
+        // signs straight in: no two-factor, no new-device code, nothing
+        // after the password. A wrong one falls through to the normal path
+        // below and gets the exact same generic failure as anyone else.
+        $reviewUser = $this->reviewAccount->resolve($request->string('login')->toString());
+        if ($reviewUser !== null
+            && ! $reviewUser->isBanned()
+            && $this->reviewAccount->passwordMatches($reviewUser, $request->string('password')->toString())) {
+            return $this->issueToken($reviewUser);
+        }
+
         $user = $this->resolveLogin($request->string('login')->toString());
         $passwordMatches = Hash::check($request->string('password'), $user?->password ?? self::DUMMY_HASH);
 
