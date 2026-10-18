@@ -79,6 +79,10 @@ return [
     'review_account' => [
         'phone' => env('REVIEW_ACCOUNT_PHONE'),
         'code' => env('REVIEW_ACCOUNT_CODE'),
+        // Password-screen equivalent (ReviewAccount) — with `phone`, lets the
+        // reviewer sign in on the username/password screen with no second
+        // step. Independent of `code`; blank means no password bypass.
+        'password' => env('REVIEW_ACCOUNT_PASSWORD'),
     ],
 
     // Phone OTP delivery — see docs/SMS.md. AppServiceProvider picks the

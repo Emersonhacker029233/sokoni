@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Notifications\VerifyEmailNotification;
+use App\Services\Auth\ReviewAccount;
 use App\Support\SafeMail;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
@@ -136,6 +137,12 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
      */
     public function needsCredentialSetup(): bool
     {
+        // The App Review demo account signs in with REVIEW_ACCOUNT_PASSWORD
+        // and must never be shown the set-a-password prompt.
+        if (app(ReviewAccount::class)->isReviewPhone($this->phone)) {
+            return false;
+        }
+
         return $this->password === null;
     }
 

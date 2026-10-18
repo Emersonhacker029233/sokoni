@@ -86,12 +86,28 @@ Seed the API first (`php artisan migrate:fresh --seed`) so the feed isn't empty 
 
 ## App Store Connect Review Notes
 
-Apple's own App Review rejected an earlier submission in part because the reviewer has no Tanzanian phone number and can't receive a real OTP (`docs/SMS.md`'s "App Review bypass" section has the full mechanism). Before resubmitting, set `REVIEW_ACCOUNT_PHONE`/`REVIEW_ACCOUNT_CODE` in the production `.env` to a chosen demo number/code (never a real user's number), then fill in App Store Connect's **App Review Information** section like this:
+Apple's own App Review rejected earlier submissions because the reviewer has no Tanzanian phone number and can't receive a real OTP (`docs/SMS.md`'s "App Review bypass" section), and then (build 1.0 (7), Guideline 2.1) because the demo credentials were typed into the **username/password** screen — the app's default sign-in — while only the OTP route knew about the review account.
+
+The review account now works on **both** routes, configured entirely in the production `.env` (never for a real user's number):
+
+| `.env` key | Route | Effect |
+| --- | --- | --- |
+| `REVIEW_ACCOUNT_PHONE` | both | The one designated demo account, E.164 (`+255783029233`). |
+| `REVIEW_ACCOUNT_PASSWORD` | username/password (default screen) | This password signs straight in — no two-factor, no new-device code, no set-a-password prompt (`App\Services\Auth\ReviewAccount`). The phone may be typed as `+255783029233`, `0783029233`, `783 029 233`, or the account's username. |
+| `REVIEW_ACCOUNT_CODE` | "Sign in with phone number instead" | This fixed code is accepted instead of an SMS (`PhoneOtpService`). |
+
+Each key is independent; a blank `REVIEW_ACCOUNT_PASSWORD` or `REVIEW_ACCOUNT_CODE` switches that route's bypass off. The demo user must already exist with that phone (signing in once through the OTP bypass creates it). Give it a username and stored password, and accept Terms so the Terms screen doesn't appear after sign-in:
+
+```bash
+php artisan tinker --execute="\$u = App\Models\User::where('phone', '+255783029233')->firstOrFail(); \$u->forceFill(['username' => \$u->username ?? 'appreview', 'password' => 'Review2026', 'two_factor_enabled' => false, 'terms_accepted_at' => \$u->terms_accepted_at ?? now(), 'terms_version' => \$u->terms_version ?? '1.0'])->save(); echo json_encode(\$u->only('id', 'phone', 'username', 'two_factor_enabled', 'terms_accepted_at', 'banned_at'));"
+```
+
+Fill in App Store Connect's **App Review Information** section like this:
 
 - **Sign-in required**: Yes
-- **Username**: the phone number a reviewer would actually type into the app's sign-in field — the UI shows a fixed `+255` prefix, so this is just the 9-digit local part of whatever you set `REVIEW_ACCOUNT_PHONE` to (E.164 `+255700000001` → type `700 000 001`, with or without a leading `0`).
-- **Password**: whatever you set `REVIEW_ACCOUNT_CODE` to (the app calls it a "code", not a password — explained in Notes below).
-- **Notes** (fill in the two blanks with the actual values you set):
-  > Sokoni signs in with a phone number and a 6-digit verification code rather than a traditional username/password. To sign in as the reviewer account: tap "Sign in", enter `<the 9-digit number from Username above>` in the phone field (country code +255 is fixed in the UI), tap "Send code", then enter `<REVIEW_ACCOUNT_CODE>` as the verification code. This fixed code is configured server-side for this one designated review account only (`REVIEW_ACCOUNT_PHONE`/`REVIEW_ACCOUNT_CODE` in production configuration) and does not send a real SMS — every other phone number still receives a real one-time code normally.
+- **Username**: `+255783029233`
+- **Password**: the value of `REVIEW_ACCOUNT_PASSWORD` (currently `Review2026`)
+- **Notes**:
+  > Enter the username and password above on the first sign-in screen and tap "Sign in" — no verification code is needed for this account. Alternatively, tap "Sign in with phone number instead", enter 783 029 233, tap "Send code", and enter `<REVIEW_ACCOUNT_CODE>` (no real SMS is sent for this one review account).
 
 Browsing the product feed, shop profiles, and search all work fully without signing in at all — sign-in is only required to place an order, start a chat, or favourite/follow something (Guideline 5.1.1(i), confirmed compliant — `api/routes/api.php`'s own public-routes comment documents this design intent directly). If the reviewer doesn't want to sign in at all, point them to the feed and product/shop pages as the way to exercise the app's core browsing functionality without the demo account.
