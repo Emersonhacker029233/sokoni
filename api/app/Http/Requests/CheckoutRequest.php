@@ -26,7 +26,18 @@ class CheckoutRequest extends FormRequest
             'delivery_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['required', Rule::in(['cash_on_delivery', 'pay_on_pickup'])],
+            // Sokoni 1.1+ only (docs/delivery/PLAN.md). Ignored entirely while
+            // DELIVERY_ENABLED is false; Sokoni 1.0 never sends it.
+            'fulfilment' => ['nullable', Rule::in(['dispatch'])],
         ];
+    }
+
+    /** True when this checkout opts into Sokoni Driver delivery and the feature is on. */
+    public function wantsDispatch(): bool
+    {
+        return (bool) config('delivery.enabled')
+            && $this->input('fulfilment') === 'dispatch'
+            && $this->input('delivery_method') === 'delivery';
     }
 
     /** Cart holds items from one seller at a time (CLAUDE.md feature 8). */
@@ -46,6 +57,36 @@ class CheckoutRequest extends FormRequest
             if ($sellerCount > 1) {
                 $validator->errors()->add('items', 'All items in one order must be from the same seller.');
             }
+
+            if ($this->wantsDispatch()) {
+                $this->validateDispatch($validator, $productIds->first());
+            }
         });
+    }
+
+    /** Dispatch needs exact coordinates on both ends and a drop-off inside the delivery area. */
+    private function validateDispatch(Validator $validator, mixed $productId): void
+    {
+        if ($this->input('delivery_lat') === null || $this->input('delivery_lng') === null) {
+            $validator->errors()->add('delivery_lat', __('delivery.errors.dropoff_location_required'));
+
+            return;
+        }
+
+        $seller = Product::query()->find($productId)?->seller;
+        if ($seller?->lat === null || $seller?->lng === null) {
+            $validator->errors()->add('fulfilment', __('delivery.errors.shop_has_no_location'));
+
+            return;
+        }
+
+        try {
+            app(\App\Services\Delivery\FeeCalculator::class)->quote(
+                (float) $seller->lat, (float) $seller->lng,
+                (float) $this->input('delivery_lat'), (float) $this->input('delivery_lng'),
+            );
+        } catch (\App\Services\Delivery\DeliveryUnavailableException $e) {
+            $validator->errors()->add('delivery_lat', $e->getMessage());
+        }
     }
 }

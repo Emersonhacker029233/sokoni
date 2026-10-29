@@ -25,3 +25,11 @@ Schedule::command('products:purge-deleted-media')->daily();
 // per tick — see ProcessSmsBlasts's own docblock for why this can't run
 // inline from the Filament action that creates the blast.
 Schedule::command('sms:process-blasts')->everyMinute()->withoutOverlapping();
+
+// Delivery (docs/delivery/PLAN.md). Dispatch waves are 60 s apart; request
+// paths also advance them lazily, so a one-minute cron is enough. The tick
+// is a no-op while DELIVERY_ENABLED is false.
+Schedule::command('delivery:dispatch-tick')->everyMinute()->withoutOverlapping(5);
+
+// Privacy: driver breadcrumbs older than 72 h are deleted.
+Schedule::command('delivery:purge-locations')->hourly();

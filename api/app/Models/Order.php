@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Observers\OrderDeliveryObserver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,8 +15,9 @@ use Illuminate\Support\Str;
 #[Fillable([
     'buyer_id', 'seller_id', 'subtotal', 'delivery_fee', 'total',
     'delivery_method', 'address', 'delivery_lat', 'delivery_lng', 'notes',
-    'payment_method',
+    'payment_method', 'fulfilment',
 ])]
+#[ObservedBy(OrderDeliveryObserver::class)]
 class Order extends Model
 {
     use HasFactory;
@@ -81,9 +84,38 @@ class Order extends Model
         return $this->hasOne(Conversation::class);
     }
 
+    /** Sokoni Driver job for a `fulfilment = 'dispatch'` order (docs/delivery/PLAN.md). */
+    public function deliveryJob(): HasOne
+    {
+        return $this->hasOne(DeliveryJob::class);
+    }
+
+    public function isDispatch(): bool
+    {
+        return $this->fulfilment === 'dispatch';
+    }
+
     public function canTransitionTo(string $status): bool
     {
-        return in_array($status, self::TRANSITIONS[$this->status] ?? [], true);
+        if (! in_array($status, self::TRANSITIONS[$this->status] ?? [], true)) {
+            return false;
+        }
+
+        // Dispatch orders only (legacy orders never have a job, so this is
+        // a no-op for every Sokoni 1.0 order). While a driver job is still
+        // open, completion comes from the driver's PIN-confirmed delivery,
+        // not a seller tap, and nobody may cancel once the goods have left
+        // the shop (PLAN.md section 6: contact support instead).
+        if ($this->isDispatch() && ($job = $this->deliveryJob) !== null && ! $job->isTerminal()) {
+            if ($status === 'completed' && $job->status !== 'failed') {
+                return false;
+            }
+            if ($status === 'cancelled' && $job->isInTransit()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function isCompleted(): bool

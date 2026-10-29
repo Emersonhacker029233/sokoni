@@ -80,7 +80,11 @@ class OrderController extends Controller
                 $subtotal += $product->price * $line['qty'];
             }
 
-            $deliveryFee = $request->input('delivery_method') === 'delivery' ? self::DELIVERY_FEE : 0;
+            // Dispatch orders (Sokoni 1.1+, DELIVERY_ENABLED only): the
+            // delivery fee is quoted when the seller accepts and is paid to
+            // Sokoni separately, never added to the seller's order total.
+            $dispatch = $request->wantsDispatch();
+            $deliveryFee = $request->input('delivery_method') === 'delivery' && ! $dispatch ? self::DELIVERY_FEE : 0;
 
             $order = $request->user()->orders()->create([
                 'seller_id' => $sellerId,
@@ -93,6 +97,7 @@ class OrderController extends Controller
                 'delivery_lng' => $request->float('delivery_lng') ?: null,
                 'notes' => $request->string('notes') ?: null,
                 'payment_method' => $request->string('payment_method'),
+                'fulfilment' => $dispatch ? 'dispatch' : null,
             ]);
 
             foreach ($request->input('items') as $line) {

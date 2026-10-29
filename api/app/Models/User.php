@@ -90,6 +90,12 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
         return $this->hasMany(Order::class, 'buyer_id');
     }
 
+    /** Sokoni Driver profile, if this account has signed up as a driver (docs/delivery/PLAN.md). */
+    public function driverProfile(): HasOne
+    {
+        return $this->hasOne(DriverProfile::class);
+    }
+
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class, 'buyer_id');

@@ -18,6 +18,10 @@ class OrderResource extends JsonResource
             'delivery_fee' => $this->delivery_fee,
             'total' => $this->total,
             'delivery_method' => $this->delivery_method,
+            // Additive (docs/delivery/PLAN.md): null for every legacy order,
+            // 'dispatch' when Sokoni Driver handles it. Details live at
+            // GET /api/delivery/orders/{id}. Sokoni 1.0 ignores unknown keys.
+            'fulfilment' => $this->fulfilment,
             'address' => $this->address,
             'notes' => $this->notes,
             'payment_method' => $this->payment_method,

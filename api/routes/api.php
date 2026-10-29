@@ -197,3 +197,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/reports', [ReportController::class, 'store']);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Delivery + Sokoni Driver (docs/delivery/PLAN.md), additive only
+|--------------------------------------------------------------------------
+| 404s entirely while DELIVERY_ENABLED=false. See routes/api_delivery.php.
+*/
+Route::middleware(['delivery.enabled', 'auth:sanctum'])->group(base_path('routes/api_delivery.php'));
