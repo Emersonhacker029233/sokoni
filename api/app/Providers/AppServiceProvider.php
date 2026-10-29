@@ -2,6 +2,17 @@
 
 namespace App\Providers;
 
+use App\Services\Catalog\CategoryCatalogService;
+use App\Services\Delivery\DeliveryNotifier;
+use App\Services\Delivery\FcmDeliveryNotifier;
+use App\Services\Delivery\FirebaseConnection;
+use App\Services\Delivery\FirebaseLiveTracking;
+use App\Services\Delivery\LiveTracking;
+use App\Services\Delivery\LogDeliveryNotifier;
+use App\Services\Delivery\NullLiveTracking;
+use App\Services\Delivery\OpenRouteServiceDistance;
+use App\Services\Delivery\RouteDistance;
+use App\Services\Delivery\StraightLineDistance;
 use App\Services\Nida\ManualReviewNidaVerifier;
 use App\Services\Nida\NidaVerifier;
 use App\Services\Payment\PaymentGateway;
@@ -14,25 +25,15 @@ use App\Services\Sms\KibonetSmsGateway;
 use App\Services\Sms\LogSmsGateway;
 use App\Services\Sms\SmsGateway;
 use App\Services\Sms\TextifySmsGateway;
-use App\Services\Catalog\CategoryCatalogService;
 use App\Services\SocialAuth\HttpSocialAuthVerifier;
 use App\Services\SocialAuth\SocialAuthVerifier;
+use App\Support\UnreadMessages;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use App\Services\Delivery\DeliveryNotifier;
-use App\Services\Delivery\FcmDeliveryNotifier;
-use App\Services\Delivery\FirebaseConnection;
-use App\Services\Delivery\FirebaseLiveTracking;
-use App\Services\Delivery\LiveTracking;
-use App\Services\Delivery\LogDeliveryNotifier;
-use App\Services\Delivery\NullLiveTracking;
-use App\Services\Delivery\OpenRouteServiceDistance;
-use App\Services\Delivery\RouteDistance;
-use App\Services\Delivery\StraightLineDistance;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -228,7 +229,7 @@ class AppServiceProvider extends ServiceProvider
         // common signed-out page view.
         View::composer(['partials.header', 'partials.bottom-nav', 'layouts.app'], function ($view) {
             $user = auth('web')->user();
-            $view->with('unreadMessagesCount', $user ? \App\Support\UnreadMessages::countFor($user) : 0);
+            $view->with('unreadMessagesCount', $user ? UnreadMessages::countFor($user) : 0);
         });
 
         // B3 (tester feedback): the header notification bell's initial

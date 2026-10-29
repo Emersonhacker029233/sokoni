@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Models\Product;
+use App\Services\Delivery\DeliveryUnavailableException;
+use App\Services\Delivery\FeeCalculator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -81,11 +83,11 @@ class CheckoutRequest extends FormRequest
         }
 
         try {
-            app(\App\Services\Delivery\FeeCalculator::class)->quote(
+            app(FeeCalculator::class)->quote(
                 (float) $seller->lat, (float) $seller->lng,
                 (float) $this->input('delivery_lat'), (float) $this->input('delivery_lng'),
             );
-        } catch (\App\Services\Delivery\DeliveryUnavailableException $e) {
+        } catch (DeliveryUnavailableException $e) {
             $validator->errors()->add('delivery_lat', $e->getMessage());
         }
     }

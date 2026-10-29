@@ -4,6 +4,7 @@ namespace Tests\Feature\Delivery;
 
 use App\Models\DeliveryJob;
 use App\Models\DeliveryOffer;
+use App\Models\User;
 use App\Services\Delivery\DeliveryActionException;
 use App\Services\Delivery\DispatchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -105,7 +106,7 @@ class AcceptRaceTest extends TestCase
     {
         $driver = $this->driverAt(1);
         $first = $this->paidJob();
-        $second = $this->paidJob(\App\Models\User::factory()->create());
+        $second = $this->paidJob(User::factory()->create());
         // Force an offer on the second job too (dispatch itself would skip a busy driver).
         DeliveryOffer::query()->updateOrCreate(
             ['delivery_job_id' => $second->id, 'driver_profile_id' => $driver->id],

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Delivery;
 
 use App\Models\DriverProfile;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -66,7 +67,7 @@ class DispatchTest extends TestCase
         $this->assertNotContains($d10->id, $this->offeredDriverIds($job), '10 km is outside every wave.');
         $this->assertSame(0, $job->offers()->where('status', 'offered')->count());
         $this->assertSame(3, $job->offers()->where('status', 'expired')->count());
-        $this->assertTrue($this->pushes->to($job->order->buyer)->contains(fn ($p) => $p['data']['status'] === 'no_driver_found'));
+        $this->assertTrue($this->pushes->to($job->order->buyer)->contains(fn ($p) => ($p['data']['status'] ?? null) === 'no_driver_found'));
     }
 
     public function test_driver_polling_advances_waves_without_cron(): void
@@ -124,7 +125,7 @@ class DispatchTest extends TestCase
         $first = $this->paidJob();
         $this->asDriver($driver)->postJson("/api/driver/offers/{$first->id}/accept")->assertOk();
 
-        $second = $this->paidJob(\App\Models\User::factory()->create());
+        $second = $this->paidJob(User::factory()->create());
 
         $this->assertSame(0, $second->offers()->count());
     }

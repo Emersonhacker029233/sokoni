@@ -23,23 +23,24 @@ class DriverProfileController extends Controller
 {
     public function me(Request $request): JsonResponse
     {
-        $driver = $request->user()->driverProfile;
+        $driver = $request->user()->driverProfile()->first();
 
         return response()->json(['data' => $driver ? new DriverProfileResource($driver) : null]);
     }
 
-    public function store(StoreDriverProfileRequest $request): DriverProfileResource
+    public function store(StoreDriverProfileRequest $request): JsonResponse
     {
         $user = $request->user();
         if ($user->phone === null) {
             throw DeliveryActionException::make('phone_required', 422);
         }
 
-        $driver = $user->driverProfile ?? new DriverProfile(['user_id' => $user->id]);
+        $driver = $user->driverProfile()->first() ?? new DriverProfile(['user_id' => $user->id]);
         if ($driver->exists && $driver->isApproved()) {
             throw DeliveryActionException::make('already_approved', 409);
         }
 
+        $created = ! $driver->exists;
         $driver->fill([
             'national_id_number' => $request->string('national_id_number')->toString(),
             'licence_number' => $request->input('licence_number'),
@@ -48,7 +49,7 @@ class DriverProfileController extends Controller
             'terms_version' => $request->string('terms_version')->toString(),
         ])->save();
 
-        return new DriverProfileResource($driver->fresh());
+        return (new DriverProfileResource($driver->fresh()))->response()->setStatusCode($created ? 201 : 200);
     }
 
     public function documents(DriverDocumentsRequest $request): DriverProfileResource
@@ -137,6 +138,6 @@ class DriverProfileController extends Controller
 
     private function driverOrFail(Request $request): DriverProfile
     {
-        return $request->user()->driverProfile ?? throw DeliveryActionException::make('not_a_driver', 403);
+        return $request->user()->driverProfile()->first() ?? throw DeliveryActionException::make('not_a_driver', 403);
     }
 }

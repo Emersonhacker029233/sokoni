@@ -4,6 +4,7 @@ namespace Tests\Feature\Delivery;
 
 use App\Models\DeliveryJob;
 use App\Models\DriverProfile;
+use App\Models\User;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -157,14 +158,14 @@ class StatusFlowTest extends TestCase
         $this->assertSame(1, $this->driver->fresh()->cancellations_count);
         $this->assertSame('cancelled', $job->offers()->where('driver_profile_id', $this->driver->id)->value('status'));
         $this->assertSame('offered', $job->offers()->where('driver_profile_id', $other->id)->value('status'));
-        $this->assertTrue($this->pushes->to($job->order->buyer)->contains(fn ($p) => $p['data']['status'] === 'pending_driver'));
+        $this->assertTrue($this->pushes->to($job->order->buyer)->contains(fn ($p) => ($p['data']['status'] ?? null) === 'pending_driver'));
     }
 
     public function test_repeated_driver_cancellations_flag_the_driver(): void
     {
         foreach (range(1, 3) as $i) {
             if ($i > 1) {
-                $this->job = $this->paidJob(\App\Models\User::factory()->create());
+                $this->job = $this->paidJob(User::factory()->create());
                 $this->asDriver($this->driver)->postJson("/api/driver/offers/{$this->job->id}/accept")->assertOk();
             }
             $this->move('cancelled')->assertOk();

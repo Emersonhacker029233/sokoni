@@ -20,6 +20,16 @@ class DeliveryJobPolicy
             || $this->isDriver($user, $job);
     }
 
+    /**
+     * The customer-app endpoint (GET /delivery/orders/{order}) is for the
+     * order's two parties only. The assigned driver has their own driver
+     * view; giving them this one would expose the seller's pickup code.
+     */
+    public function viewInCustomerApp(User $user, DeliveryJob $job): bool
+    {
+        return $this->isBuyer($user, $job) || $this->isSeller($user, $job);
+    }
+
     public function actAsBuyer(User $user, DeliveryJob $job): bool
     {
         return $this->isBuyer($user, $job);

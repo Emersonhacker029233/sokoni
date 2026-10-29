@@ -3,6 +3,7 @@
 namespace Tests\Feature\Delivery;
 
 use App\Models\DeliveryJob;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\SellerProfile;
 use App\Models\User;
@@ -58,7 +59,7 @@ class CheckoutAndJobCreationTest extends TestCase
             ->assertJsonPath('data.total', 13000)
             ->json('data.id');
 
-        $order = \App\Models\Order::query()->findOrFail($id);
+        $order = Order::query()->findOrFail($id);
         $this->actingAs($order->seller->user)->patchJson("/api/orders/{$id}/status", ['status' => 'accepted'])->assertOk();
         $this->actingAs($order->seller->user)->patchJson("/api/orders/{$id}/status", ['status' => 'ready'])->assertOk();
         $this->actingAs($order->seller->user)->patchJson("/api/orders/{$id}/status", ['status' => 'completed'])->assertOk();

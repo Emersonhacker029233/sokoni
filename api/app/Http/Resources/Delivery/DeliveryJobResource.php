@@ -66,7 +66,7 @@ class DeliveryJobResource extends JsonResource
     private function buyerView(): array
     {
         $active = $this->isDriverActive();
-        $hasDriver = $this->driver !== null && in_array($this->status, [...\App\Models\DeliveryJob::DRIVER_ACTIVE_STATUSES, 'delivered'], true);
+        $hasDriver = $this->driver !== null && in_array($this->status, [...DeliveryJob::DRIVER_ACTIVE_STATUSES, 'delivered'], true);
         $reassignable = in_array($this->status, ['no_driver_found', 'failed'], true) && $this->failure_reason !== 'customer_unreachable';
 
         return [
@@ -161,7 +161,7 @@ class DeliveryJobResource extends JsonResource
             'unreachable_available_at' => $this->status === 'arrived' && $this->arrived_at ? $this->arrived_at->copy()->addMinutes($waitMinutes) : null,
             'actions' => [
                 'next' => array_values(array_intersect(
-                    \App\Models\DeliveryJob::TRANSITIONS[$this->status] ?? [],
+                    DeliveryJob::TRANSITIONS[$this->status] ?? [],
                     ['arrived_at_shop', 'picked_up', 'on_the_way', 'arrived', 'delivered', 'failed'],
                 )),
                 'can_cancel' => $beforePickup,

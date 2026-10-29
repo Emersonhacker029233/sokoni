@@ -47,7 +47,7 @@ class CustomerDeliveryController extends Controller
     public function show(Request $request, Order $order): JsonResponse
     {
         $job = $this->jobFor($order);
-        $this->authorize('view', $job);
+        $this->authorize('viewInCustomerApp', $job);
 
         if ($job->status === 'pending_driver') {
             $this->dispatch->advanceIfDue($job);

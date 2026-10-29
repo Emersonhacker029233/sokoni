@@ -10,6 +10,7 @@ use App\Models\DeliveryJob;
 use App\Models\DriverProfile;
 use App\Services\Delivery\DeliveryJobService;
 use App\Services\Delivery\DriverEarnings;
+use App\Support\DeliverySettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -91,7 +92,7 @@ class DriverJobController extends Controller
             'summary' => $earnings->summary($driver, $from, $to),
             'balance' => $earnings->balance($driver),
             'payouts' => $driver->payouts()->latest('id')->limit(20)->get(['id', 'amount', 'status', 'method', 'reference', 'period_start', 'period_end', 'paid_at']),
-            'commission_pct' => \App\Support\DeliverySettings::commissionPct(),
+            'commission_pct' => DeliverySettings::commissionPct(),
         ]]);
     }
 
