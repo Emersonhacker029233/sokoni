@@ -44,7 +44,7 @@ class DeliveryJobResource extends JsonResource
         $base = [
             'id' => $this->id,
             'order_id' => $this->order_id,
-            'order_code' => $this->order->code,
+            'order_code' => $this->orderCodeForViewer(),
             'status' => $this->status,
             'is_active' => $this->isDriverActive(),
             'distance_km' => $this->distance_km,
@@ -168,6 +168,22 @@ class DeliveryJobResource extends JsonResource
                 'can_rate' => $this->status === 'delivered' && ! $this->ratings->contains('direction', 'driver_to_buyer'),
             ],
         ];
+    }
+
+    /**
+     * The pickup code is the last 4 characters of the order code, so a
+     * driver who could read the full code before pickup could "confirm"
+     * a pickup without ever meeting the seller. Drivers see it masked
+     * until the goods are in their hands.
+     */
+    private function orderCodeForViewer(): string
+    {
+        $code = (string) $this->order->code;
+        if ($this->viewer !== self::DRIVER || ! in_array($this->status, ['pending_driver', 'driver_assigned', 'arrived_at_shop'], true)) {
+            return $code;
+        }
+
+        return substr($code, 0, -4).'••••';
     }
 
     private function vehicleArray(): ?array

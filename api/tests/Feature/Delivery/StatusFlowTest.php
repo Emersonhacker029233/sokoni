@@ -68,6 +68,20 @@ class StatusFlowTest extends TestCase
         );
     }
 
+    public function test_driver_sees_the_order_code_masked_until_pickup(): void
+    {
+        $code = $this->job->order->code;
+        $masked = substr($code, 0, -4).'••••';
+
+        $this->asDriver($this->driver)->getJson('/api/driver/jobs/active')->assertOk()->assertJsonPath('data.order_code', $masked);
+        $this->move('arrived_at_shop')->assertOk()->assertJsonPath('data.order_code', $masked);
+        $this->move('picked_up', ['pickup_code' => $this->job->pickupCode()])->assertOk()->assertJsonPath('data.order_code', $code);
+
+        // Buyer and seller always see the real code.
+        $this->actingAs($this->job->order->buyer)->getJson("/api/delivery/orders/{$this->job->order_id}")
+            ->assertJsonPath('data.order_code', $code);
+    }
+
     public function test_skipping_steps_is_rejected(): void
     {
         $this->move('picked_up', ['pickup_code' => $this->job->pickupCode()])->assertStatus(409)->assertJsonPath('code', 'invalid_transition');
