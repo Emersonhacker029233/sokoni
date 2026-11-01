@@ -73,6 +73,43 @@ class CancellationTest extends TestCase
         $this->assertSame(1000, $job->earned_amount);
     }
 
+    public function test_seller_cancel_after_assignment_is_logged_on_the_timeline(): void
+    {
+        [$job, $driver] = $this->assignedJob();
+        $order = $job->order;
+
+        $this->actingAs($order->seller->user)->patchJson("/api/orders/{$order->id}/status", ['status' => 'cancelled', 'reason' => 'Bidhaa imeisha'])->assertOk();
+
+        $event = $job->events()->where('type', DeliveryJobService::SELLER_CANCELLED_AFTER_ASSIGN)->sole();
+        $this->assertSame('seller', $event->actor_role);
+        $this->assertSame($order->seller->user_id, $event->actor_user_id);
+        $this->assertSame('Bidhaa imeisha', $event->note);
+        $this->assertSame([
+            'reason' => 'seller_cancelled_after_assign',
+            'driver_profile_id' => $driver->id,
+            'driver_compensation' => 1000,
+            'compensation_funded_by' => 'platform',
+            'buyer_refund' => $job->fee,
+        ], $event->meta);
+
+        // The shared timeline both apps render carries the reason code too.
+        $last = collect($this->actingAs($order->buyer)->getJson("/api/delivery/orders/{$order->id}")->assertOk()->json('data.timeline'))->last();
+        $this->assertSame('cancelled', $last['status']);
+        $this->assertSame('seller', $last['by']);
+        $this->assertSame('seller_cancelled_after_assign', $last['reason']);
+    }
+
+    public function test_seller_cancel_before_assignment_is_not_tagged(): void
+    {
+        $job = $this->paidJob();
+        $order = $job->order;
+
+        $this->actingAs($order->seller->user)->patchJson("/api/orders/{$order->id}/status", ['status' => 'cancelled', 'reason' => 'x'])->assertOk();
+
+        $this->assertSame('cancelled', $job->fresh()->status);
+        $this->assertFalse($job->events()->where('type', DeliveryJobService::SELLER_CANCELLED_AFTER_ASSIGN)->exists());
+    }
+
     public function test_seller_cancel_compensation_can_be_switched_off(): void
     {
         Settings::set('delivery_seller_cancel_compensates_driver', '0');

@@ -98,4 +98,7 @@ return [
     // item money) to the driver in cash.
     'delivery_fee_cash_enabled' => env('SOKONI_DELIVERY_FEE_CASH_ENABLED', false),
     'delivery_location_retention_hours' => env('SOKONI_DELIVERY_LOCATION_RETENTION_HOURS', 72),
+    // A job still waiting for its delivery fee this many minutes after the
+    // seller accepted is cancelled, with its order, by delivery:dispatch-tick.
+    'delivery_unpaid_timeout_minutes' => env('SOKONI_DELIVERY_UNPAID_TIMEOUT_MINUTES', 20),
 ];

@@ -20,7 +20,10 @@ class DeliveryMessages
         $order = $job->order;
         $data = ['type' => 'delivery_status', 'order_id' => $order->id, 'job_id' => $job->id, 'status' => $to];
 
+        $paymentTimeout = $to === 'cancelled' && $job->cancel_reason === DeliveryJobService::PAYMENT_TIMEOUT;
+
         $buyerKey = match (true) {
+            $paymentTimeout => 'buyer_payment_expired',
             $to === 'pending_driver' && in_array($from, ['driver_assigned', 'arrived_at_shop'], true) => 'buyer_driver_cancelled',
             $to === 'pending_driver' => 'buyer_finding_driver',
             in_array($to, ['driver_assigned', 'arrived_at_shop', 'picked_up', 'on_the_way', 'arrived', 'delivered', 'no_driver_found', 'failed', 'cancelled'], true) => "buyer_{$to}",
@@ -30,11 +33,12 @@ class DeliveryMessages
             $this->toCustomerApp($order->buyer, $buyerKey, $job, $data);
         }
 
-        $sellerKey = match ($to) {
-            'driver_assigned' => 'seller_driver_assigned',
-            'arrived_at_shop' => 'seller_driver_at_shop',
-            'delivered' => 'seller_delivered',
-            'failed' => 'seller_failed',
+        $sellerKey = match (true) {
+            $paymentTimeout => 'seller_payment_expired',
+            $to === 'driver_assigned' => 'seller_driver_assigned',
+            $to === 'arrived_at_shop' => 'seller_driver_at_shop',
+            $to === 'delivered' => 'seller_delivered',
+            $to === 'failed' => 'seller_failed',
             default => null,
         };
         if ($sellerKey !== null && $order->seller?->user !== null) {

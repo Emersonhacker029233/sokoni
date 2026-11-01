@@ -29,6 +29,7 @@ class DeliveryStateMachine
     /**
      * @param  array<string, mixed>  $attributes  extra columns to write in the same update
      * @param  (callable(DeliveryJob): void)|null  $inTransaction  extra work that must commit atomically with the change
+     * @param  list<string>  $onlyFrom  when set, the locked CURRENT status must also be one of these
      *
      * @throws DeliveryActionException when the edge is not legal from the job's CURRENT status
      */
@@ -41,13 +42,14 @@ class DeliveryStateMachine
         ?string $note = null,
         array $meta = [],
         ?callable $inTransaction = null,
+        array $onlyFrom = [],
     ): DeliveryJob {
-        [$fresh, $from] = DB::transaction(function () use ($job, $to, $actor, $actorRole, $attributes, $note, $meta, $inTransaction) {
+        [$fresh, $from] = DB::transaction(function () use ($job, $to, $actor, $actorRole, $attributes, $note, $meta, $inTransaction, $onlyFrom) {
             /** @var DeliveryJob $fresh */
             $fresh = DeliveryJob::query()->lockForUpdate()->findOrFail($job->id);
             $from = $fresh->status;
 
-            if (! $fresh->canTransitionTo($to)) {
+            if (! $fresh->canTransitionTo($to) || ($onlyFrom !== [] && ! in_array($from, $onlyFrom, true))) {
                 throw DeliveryActionException::make('invalid_transition', 409, ['from' => $from, 'to' => $to]);
             }
 

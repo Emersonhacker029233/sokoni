@@ -44,12 +44,14 @@ Buyer view:
   "tracking": { "channel": "tracking/12" },
   "refund": null,
   "actions": { "can_pay": false, "can_cancel": false, "can_retry": false, "can_switch_to_pickup": false, "can_rate": false },
-  "timeline": [ { "status": "pending_payment", "at": "...", "by": "system" } ],
+  "timeline": [ { "status": "pending_payment", "at": "...", "by": "system", "reason": null } ],
   "cancelled_by": null, "cancel_reason": null, "failure_reason": null, "created_at": "..."
 } }
 ```
 - `driver.phone`, `driver_location` and `tracking` are null unless the job is active (`driver_assigned` through `arrived`).
 - `delivery_pin` is shown from `pending_driver` until the job ends.
+- `timeline[].reason` is a machine code or null. Today it is `seller_cancelled_after_assign` (seller cancelled after a driver took the job; the driver is paid by Sokoni and the buyer refunded in full) or `payment_timeout`.
+- A job left in `pending_payment` for 20 minutes (setting `delivery_unpaid_timeout_minutes`) is cancelled with its order by the minute cron: `cancelled_by: "system"`, `cancel_reason: "payment_timeout"`. Buyer and seller both get a push.
 
 The seller view has no PIN, fee or location. It shows `driver` (name, photo, vehicle, and phone only before pickup) and `pickup_code` (the last 4 characters of the order code) while the driver is coming or at the shop.
 

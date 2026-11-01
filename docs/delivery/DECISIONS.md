@@ -18,10 +18,17 @@ Judgement calls made while building the delivery system, one line of rationale e
 - **Real FCM for delivery only, through a separate `DeliveryNotifier`.** (client) `PushNotifier` and `LogPushNotifier` are untouched. Customer-app delivery pushes also go to the existing in-app inbox. Driver-app pushes do not.
 - **`devices.app` column.** One phone may have both apps installed. Driver offers must reach the driver app only, and existing rows stay `null`, meaning the customer app.
 - **Firebase is used only when the credentials file exists.** Otherwise pushes are logged and the realtime-token endpoint returns `503 { fallback: "poll" }`. Nothing breaks before credentials arrive.
-- **Seller cancelling after assignment compensates the driver with the cancellation fee, platform-funded, and refunds the buyer in full.** Section 6 didn't cover the seller-cancel case. This is a setting (`delivery_seller_cancel_compensates_driver`, default on) and **needs client confirmation**.
-- **Cash-fee jobs cancelled after assignment earn the driver nothing.** No money was collected, so there's nothing to pay a cancellation fee from.
+- **Seller cancelling after assignment compensates the driver with the cancellation fee, platform-funded, and refunds the buyer in full.** (client, confirmed 2026-11-01) Section 6 didn't cover the seller-cancel case. This is a setting (`delivery_seller_cancel_compensates_driver`, default on).
+- **Cash-fee jobs cancelled by the buyer after assignment earn the driver nothing.** No money was collected, so there's nothing to pay a cancellation fee from. A seller cancel still pays the driver, because Sokoni funds that one.
 - **Driver-side failure after pickup earns 0, and the order stays open.** The buyer can retry, switch to pickup, or cancel. An unreachable customer cancels the order, the driver keeps earnings, and the fee is not refunded. (client)
 - **Driver documents go on the private `local` disk.** Driver photos are exposed only through 30-minute signed URLs. ID and licence images never leave the server except to the admin panel.
 - **The national ID number is encrypted at rest.** Only the last 4 digits are returned to the driver's own app.
 - **Breadcrumbs are sampled every 30 s while on a job and purged after 72 h by an hourly command.** (client) The 4-second live stream never touches MySQL.
 - **Separate decisions file.** The root `DECISIONS.md` had uncommitted edits on `main` when this branch was cut, so delivery decisions live here to avoid mixing changes.
+
+## Phase 2 follow-up, client answers 2026-11-01
+
+- **Every seller cancel after assignment is tagged `seller_cancelled_after_assign`.** (client) The `cancelled` status event carries `meta.reason`, which the shared timeline returns as `reason`. A second event of that type records the driver, the compensation, who funds it and the buyer refund, so admins can query every case and spot repeat offenders. Seller cancels before a driver is assigned are not tagged, because they cost the platform nothing.
+- **Unpaid jobs auto-cancel after 20 minutes.** (client) The timeout is the `delivery_unpaid_timeout_minutes` setting (env `SOKONI_DELIVERY_UNPAID_TIMEOUT_MINUTES`). `delivery:dispatch-tick` runs it every minute, so a job can live up to one minute past the timeout. It is measured from job creation, which is the moment the seller accepted.
+- **The order is cancelled together with the job.** The buyer chose dispatch and never paid, so there is nothing to deliver. The seller gets a push saying not to prepare it, because App 1.0 sellers would otherwise only see the status change. The order's `cancelled_reason` is written in the seller's language, since the seller reads it in 1.0.
+- **A payment that lands at the same moment always wins.** The cancel re-checks `pending_payment` under the row lock. A payment confirmed after the cancel is kept as paid with a pending full refund, using the existing late-payment path.

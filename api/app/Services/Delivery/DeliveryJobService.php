@@ -23,6 +23,12 @@ use Throwable;
  */
 class DeliveryJobService
 {
+    /** Timeline reason when a seller cancels after a driver took the job (client decision 2026-11-01). */
+    public const SELLER_CANCELLED_AFTER_ASSIGN = 'seller_cancelled_after_assign';
+
+    /** cancel_reason for jobs whose delivery fee was not paid in time. */
+    public const PAYMENT_TIMEOUT = 'payment_timeout';
+
     /** Driver-reported failure reasons the app may send. */
     public const FAILURE_REASONS = ['customer_unreachable', 'vehicle_breakdown', 'accident', 'item_damaged', 'wrong_address', 'other'];
 
@@ -166,6 +172,11 @@ class DeliveryJobService
             default => [0, $paid ? $job->fee : 0],
         };
 
+        // Client decision 2026-11-01: every seller cancel after assignment is
+        // tagged on the timeline, so the platform-funded driver payouts can be
+        // audited and repeat offenders spotted from delivery_job_events.
+        $sellerAfterAssign = $driverAssigned && $role === 'seller';
+
         $job = $this->stateMachine->transition($job, 'cancelled', $actor, $role,
             [
                 'cancelled_by' => $role,
@@ -175,8 +186,21 @@ class DeliveryJobService
                 'refund_status' => $refund > 0 ? 'pending' : null,
             ],
             note: $reason,
-            meta: ['earned_amount' => $earned, 'refund_amount' => $refund],
-            inTransaction: function (DeliveryJob $fresh) use ($cancelOrder, $reason) {
+            meta: array_filter([
+                'earned_amount' => $earned,
+                'refund_amount' => $refund,
+                'reason' => $sellerAfterAssign ? self::SELLER_CANCELLED_AFTER_ASSIGN : null,
+            ], fn ($v) => $v !== null),
+            inTransaction: function (DeliveryJob $fresh) use ($cancelOrder, $reason, $sellerAfterAssign, $actor, $earned, $refund) {
+                if ($sellerAfterAssign) {
+                    $this->stateMachine->record($fresh, $actor, 'seller', self::SELLER_CANCELLED_AFTER_ASSIGN, note: $reason, meta: [
+                        'reason' => self::SELLER_CANCELLED_AFTER_ASSIGN,
+                        'driver_profile_id' => $fresh->driver_profile_id,
+                        'driver_compensation' => $earned,
+                        'compensation_funded_by' => 'platform',
+                        'buyer_refund' => $refund,
+                    ]);
+                }
                 if ($cancelOrder) {
                     $this->cancelOrder($fresh->order, $reason ?? __('delivery.reasons.delivery_cancelled'));
                 }
@@ -185,6 +209,48 @@ class DeliveryJobService
         $this->dispatch->withdrawOpenOffers($job);
 
         return $job;
+    }
+
+    /**
+     * Cancels every job still waiting for its delivery fee after the
+     * configured timeout (default 20 minutes), together with its order.
+     * Run every minute by delivery:dispatch-tick. The status is re-checked
+     * under the row lock, so a payment landing at the same moment wins.
+     *
+     * @return int how many jobs were cancelled
+     */
+    public function expireUnpaidJobs(): int
+    {
+        $minutes = DeliverySettings::unpaidTimeoutMinutes();
+        $expired = 0;
+
+        DeliveryJob::query()
+            ->where('status', 'pending_payment')
+            ->where('created_at', '<=', now()->subMinutes($minutes))
+            ->orderBy('id')
+            ->each(function (DeliveryJob $job) use (&$expired, $minutes) {
+                try {
+                    $this->stateMachine->transition($job, 'cancelled', null, 'system',
+                        [
+                            'cancelled_by' => 'system',
+                            'cancel_reason' => self::PAYMENT_TIMEOUT,
+                            'earned_amount' => 0,
+                            'refund_amount' => 0,
+                        ],
+                        meta: ['reason' => self::PAYMENT_TIMEOUT, 'timeout_minutes' => $minutes],
+                        inTransaction: function (DeliveryJob $fresh) {
+                            $order = $fresh->order;
+                            $this->cancelOrder($order, __('delivery.reasons.payment_timeout', [], $order->seller?->user?->preferredLocale()));
+                        },
+                        onlyFrom: ['pending_payment'],
+                    );
+                    $expired++;
+                } catch (DeliveryActionException) {
+                    // Paid or cancelled between the query and the row lock: leave it alone.
+                }
+            });
+
+        return $expired;
     }
 
     /** No driver found (or a driver-side failure): try again with the fee already paid. */

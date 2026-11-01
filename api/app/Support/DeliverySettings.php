@@ -83,6 +83,12 @@ class DeliverySettings
         return max(1, (int) Settings::get('delivery_location_retention_hours'));
     }
 
+    /** Minutes a job may wait in pending_payment before it is auto-cancelled. */
+    public static function unpaidTimeoutMinutes(): int
+    {
+        return max(1, (int) Settings::get('delivery_unpaid_timeout_minutes'));
+    }
+
     /** Settings rows store strings, so "0"/"false" must read as false. */
     private static function bool(string $key): bool
     {

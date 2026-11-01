@@ -8,6 +8,7 @@ return [
     'reasons' => [
         'delivery_cancelled' => 'Usafirishaji umeghairiwa',
         'customer_unreachable' => 'Usafirishaji umeshindikana: mteja hakupatikana',
+        'payment_timeout' => 'Ada ya usafirishaji haikulipwa kwa wakati',
     ],
 
     'errors' => [
@@ -60,11 +61,13 @@ return [
         'buyer_no_driver_found' => ['title' => 'Hakuna dereva aliyepatikana', 'body' => 'Hakuna dereva aliye huru karibu na :shop kwa sasa. Jaribu tena, chagua kuchukua mwenyewe, au ghairi urudishiwe pesa yote.'],
         'buyer_failed' => ['title' => 'Tatizo la usafirishaji', 'body' => 'Usafirishaji wa oda :code haukukamilika. Fungua programu kuona machaguo yako.'],
         'buyer_cancelled' => ['title' => 'Usafirishaji umeghairiwa', 'body' => 'Usafirishaji wa oda :code umeghairiwa.'],
+        'buyer_payment_expired' => ['title' => 'Oda imeghairiwa', 'body' => 'Ada ya usafirishaji ya oda :code haikulipwa kwa wakati, kwa hiyo oda imeghairiwa.'],
         'buyer_pin_locked' => ['title' => 'PIN ya kupokea imefungwa', 'body' => 'PIN zisizo sahihi zimeingizwa mara nyingi kwa oda :code. Huduma kwa wateja ya Sokoni itawasiliana nawe.'],
         'seller_driver_assigned' => ['title' => 'Dereva amepatikana', 'body' => ':driver anakuja kuchukua oda :code.'],
         'seller_driver_at_shop' => ['title' => 'Dereva amefika', 'body' => ':driver yuko dukani kwako kwa oda :code. Mkabidhi baada tu ya kuingiza namba ya kuchukua.'],
         'seller_delivered' => ['title' => 'Oda imefikishwa', 'body' => 'Oda :code imemfikia mteja.'],
         'seller_failed' => ['title' => 'Usafirishaji umeshindikana', 'body' => 'Usafirishaji wa oda :code umeshindikana. Dereva atarudisha bidhaa.'],
+        'seller_payment_expired' => ['title' => 'Oda imeghairiwa', 'body' => 'Oda :code imeghairiwa kwa sababu mnunuzi hakulipa ada ya usafirishaji kwa wakati. Usiiandae.'],
         'driver_new_offer' => ['title' => 'Kazi mpya: TSh :earnings', 'body' => 'Chukua :shop. Gusa kuona na kukubali.'],
         'driver_job_cancelled' => ['title' => 'Kazi imeghairiwa', 'body' => 'Oda :code imeghairiwa. Usiichukue.'],
     ],

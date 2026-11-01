@@ -8,6 +8,7 @@ return [
     'reasons' => [
         'delivery_cancelled' => 'Delivery cancelled',
         'customer_unreachable' => 'Delivery failed: the customer could not be reached',
+        'payment_timeout' => 'Delivery fee not paid in time',
     ],
 
     'errors' => [
@@ -60,11 +61,13 @@ return [
         'buyer_no_driver_found' => ['title' => 'No driver available', 'body' => 'No driver is free near :shop right now. Try again, switch to pickup, or cancel for a full refund.'],
         'buyer_failed' => ['title' => 'Delivery problem', 'body' => 'The delivery of order :code could not be completed. Open the app to see your options.'],
         'buyer_cancelled' => ['title' => 'Delivery cancelled', 'body' => 'The delivery for order :code was cancelled.'],
+        'buyer_payment_expired' => ['title' => 'Order cancelled', 'body' => 'The delivery fee for order :code was not paid in time, so the order was cancelled.'],
         'buyer_pin_locked' => ['title' => 'Delivery PIN locked', 'body' => 'Too many wrong PINs were entered for order :code. Sokoni support will contact you.'],
         'seller_driver_assigned' => ['title' => 'Driver assigned', 'body' => ':driver is coming to collect order :code.'],
         'seller_driver_at_shop' => ['title' => 'Driver has arrived', 'body' => ':driver is at your shop for order :code. Hand over only after they enter the pickup code.'],
         'seller_delivered' => ['title' => 'Order delivered', 'body' => 'Order :code was delivered to the customer.'],
         'seller_failed' => ['title' => 'Delivery failed', 'body' => 'The delivery of order :code failed. The driver will return the items.'],
+        'seller_payment_expired' => ['title' => 'Order cancelled', 'body' => 'Order :code was cancelled because the buyer did not pay the delivery fee in time. Do not prepare it.'],
         'driver_new_offer' => ['title' => 'New delivery: TSh :earnings', 'body' => 'Pickup at :shop. Tap to view and accept.'],
         'driver_job_cancelled' => ['title' => 'Job cancelled', 'body' => 'Order :code was cancelled. Do not collect it.'],
     ],

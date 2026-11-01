@@ -184,7 +184,7 @@ class DeliveryJobResource extends JsonResource
     {
         return $this->events
             ->where('type', 'status')
-            ->map(fn ($e) => ['status' => $e->to_status, 'at' => $e->created_at, 'by' => $e->actor_role])
+            ->map(fn ($e) => ['status' => $e->to_status, 'at' => $e->created_at, 'by' => $e->actor_role, 'reason' => $e->meta['reason'] ?? null])
             ->values()
             ->all();
     }
