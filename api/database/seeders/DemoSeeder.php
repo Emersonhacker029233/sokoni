@@ -351,8 +351,7 @@ class DemoSeeder extends Seeder
     /**
      * Part 2 (client feedback): "provide a way to force-regenerate every
      * existing file, not only mismatched ones" — set by
-     * Console\Commands\SeedDemoContent's `--force-media` (or setup.php's
-     * `demo-seed&force-media=1`) before this seeder runs. Bypasses
+     * Console\Commands\SeedDemoContent's `--force-media` before this seeder runs. Bypasses
      * ensureFileExists()'s own content comparison entirely, so every
      * placeholder is rewritten unconditionally — useful when a stale
      * *cached* copy (uploads serve with a 7-day Cache-Control) is

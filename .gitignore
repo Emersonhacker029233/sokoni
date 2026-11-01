@@ -100,3 +100,8 @@ DEPLOY_MANIFEST_*.md
 
 # ==== Throwaway diagnostic scripts (not part of either app) ====
 _throwaway_*.dart
+
+# One-off server helpers (web-reachable, token-gated) must never be committed.
+# Run maintenance through artisan instead (e.g. a one-time cron job).
+api/public/setup*.php
+api/public/*-tool.php
