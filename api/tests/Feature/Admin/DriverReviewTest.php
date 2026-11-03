@@ -161,6 +161,30 @@ class DriverReviewTest extends TestCase
         $this->assertFalse(ActivityLog::query()->exists());
     }
 
+    /**
+     * Staging 2026-11-04: the screen existed on the server but never showed,
+     * because a Filament component cache from before it existed was on the
+     * server. This pins what an admin must see once no stale cache is there.
+     */
+    public function test_drivers_is_discovered_and_hidden_from_staff(): void
+    {
+        $panel = \Filament\Facades\Filament::getPanel('admin');
+        $this->assertContains(\App\Filament\Resources\Drivers\DriverResource::class, $panel->getResources());
+        $this->assertFalse($panel->hasCachedComponents(), 'tests must never run against a component cache');
+
+        // Staff first: Filament keeps the built navigation on the panel for
+        // the rest of the process, so the first request in a test decides it.
+        $staff = User::factory()->staff()->create();
+        $this->as($staff)->get('/admin')->assertOk()->assertDontSee('/admin/drivers', false);
+    }
+
+    public function test_admins_see_drivers_under_trust_and_safety(): void
+    {
+        $this->as($this->admin)->get('/admin')->assertOk()
+            ->assertSee('Trust &amp; Safety', false)
+            ->assertSee('/admin/drivers', false);
+    }
+
     public function test_staff_and_ordinary_users_cannot_open_the_driver_queue(): void
     {
         $driver = $this->submittedDriver();
