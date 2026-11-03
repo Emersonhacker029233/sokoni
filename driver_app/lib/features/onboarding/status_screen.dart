@@ -22,6 +22,26 @@ class StatusScreen extends ConsumerStatefulWidget {
 class _StatusScreenState extends ConsumerState<StatusScreen> {
   bool _checking = false;
 
+  /// Without Firebase the decision arrives by SMS. Coming back to the app
+  /// after reading it re-checks straight away, no tap needed.
+  late final AppLifecycleListener _lifecycle = AppLifecycleListener(
+    onResume: () {
+      if (mounted && !_checking) _check();
+    },
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle;
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
   Future<void> _check() async {
     setState(() => _checking = true);
     await ref.read(profileProvider.notifier).refresh();

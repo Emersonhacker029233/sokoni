@@ -87,6 +87,17 @@ class DeliveryMessages
         ]);
     }
 
+    /** Support unlocked PIN entry: the driver can try again, the buyer knows delivery continues. */
+    public function pinUnlocked(DeliveryJob $job): void
+    {
+        $job->loadMissing(['order.buyer', 'driver.user']);
+        $data = ['type' => 'delivery_status', 'order_id' => $job->order_id, 'job_id' => $job->id, 'status' => $job->status];
+        $this->toCustomerApp($job->order->buyer, 'buyer_pin_unlocked', $job, $data);
+        if ($job->driver?->user !== null) {
+            $this->toDriverApp($job->driver->user, 'driver_pin_unlocked', $job, $data);
+        }
+    }
+
     private function toCustomerApp(User $user, string $key, DeliveryJob $job, array $data): void
     {
         // Same Settings > Notifications "orders" toggle the existing order pushes honour.

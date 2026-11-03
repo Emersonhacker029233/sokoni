@@ -21,4 +21,11 @@ interface DeliveryNotifier
      * @param  bool  $silent  data-only, no visible notification (e.g. offer withdrawn)
      */
     public function send(User $user, string $app, string $title, string $body, array $data = [], bool $silent = false): void;
+
+    /**
+     * Whether a push would really arrive: real FCM is configured AND the
+     * user has a registered device for $app. Callers with an important
+     * one-off message (driver approval) fall back to SMS when this is false.
+     */
+    public function canReach(User $user, string $app): bool;
 }

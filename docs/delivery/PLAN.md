@@ -175,5 +175,5 @@ iOS background location gets extra App Review scrutiny. Plan: ask "While Using" 
 2. Backend: migrations, fee calculator, job creation on accept, dispatch waves, race-safe accept, state machine, PIN/pickup code, events, pushes, policies, tests.
 3. Driver app.
 4. Sokoni app 1.1: quote/total screen, pay, tracking map, driver card, PIN, ratings.
-5. Payment aggregator integration + Filament driver queue, jobs, payouts, delivery settings.
+5. Payment aggregator integration + Filament jobs, payouts, delivery settings. (The Filament driver review queue shipped early as phase 5a; see DECISIONS.md.)
 6. Hardening, rate limits, logging, DEPLOY.md, store-submission notes.

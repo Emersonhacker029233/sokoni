@@ -18,6 +18,11 @@ class FcmDeliveryNotifier extends BaseDeliveryNotifier
 {
     public function __construct(private readonly FirebaseConnection $firebase) {}
 
+    protected function isLive(): bool
+    {
+        return true;
+    }
+
     protected function deliver(User $user, Collection $tokens, string $title, string $body, array $data, bool $silent): void
     {
         try {

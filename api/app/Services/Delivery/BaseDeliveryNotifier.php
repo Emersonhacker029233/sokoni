@@ -22,6 +22,14 @@ abstract class BaseDeliveryNotifier implements DeliveryNotifier
         }
     }
 
+    public function canReach(User $user, string $app): bool
+    {
+        return $this->isLive() && $this->tokensFor($user, $app)->isNotEmpty();
+    }
+
+    /** False for the logging stand-in: nothing actually leaves the server. */
+    abstract protected function isLive(): bool;
+
     /** @return Collection<int, string> */
     protected function tokensFor(User $user, string $app): Collection
     {

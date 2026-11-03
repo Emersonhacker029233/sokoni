@@ -70,5 +70,37 @@ return [
         'seller_payment_expired' => ['title' => 'Order cancelled', 'body' => 'Order :code was cancelled because the buyer did not pay the delivery fee in time. Do not prepare it.'],
         'driver_new_offer' => ['title' => 'New delivery: TSh :earnings', 'body' => 'Pickup at :shop. Tap to view and accept.'],
         'driver_job_cancelled' => ['title' => 'Job cancelled', 'body' => 'Order :code was cancelled. Do not collect it.'],
+        'buyer_pin_unlocked' => ['title' => 'Delivery can continue', 'body' => 'Sokoni support unlocked PIN entry for order :code. Give your driver the PIN from the app.'],
+        'driver_pin_unlocked' => ['title' => 'PIN entry unlocked', 'body' => 'You can enter the customer\'s PIN for order :code again.'],
+    ],
+
+    // Admin decisions on a driver application (Filament > Drivers). `sms` is
+    // the short fallback used when no push can reach the driver app.
+    'account' => [
+        'approved' => [
+            'title' => 'You are approved',
+            'body' => 'Welcome to Sokoni Driver. Open the app and go online to start receiving deliveries.',
+            'sms' => 'Sokoni Driver: you are approved. Open the app and go online to start receiving deliveries.',
+        ],
+        'vehicle_approved' => [
+            'title' => 'Vehicle verified',
+            'body' => 'Your vehicle :plate is verified. You can go online again.',
+            'sms' => 'Sokoni Driver: your vehicle :plate is verified. You can go online again.',
+        ],
+        'rejected' => [
+            'title' => 'Your application needs changes',
+            'body' => 'Reason: :reason. Open the app to fix it and submit again.',
+            'sms' => 'Sokoni Driver: your application needs changes: :reason. Open the app to fix it and submit again.',
+        ],
+        'suspended' => [
+            'title' => 'Driver account suspended',
+            'body' => 'You cannot receive deliveries for now. Reason: :reason. Contact Sokoni support for help.',
+            'sms' => 'Sokoni Driver: your account is suspended: :reason. Contact support@sokoni.co.tz.',
+        ],
+        'reinstated' => [
+            'title' => 'Driver account active again',
+            'body' => 'Your suspension has ended. Open the app and go online to receive deliveries.',
+            'sms' => 'Sokoni Driver: your account is active again. Open the app and go online.',
+        ],
     ],
 ];

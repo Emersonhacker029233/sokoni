@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
@@ -16,8 +18,22 @@ class ProfileController extends AsyncNotifier<ProfileState> {
   @override
   Future<ProfileState> build() async {
     if (ref.watch(authProvider) != AuthStatus.signedIn) return const ProfileState(null);
+    _listenForAccountDecisions();
     final result = await ref.read(driverRepositoryProvider).me();
     return ProfileState(result.value, fromCache: result.fromCache);
+  }
+
+  /// Registers this phone for push as soon as the driver is signed in, not
+  /// only once approved, so the approval or rejection itself can arrive as
+  /// a push. A `driver_account` push re-reads the profile, which moves the
+  /// router on (status screen to home, or to "needs changes").
+  void _listenForAccountDecisions() {
+    final push = ref.read(pushServiceProvider);
+    final subscription = push.messages.listen((message) {
+      if (message.type == 'driver_account') unawaited(refresh());
+    });
+    ref.onDispose(subscription.cancel);
+    unawaited(push.start());
   }
 
   Future<void> refresh() async {

@@ -70,5 +70,37 @@ return [
         'seller_payment_expired' => ['title' => 'Oda imeghairiwa', 'body' => 'Oda :code imeghairiwa kwa sababu mnunuzi hakulipa ada ya usafirishaji kwa wakati. Usiiandae.'],
         'driver_new_offer' => ['title' => 'Kazi mpya: TSh :earnings', 'body' => 'Chukua :shop. Gusa kuona na kukubali.'],
         'driver_job_cancelled' => ['title' => 'Kazi imeghairiwa', 'body' => 'Oda :code imeghairiwa. Usiichukue.'],
+        'buyer_pin_unlocked' => ['title' => 'Usafirishaji unaweza kuendelea', 'body' => 'Huduma kwa wateja ya Sokoni imefungua uwekaji wa PIN kwa oda :code. Mpe dereva wako PIN iliyo kwenye programu.'],
+        'driver_pin_unlocked' => ['title' => 'Uwekaji wa PIN umefunguliwa', 'body' => 'Unaweza kuweka tena PIN ya mteja kwa oda :code.'],
+    ],
+
+    // Maamuzi ya msimamizi kuhusu ombi la dereva (Filament > Drivers). `sms`
+    // ni ujumbe mfupi unaotumwa pale arifa ya programu haiwezi kumfikia dereva.
+    'account' => [
+        'approved' => [
+            'title' => 'Umeidhinishwa',
+            'body' => 'Karibu Sokoni Driver. Fungua programu na uingie kazini ili uanze kupokea kazi.',
+            'sms' => 'Sokoni Driver: umeidhinishwa. Fungua programu na uingie kazini ili uanze kupokea kazi.',
+        ],
+        'vehicle_approved' => [
+            'title' => 'Chombo kimethibitishwa',
+            'body' => 'Chombo chako :plate kimethibitishwa. Unaweza kuingia kazini tena.',
+            'sms' => 'Sokoni Driver: chombo chako :plate kimethibitishwa. Unaweza kuingia kazini tena.',
+        ],
+        'rejected' => [
+            'title' => 'Ombi lako linahitaji marekebisho',
+            'body' => 'Sababu: :reason. Fungua programu urekebishe kisha utume tena.',
+            'sms' => 'Sokoni Driver: ombi lako linahitaji marekebisho: :reason. Fungua programu urekebishe kisha utume tena.',
+        ],
+        'suspended' => [
+            'title' => 'Akaunti ya dereva imesimamishwa',
+            'body' => 'Huwezi kupokea kazi kwa sasa. Sababu: :reason. Wasiliana na huduma kwa wateja ya Sokoni.',
+            'sms' => 'Sokoni Driver: akaunti yako imesimamishwa: :reason. Wasiliana na support@sokoni.co.tz.',
+        ],
+        'reinstated' => [
+            'title' => 'Akaunti ya dereva iko hai tena',
+            'body' => 'Usimamishwaji umeisha. Fungua programu na uingie kazini ili upokee kazi.',
+            'sms' => 'Sokoni Driver: akaunti yako iko hai tena. Fungua programu na uingie kazini.',
+        ],
     ],
 ];
