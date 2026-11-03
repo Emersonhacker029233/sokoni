@@ -15,8 +15,9 @@ use App\Services\Delivery\RouteDistance;
 use App\Services\Delivery\StraightLineDistance;
 use App\Services\Nida\ManualReviewNidaVerifier;
 use App\Services\Nida\NidaVerifier;
+use App\Services\Payment\FakePaymentGateway;
 use App\Services\Payment\PaymentGateway;
-use App\Services\Payment\UnimplementedPaymentGateway;
+use App\Services\Payment\UnavailablePaymentGateway;
 use App\Services\Push\LogPushNotifier;
 use App\Services\Push\PushNotifier;
 use App\Services\Sms\AfricasTalkingSmsGateway;
@@ -78,7 +79,10 @@ class AppServiceProvider extends ServiceProvider
             };
         });
         $this->app->bind(NidaVerifier::class, ManualReviewNidaVerifier::class);
-        $this->app->bind(PaymentGateway::class, UnimplementedPaymentGateway::class);
+        // The sandbox fake never runs in production, whatever .env says.
+        $this->app->bind(PaymentGateway::class, fn ($app) => config('payments.provider') === 'fake' && ! $app->environment('production')
+            ? new FakePaymentGateway((int) config('payments.fake.approve_after_seconds'))
+            : new UnavailablePaymentGateway);
         $this->app->bind(SocialAuthVerifier::class, HttpSocialAuthVerifier::class);
         $this->app->bind(PushNotifier::class, LogPushNotifier::class);
 

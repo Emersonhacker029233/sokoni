@@ -14,7 +14,7 @@ class ConversationResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'buyer' => new UserResource($this->whenLoaded('buyer')),
+            'buyer' => $this->whenLoaded('buyer', fn () => $this->buyerFor($request)),
             'seller' => new SellerSummaryResource($this->whenLoaded('seller')),
             'product' => new ProductResource($this->whenLoaded('product')),
             'order_id' => $this->order_id,
@@ -29,5 +29,19 @@ class ConversationResource extends JsonResource
                 fn () => $this->otherPartyTyping($request->user())
             ),
         ];
+    }
+
+    /** A thread about a dispatch order hides the buyer's contact details from the seller, like the order itself (OrderResource). */
+    private function buyerFor(Request $request): ?array
+    {
+        if ($this->buyer === null) {
+            return null;
+        }
+        $viewerIsBuyer = $request->user()?->id === $this->buyer_id;
+        if (! $viewerIsBuyer && $this->order_id !== null && $this->order?->isDispatch()) {
+            return UserResource::withoutContact($this->buyer, $request);
+        }
+
+        return (new UserResource($this->buyer))->resolve($request);
     }
 }

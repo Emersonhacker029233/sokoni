@@ -35,10 +35,15 @@ class DeliveryMessages
 
         $sellerKey = match (true) {
             $paymentTimeout => 'seller_payment_expired',
+            // Sokoni 1.1: the seller hears every step that changes what they do.
+            $to === 'pending_driver' && $from === 'pending_payment' => 'seller_fee_paid',
             $to === 'driver_assigned' => 'seller_driver_assigned',
             $to === 'arrived_at_shop' => 'seller_driver_at_shop',
+            $to === 'picked_up' => 'seller_picked_up',
             $to === 'delivered' => 'seller_delivered',
             $to === 'failed' => 'seller_failed',
+            // Not when the seller cancelled it themselves.
+            $to === 'cancelled' && $job->cancelled_by !== 'seller' => 'seller_cancelled',
             default => null,
         };
         if ($sellerKey !== null && $order->seller?->user !== null) {
@@ -57,6 +62,15 @@ class DeliveryMessages
         $job->loadMissing('order.buyer');
         $key = $job->status === 'pending_payment' ? 'buyer_pay_fee' : 'buyer_finding_driver';
         $this->toCustomerApp($job->order->buyer, $key, $job, [
+            'type' => 'delivery_status', 'order_id' => $job->order_id, 'job_id' => $job->id, 'status' => $job->status,
+        ]);
+    }
+
+    /** A delivery-fee payment attempt failed or timed out; the buyer can try again. */
+    public function paymentFailed(DeliveryJob $job): void
+    {
+        $job->loadMissing(['order.buyer', 'order.seller']);
+        $this->toCustomerApp($job->order->buyer, 'buyer_payment_failed', $job, [
             'type' => 'delivery_status', 'order_id' => $job->order_id, 'job_id' => $job->id, 'status' => $job->status,
         ]);
     }

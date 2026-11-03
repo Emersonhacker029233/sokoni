@@ -23,11 +23,14 @@ class OrderResource extends JsonResource
             // GET /api/delivery/orders/{id}. Sokoni 1.0 ignores unknown keys.
             'fulfilment' => $this->fulfilment,
             'address' => $this->address,
+            // Sokoni 1.1 dispatch orders: the drop-off phone the rider calls.
+            // Only the buyer ever gets it back; the seller and 1.0 never do.
+            'delivery_phone' => $this->when($this->isDispatch() && $this->viewerIsBuyer($request), $this->delivery_phone),
             'notes' => $this->notes,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'cancelled_reason' => $this->cancelled_reason,
-            'buyer' => new UserResource($this->whenLoaded('buyer')),
+            'buyer' => $this->whenLoaded('buyer', fn () => $this->buyerFor($request)),
             'seller' => new SellerSummaryResource($this->whenLoaded('seller')),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'conversation_id' => $this->when(
@@ -38,5 +41,28 @@ class OrderResource extends JsonResource
             'has_review' => $this->when($this->relationLoaded('review'), fn () => $this->review !== null),
             'created_at' => $this->created_at,
         ];
+    }
+
+    private function viewerIsBuyer(Request $request): bool
+    {
+        return $request->user() !== null && $request->user()->id === $this->buyer_id;
+    }
+
+    /**
+     * On a dispatch order a Sokoni rider meets the buyer, not the seller,
+     * so the seller gets the buyer's name but no way to contact them outside
+     * Sokoni chat (docs/delivery/PLAN.md privacy rules). The shape is the
+     * usual user object with the contact fields null, which Sokoni 1.0
+     * already handles because phone and email are optional on every account.
+     * Legacy orders are unchanged: the seller delivers and needs the phone.
+     */
+    private function buyerFor(Request $request): ?array
+    {
+        if ($this->buyer === null) {
+            return null;
+        }
+        return $this->isDispatch() && ! $this->viewerIsBuyer($request)
+            ? UserResource::withoutContact($this->buyer, $request)
+            : (new UserResource($this->buyer))->resolve($request);
     }
 }

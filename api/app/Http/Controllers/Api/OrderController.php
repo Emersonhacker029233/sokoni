@@ -93,6 +93,7 @@ class OrderController extends Controller
                 'total' => $subtotal + $deliveryFee,
                 'delivery_method' => $request->string('delivery_method'),
                 'address' => $request->string('address') ?: null,
+                'delivery_phone' => $dispatch ? ($request->input('delivery_phone') ?: null) : null,
                 'delivery_lat' => $request->float('delivery_lat') ?: null,
                 'delivery_lng' => $request->float('delivery_lng') ?: null,
                 'notes' => $request->string('notes') ?: null,

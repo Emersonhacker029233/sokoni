@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Delivery\DeliveryJobService;
+use App\Services\Delivery\DeliveryPaymentService;
 use App\Services\Delivery\DispatchService;
 use Illuminate\Console\Command;
 
@@ -20,10 +21,16 @@ class DeliveryDispatchTick extends Command
 
     protected $description = 'Expire unpaid delivery jobs, advance dispatch waves and top up open offers';
 
-    public function handle(DispatchService $dispatch, DeliveryJobService $jobs): int
+    public function handle(DispatchService $dispatch, DeliveryJobService $jobs, DeliveryPaymentService $payments): int
     {
         if (! config('delivery.enabled')) {
             return self::SUCCESS;
+        }
+
+        // Payments first: a fee confirmed in the last minute must win over the unpaid timeout.
+        $settled = $payments->refreshAllPending();
+        if ($settled > 0) {
+            $this->info("Settled {$settled} payment attempt(s).");
         }
 
         $expired = $jobs->expireUnpaidJobs();

@@ -42,4 +42,15 @@ class UserResource extends JsonResource
             'notify_marketing' => $this->marketing_consent,
         ];
     }
+
+    /**
+     * The same user object with every way to contact the person outside
+     * Sokoni removed. Used where Sokoni 1.0 expects a full user but the
+     * viewer must not get the phone or email (a seller looking at the
+     * buyer of a dispatch order, docs/delivery/PLAN.md privacy rules).
+     */
+    public static function withoutContact(\App\Models\User $user, Request $request): array
+    {
+        return [...(new self($user))->resolve($request), 'phone' => null, 'email' => null, 'email_verified' => false, 'username' => null];
+    }
 }

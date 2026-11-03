@@ -46,6 +46,10 @@ return [
         'no_delivery_job' => 'Oda hii bado haina usafirishaji.',
         'no_active_job' => 'Ufuatiliaji wa moja kwa moja unapatikana tu wakati wa usafirishaji unaoendelea.',
         'tracking_unavailable' => 'Ufuatiliaji wa moja kwa moja haupatikani kwa sasa. Mahali patasasishwa kila baada ya sekunde chache badala yake.',
+        'not_payable' => 'Ada hii ya usafirishaji haiwezi kulipwa sasa.',
+        'payment_in_progress' => 'Ombi la malipo tayari liko kwenye simu yako. Likubali, au subiri kidogo ujaribu tena.',
+        'payments_unavailable' => 'Malipo ya mtandaoni hayapatikani kwa sasa.',
+        'idempotency_key_reused' => 'Ombi hili la malipo tayari limetumika kwa oda nyingine.',
     ],
 
     'push' => [
@@ -72,6 +76,10 @@ return [
         'driver_job_cancelled' => ['title' => 'Kazi imeghairiwa', 'body' => 'Oda :code imeghairiwa. Usiichukue.'],
         'buyer_pin_unlocked' => ['title' => 'Usafirishaji unaweza kuendelea', 'body' => 'Huduma kwa wateja ya Sokoni imefungua uwekaji wa PIN kwa oda :code. Mpe dereva wako PIN iliyo kwenye programu.'],
         'driver_pin_unlocked' => ['title' => 'Uwekaji wa PIN umefunguliwa', 'body' => 'Unaweza kuweka tena PIN ya mteja kwa oda :code.'],
+        'buyer_payment_failed' => ['title' => 'Malipo hayakukamilika', 'body' => 'Ada ya usafirishaji ya oda :code haikulipwa. Fungua programu ujaribu tena.'],
+        'seller_fee_paid' => ['title' => 'Usafirishaji umelipiwa', 'body' => 'Mnunuzi amelipia usafirishaji wa oda :code. Iandae; tunatafuta dereva.'],
+        'seller_picked_up' => ['title' => 'Oda imechukuliwa', 'body' => ':driver amechukua oda :code.'],
+        'seller_cancelled' => ['title' => 'Usafirishaji umeghairiwa', 'body' => 'Usafirishaji wa oda :code umeghairiwa. Usimkabidhi mtu.'],
     ],
 
     // Maamuzi ya msimamizi kuhusu ombi la dereva (Filament > Drivers). `sms`

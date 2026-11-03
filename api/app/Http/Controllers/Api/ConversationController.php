@@ -23,7 +23,7 @@ class ConversationController extends Controller
                     $q->orWhere('seller_id', $sellerId);
                 }
             })
-            ->with(['buyer', 'seller', 'product', 'messages'])
+            ->with(['buyer', 'seller', 'product', 'messages', 'order'])
             ->orderByDesc('last_message_at')
             ->paginate(20);
 
@@ -33,7 +33,7 @@ class ConversationController extends Controller
     public function show(Request $request, Conversation $conversation): ConversationResource
     {
         $this->authorize('view', $conversation);
-        $conversation->load(['buyer', 'seller', 'product', 'messages']);
+        $conversation->load(['buyer', 'seller', 'product', 'messages', 'order']);
 
         return new ConversationResource($conversation);
     }
@@ -50,7 +50,7 @@ class ConversationController extends Controller
             ['last_message_at' => now()],
         );
 
-        return new ConversationResource($conversation->load(['buyer', 'seller', 'product', 'messages']));
+        return new ConversationResource($conversation->load(['buyer', 'seller', 'product', 'messages', 'order']));
     }
 
     /** Refreshes the caller's typing signal (CLAUDE.md feature 5) — see Conversation::markTyping. */
@@ -59,6 +59,6 @@ class ConversationController extends Controller
         $this->authorize('view', $conversation);
         $conversation->markTyping($request->user());
 
-        return new ConversationResource($conversation->load(['buyer', 'seller', 'product', 'messages']));
+        return new ConversationResource($conversation->load(['buyer', 'seller', 'product', 'messages', 'order']));
     }
 }

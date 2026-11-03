@@ -48,9 +48,11 @@ Route::prefix('driver')->group(function () {
 });
 
 Route::prefix('delivery')->group(function () {
+    Route::get('/config', [CustomerDeliveryController::class, 'config']);
     Route::get('/quote', [CustomerDeliveryController::class, 'quote']);
     Route::get('/orders/{order}', [CustomerDeliveryController::class, 'show']);
     Route::middleware('throttle:delivery-actions')->group(function () {
+        Route::post('/orders/{order}/pay', [CustomerDeliveryController::class, 'pay']);
         Route::post('/orders/{order}/cancel', [CustomerDeliveryController::class, 'cancel']);
         Route::post('/orders/{order}/retry', [CustomerDeliveryController::class, 'retry']);
         Route::post('/orders/{order}/switch-to-pickup', [CustomerDeliveryController::class, 'switchToPickup']);

@@ -46,6 +46,10 @@ return [
         'no_delivery_job' => 'This order has no delivery yet.',
         'no_active_job' => 'Live tracking is only available during an active delivery.',
         'tracking_unavailable' => 'Live tracking is unavailable right now. Location updates every few seconds instead.',
+        'not_payable' => 'This delivery fee cannot be paid now.',
+        'payment_in_progress' => 'A payment request is already on your phone. Approve it, or wait a moment and try again.',
+        'payments_unavailable' => 'Online payment is not available right now.',
+        'idempotency_key_reused' => 'This payment request was already used for another order.',
     ],
 
     'push' => [
@@ -72,6 +76,10 @@ return [
         'driver_job_cancelled' => ['title' => 'Job cancelled', 'body' => 'Order :code was cancelled. Do not collect it.'],
         'buyer_pin_unlocked' => ['title' => 'Delivery can continue', 'body' => 'Sokoni support unlocked PIN entry for order :code. Give your driver the PIN from the app.'],
         'driver_pin_unlocked' => ['title' => 'PIN entry unlocked', 'body' => 'You can enter the customer\'s PIN for order :code again.'],
+        'buyer_payment_failed' => ['title' => 'Payment not completed', 'body' => 'The delivery fee for order :code was not paid. Open the app to try again.'],
+        'seller_fee_paid' => ['title' => 'Delivery paid', 'body' => 'The buyer paid for delivery of order :code. Prepare it; a driver is being found.'],
+        'seller_picked_up' => ['title' => 'Order collected', 'body' => ':driver has collected order :code.'],
+        'seller_cancelled' => ['title' => 'Delivery cancelled', 'body' => 'The delivery of order :code was cancelled. Do not hand it over.'],
     ],
 
     // Admin decisions on a driver application (Filament > Drivers). `sms` is

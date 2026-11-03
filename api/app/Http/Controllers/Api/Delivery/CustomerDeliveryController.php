@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Delivery;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Delivery\DeliveryQuoteRequest;
+use App\Http\Requests\Delivery\PayDeliveryRequest;
 use App\Http\Requests\Delivery\RateDeliveryRequest;
 use App\Http\Resources\Delivery\DeliveryJobResource;
 use App\Models\DeliveryJob;
@@ -11,10 +12,12 @@ use App\Models\Order;
 use App\Models\SellerProfile;
 use App\Services\Delivery\DeliveryActionException;
 use App\Services\Delivery\DeliveryJobService;
+use App\Services\Delivery\DeliveryPaymentService;
 use App\Services\Delivery\DeliveryUnavailableException;
 use App\Services\Delivery\DispatchService;
 use App\Services\Delivery\FeeCalculator;
 use App\Services\Delivery\LiveTracking;
+use App\Support\DeliverySettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,12 +46,48 @@ class CustomerDeliveryController extends Controller
         return response()->json(['data' => [...$quote->toArray(), 'estimate' => true]]);
     }
 
+    /**
+     * GET /delivery/config. Tells Sokoni 1.1 whether to offer Sokoni
+     * delivery at checkout and how the fee is paid. Answers 404 (from the
+     * delivery.enabled middleware) while DELIVERY_ENABLED is false, which
+     * the app reads as "keep the 1.0 checkout".
+     */
+    public function config(DeliveryPaymentService $payments): JsonResponse
+    {
+        $capabilities = $payments->capabilities();
+
+        return response()->json(['data' => [
+            'enabled' => true,
+            'min_app_version' => '1.1.0',
+            'currency' => 'TZS',
+            'max_distance_km' => DeliverySettings::maxDistanceKm(),
+            'unpaid_timeout_minutes' => DeliverySettings::unpaidTimeoutMinutes(),
+            'payment' => [
+                'mode' => DeliverySettings::feeCashEnabled() ? 'cash' : 'online',
+                'online_available' => $capabilities->collections,
+                'sandbox' => $capabilities->sandbox,
+                'channels' => $capabilities->channels,
+                'covers' => ['delivery_fee'],
+                'goods_paid_to' => 'shop',
+            ],
+            'tracking' => [
+                'poll_seconds' => 5,
+                'realtime' => app(LiveTracking::class)->isEnabled(),
+            ],
+        ]]);
+    }
+
     /** GET /delivery/orders/{order}. Polled every few seconds while the tracking screen is open. */
-    public function show(Request $request, Order $order): JsonResponse
+    public function show(Request $request, Order $order, DeliveryPaymentService $payments): JsonResponse
     {
         $job = $this->jobFor($order);
         $this->authorize('viewInCustomerApp', $job);
 
+        if ($job->status === 'pending_payment') {
+            // The buyer is waiting on their phone's prompt: ask the gateway (throttled).
+            $payments->refreshForJob($job);
+            $job->refresh();
+        }
         if ($job->status === 'pending_driver') {
             $this->dispatch->advanceIfDue($job);
             $job->refresh();
@@ -57,6 +96,19 @@ class CustomerDeliveryController extends Controller
         $viewer = $request->user()->can('isBuyer', $job) ? DeliveryJobResource::BUYER : DeliveryJobResource::SELLER;
 
         return response()->json(['data' => DeliveryJobResource::for($job, $viewer)->resolve($request)]);
+    }
+
+    /**
+     * POST /delivery/orders/{order}/pay. Sends the payment prompt to the
+     * buyer's phone and answers 202 with the attempt pending. The job is
+     * marked paid later, only when the gateway confirms it to the server.
+     */
+    public function pay(PayDeliveryRequest $request, Order $order, DeliveryPaymentService $payments): JsonResponse
+    {
+        $job = $this->buyersJob($request, $order);
+        $payments->start($job, $request->user(), $request->string('channel'), $request->string('msisdn'), $request->string('idempotency_key'));
+
+        return $this->buyerResponse($request, $job)->setStatusCode(202);
     }
 
     public function cancel(Request $request, Order $order): JsonResponse

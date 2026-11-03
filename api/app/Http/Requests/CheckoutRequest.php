@@ -27,6 +27,9 @@ class CheckoutRequest extends FormRequest
             'delivery_lat' => ['nullable', 'numeric', 'between:-90,90'],
             'delivery_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            // Sokoni 1.1 dispatch only: who the rider calls at the drop-off
+            // (E.164). Optional for the API; empty means the buyer's phone.
+            'delivery_phone' => ['nullable', 'string', 'regex:/^\+255[67]\d{8}$/'],
             'payment_method' => ['required', Rule::in(['cash_on_delivery', 'pay_on_pickup'])],
             // Sokoni 1.1+ only (docs/delivery/PLAN.md). Ignored entirely while
             // DELIVERY_ENABLED is false; Sokoni 1.0 never sends it.
