@@ -267,3 +267,123 @@ Each has my recommendation. Say "approved" to take them all, or change any.
 3. **Terms version 1.1 makes every existing account accept once** at their next app start or sign-in, including the App Review account. *Recommended:* yes. It also puts the agreement screen in the recording naturally.
 4. **The reviews privacy fix ships in this build.** *Recommended:* yes. It's small, compatible with build 7, and it is a real leak of phone numbers.
 5. **Website scope.** The website gets the new Terms text, and the ban-aware scopes apply there automatically. It gets no block UI in this round. *Recommended:* as stated.
+
+## 8. What step 2 built (approved 2026-11-04)
+
+All five decisions in §7 were approved as recommended, plus these extra requirements:
+
+- the review account keeps signing in on the first screen
+- a single Agree action
+- MyISAM-safe additive migrations
+- `MODERATION_ALERT_EMAIL` alerts and a daily summary of reports older than 20 hours
+- this Swahili list
+
+The deployment checklist is in [DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md). The iOS and Android build steps are in [BUILD_1.0.9.md](BUILD_1.0.9.md), and the iPad recording script is in [RECORDING_SCRIPT.md](RECORDING_SCRIPT.md).
+
+| Apple requirement | Now |
+|---|---|
+| 1. Terms before sign-in or registration, with zero tolerance | **Terms step first.** Every sign-in sheet opens on a "Sokoni Terms of Use" step with one **Agree and continue** button. Its three points are zero tolerance, report and block, and 24 hours. It links to the full Terms. No way to sign in or register shows until Agree is tapped. **Recorded on the account.** The agreed version, `1.1`, goes with the sign-in request and is stored on the account. **Older accounts are asked once.** An account on an older version gets the same one-tap screen after sign-in or at app start. **Full Terms updated.** The full Terms (app and website) have a new clause 2 on zero tolerance, and clause 8 no longer waits for three reports. Google and Apple stay hidden on iOS, as in build 7. |
+| 2. Flag objectionable content | **Report on everything.** Every product, shop, feed card, offer, showcase, update, comment, review and chat has a "⋯" menu with Report. Chat messages also have press-and-hold. **New reasons:** offensive or abusive, harassment or hate, sexual or violent, scam, and the earlier business reasons. "Something else" takes a note. **Guests** are asked to sign in. |
+| 3. Block abusive users, notify the developer, instant removal | **Block** is in the same "⋯" menu, behind a confirm dialog. **Instant on screen.** Cards, comments, reviews, chats, showcases, offers and updates from that person disappear at once, cached screens included. **On the server.** Every list filters them out for the blocker, and their notifications stop. **Contact stops both ways.** Neither can message or order from the other. **The developer is told.** Each block files a report, which emails the moderators and rings the admin bell. **Settings → Blocked accounts** lists them, with Unblock. |
+| 4. Act within 24 hours, remove content, eject the user | **Every new report and block alerts at once:** an email to `MODERATION_ALERT_EMAIL` and the admin-panel bell. A **daily 08:00 EAT summary** lists reports waiting more than 20 hours. **The Reports list has a 24-hour clock:** pending reports oldest first, a "Due" badge that turns red when overdue, an overdue filter, a red menu badge and a dashboard stat. **The report page shows the content itself.** **One click removes and ejects:** "Remove content and ban user". Hide now works for shops, messages, showcases and updates too. **A ban hides everything the user posted** until they're unbanned. |
+| 5. Screen recording | Script in [RECORDING_SCRIPT.md](RECORDING_SCRIPT.md). |
+
+Also fixed: the public review list no longer exposes reviewers' phone, email or username (§5.1).
+
+## 9. New Swahili text for review
+
+Everything new in Swahili, in one place. The app strings live in `app/lib/core/l10n/app_sw.arb`. The full Terms text is in `app/lib/features/legal/presentation/terms_screen.dart` and, identically, in `api/resources/views/web/pages/terms.blade.php`. If you change any line, change it in each place it appears.
+
+### 9.1 Changed app strings
+
+| English | Kiswahili (was → now) | Key |
+|---|---|---|
+| Terms of Use (was "Terms of Service") | Masharti ya Huduma → **Masharti ya Matumizi** | `legalTermsTitle` |
+
+### 9.2 New app strings
+
+| # | English | Kiswahili | Key |
+|---|---|---|---|
+| 1 | Sokoni Terms of Use | Masharti ya Matumizi ya Sokoni | `termsGateTitle` |
+| 2 | Before you sign in or create an account, please read and agree to our Terms of Use. | Kabla ya kuingia au kufungua akaunti, tafadhali soma na ukubali Masharti yetu ya Matumizi. | `termsGateIntro` |
+| 3 | Zero tolerance | Hatuvumilii kabisa | `termsGateZeroToleranceTitle` |
+| 4 | Sokoni does not allow objectionable content or abusive users. Offensive, sexual, violent, hateful, harassing or illegal content is not allowed anywhere: products, photos, videos, shop profiles, comments, reviews or messages. | Sokoni hairuhusu maudhui yasiyofaa wala watumiaji wanaonyanyasa wengine. Maudhui ya matusi, ngono, vurugu, chuki, unyanyasaji au yaliyo kinyume cha sheria hayaruhusiwi popote: bidhaa, picha, video, wasifu wa duka, maoni, tathmini au ujumbe. | `termsGateZeroToleranceBody` |
+| 5 | Report and block | Ripoti na zuia | `termsGateReportBlockTitle` |
+| 6 | You can report any content and block any user. Blocked users disappear from your feeds, search, chats and notifications. | Unaweza kuripoti maudhui yoyote na kumzuia mtumiaji yeyote. Watumiaji uliowazuia hawataonekana tena kwenye mipasho, utafutaji, mazungumzo na arifa zako. | `termsGateReportBlockBody` |
+| 7 | 24 hours | Saa 24 | `termsGate24hTitle` |
+| 8 | We review every report within 24 hours, remove content that breaks these rules and remove the user who posted it. | Tunakagua kila ripoti ndani ya saa 24, tunaondoa maudhui yanayovunja sheria hizi na kumwondoa mtumiaji aliyeyaweka. | `termsGate24hBody` |
+| 9 | Read the full Terms of Use | Soma Masharti kamili ya Matumizi | `termsGateReadFull` |
+| 10 | By tapping Agree and continue you accept the Terms of Use (EULA) and the Privacy Policy. | Kwa kubofya Kubali na uendelee, unakubali Masharti ya Matumizi (EULA) na Sera ya Faragha. | `termsGateAgreeNote` |
+| 11 | Agree and continue | Kubali na uendelee | `termsGateAgree` |
+| 12 | Our Terms have changed | Masharti yetu yamebadilika | `termsUpdatedTitle` |
+| 13 | Please agree to the updated Terms of Use to keep using Sokoni. | Tafadhali kubali Masharti mapya ya Matumizi ili uendelee kutumia Sokoni. | `termsUpdatedIntro` |
+| 14 | You agreed to the Sokoni Terms of Use (version {version}). | Umekubali Masharti ya Matumizi ya Sokoni (toleo {version}). | `termsAgreedNote` |
+| 15 | Our team reviews every report within 24 hours. | Timu yetu hukagua kila ripoti ndani ya saa 24. | `reportSubtitle` |
+| 16 | Offensive or abusive | Lugha ya matusi au ya kuudhi | `reportReasonAbusive` |
+| 17 | Harassment or hate | Unyanyasaji au chuki | `reportReasonHarassment` |
+| 18 | Sexual or violent content | Maudhui ya ngono au vurugu | `reportReasonSexualViolent` |
+| 19 | Scam or fraud | Utapeli au udanganyifu | `reportReasonScam` |
+| 20 | Something else | Kitu kingine | `reportReasonOther` |
+| 21 | Tell us more (optional) | Tueleze zaidi (hiari) | `reportNoteHint` |
+| 22 | Send report | Tuma ripoti | `reportSend` |
+| 23 | Report or block | Ripoti au zuia | `moderationMenuTooltip` |
+| 24 | Report this listing | Ripoti tangazo hili | `moderationReportListing` |
+| 25 | Report this shop | Ripoti duka hili | `moderationReportShop` |
+| 26 | Report this comment | Ripoti maoni haya | `moderationReportComment` |
+| 27 | Report this review | Ripoti tathmini hii | `moderationReportReview` |
+| 28 | Report this post | Ripoti chapisho hili | `moderationReportPost` |
+| 29 | Report this message | Ripoti ujumbe huu | `moderationReportMessage` |
+| 30 | Report {name} | Ripoti {name} | `moderationReportUser` |
+| 31 | Block {name} | Mzuie {name} | `moderationBlock` |
+| 32 | Unblock {name} | Ondoa kizuizi kwa {name} | `moderationUnblock` |
+| 33 | Block {name}? | Umzuie {name}? | `blockConfirmTitle` |
+| 34 | You won't see their shop, products, posts, comments, reviews or messages, and neither of you can message or order from the other. They won't be told. Our team is notified and reviews it within 24 hours. | Hutaona duka, bidhaa, machapisho, maoni, tathmini wala ujumbe wake, na hakuna kati yenu atakayeweza kumtumia mwenzake ujumbe wala kuagiza kutoka kwake. Hataambiwa. Timu yetu hujulishwa na hukagua ndani ya saa 24. | `blockConfirmBody` |
+| 35 | Block | Zuia | `blockConfirmAction` |
+| 36 | {name} is blocked. | {name} amezuiwa. | `blockDone` |
+| 37 | {name} is unblocked. | Kizuizi kwa {name} kimeondolewa. | `unblockDone` |
+| 38 | You blocked this account | Umeizuia akaunti hii | `blockedStateTitle` |
+| 39 | You won't see their content or messages. Unblock to see them again. | Hutaona maudhui wala ujumbe wake. Ondoa kizuizi ili uyaone tena. | `blockedStateBody` |
+| 40 | This account isn't available. | Akaunti hii haipatikani. | `blockedStateUnavailable` |
+| 41 | Unblock | Ondoa kizuizi | `unblockAction` |
+| 42 | Blocked accounts | Akaunti ulizozuia | `blockedAccountsTitle` |
+| 43 | You haven't blocked anyone. Use the ⋯ menu on a shop, listing, comment, review or chat to block someone. | Hujamzuia mtu yeyote. Tumia menyu ya ⋯ kwenye duka, tangazo, maoni, tathmini au mazungumzo ili kumzuia mtu. | `blockedAccountsEmptyBody` |
+| 44 | Press and hold a message to report it. | Bonyeza na ushikilie ujumbe ili kuuripoti. | `messageLongPressHint` |
+| 45 | Sign in to report or block | Ingia ili kuripoti au kuzuia | `guestPromptReport` |
+
+### 9.3 Full Terms of Use, version 1.1 (app and website)
+
+The title changed from "Masharti ya Huduma — toleo 1.0" to:
+
+> Masharti ya Matumizi (EULA) — toleo 1.1
+> Yalisasishwa mwisho: Novemba 2026
+
+Clause 1 gained one sentence:
+
+> Masharti haya ni makubaliano ya leseni kati yako na Sokoni (EULA) na yanasimamia matumizi yako ya Sokoni.
+
+**New clause 2** (the later clauses moved down by one):
+
+> **2. Hatuvumilii kabisa maudhui yasiyofaa wala watumiaji wanaonyanyasa wengine**
+> Sokoni haivumilii kabisa maudhui yasiyofaa wala watumiaji wanaonyanyasa wengine. Usiweke, usipakie wala usitume chochote cha matusi, ngono, vurugu, chuki, unyanyasaji, vitisho, ubaguzi, udanganyifu au kilicho kinyume cha sheria — kwenye bidhaa, picha, video, wasifu wa duka, maoni, tathmini, ujumbe au wasifu wako — na usiwanyanyase, usiwasumbue wala usiwatishie watumiaji wengine.
+>
+> Unaweza kuripoti maudhui au mtumiaji yeyote kupitia menyu ya "⋯" iliyo kando yake, na unaweza kumzuia mtumiaji yeyote. Ukimzuia mtu, duka lake, bidhaa, machapisho, maoni, tathmini na ujumbe wake hupotea mara moja kwenye skrini yako, hakuna kati yenu atakayeweza kumtumia mwenzake ujumbe wala kuagiza kutoka kwake, na timu yetu hujulishwa.
+>
+> Tunakagua kila ripoti ndani ya saa 24. Maudhui yanayovunja sheria hizi huondolewa, na mtumiaji aliyeyaweka huondolewa kwenye Sokoni (akaunti yake hufungiwa). Tunaweza pia kuchukua hatua bila ripoti.
+
+Clause 3 ("Akaunti yako") gained one sentence:
+
+> Lazima ukubali Masharti haya kabla ya kuingia au kufungua akaunti.
+
+Clause 6 is now titled **Tathmini** (was "Maoni"), using "tathmini" for reviews throughout, so it no longer reads like "comments":
+
+> Wanunuzi wanaweza kutoa tathmini tu baada ya kukamilisha oda na muuzaji. Tathmini lazima ziakisi uzoefu halisi. Wauzaji wanaweza kujibu mara moja kwa kila tathmini. Tunahifadhi haki ya kuondoa tathmini zinazokiuka Masharti haya.
+
+Clause 8 ("Usimamizi wa maudhui") was rewritten so it no longer suggests content waits for three reports:
+
+> Tunaweza kuficha au kuondoa maudhui na kuonya, kusimamisha, au kufungia akaunti zinazokiuka Masharti haya, tukimweleza mtumiaji husika sababu. Maudhui yaliyoripotiwa hukaguliwa ndani ya saa 24; hatusubiri ripoti zaidi kabla ya kuchukua hatua. Maudhui yanaweza pia kufichwa moja kwa moja wakati yanakaguliwa.
+
+Word choices to check:
+
+- **Maoni** for comments and **tathmini** for reviews. The app already used "Toa maoni" for "Leave a review", which is unchanged.
+- **Kumzuia / zuia** for block.
+- **Kufungiwa** for an account that is banned.
