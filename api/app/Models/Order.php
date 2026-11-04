@@ -22,6 +22,20 @@ class Order extends Model
 {
     use HasFactory;
 
+    /**
+     * The orders table's column defaults, mirrored so a freshly created
+     * order carries them before it is re-read. Without this, POST
+     * /api/orders answered with "status": null and "payment_status": null
+     * (Eloquent never reads database defaults back after an insert), which
+     * the apps' Order model can't parse: Sokoni 1.1 showed "type 'Null' is
+     * not a subtype of type 'String'" after Place order (2026-11-04).
+     */
+    protected $attributes = [
+        'status' => 'pending',
+        'payment_status' => 'unpaid',
+        'delivery_fee' => 0,
+    ];
+
     /** Allowed forward transitions; cancelled is reachable from pending/accepted/ready. */
     public const TRANSITIONS = [
         'pending' => ['accepted', 'cancelled'],

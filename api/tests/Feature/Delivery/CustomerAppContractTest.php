@@ -49,6 +49,11 @@ class CustomerAppContractTest extends TestCase
             ->assertJsonPath('data.fulfilment', 'dispatch')
             ->assertJsonPath('data.delivery_fee', 0)
             ->assertJsonPath('data.delivery_phone', $phone)
+            // Regression (2026-11-04): these were null on create and the
+            // 1.1 app failed to parse the order it had just placed.
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.payment_status', 'unpaid')
+            ->assertJsonPath('data.code', fn ($code) => is_string($code) && $code !== '')
             ->json('data.id');
 
         return \App\Models\Order::query()->findOrFail($id);

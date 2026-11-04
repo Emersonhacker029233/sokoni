@@ -36,6 +36,40 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseHas('orders', ['buyer_id' => $buyer->id, 'seller_id' => $seller->id, 'subtotal' => 25000]);
     }
 
+    /**
+     * Regression (2026-11-04): the create response used to carry
+     * "status": null and "payment_status": null because Eloquent doesn't
+     * read database defaults back after an insert. The apps parse status,
+     * code, delivery_method and payment_method as required strings, so the
+     * order was created but the app showed "type 'Null' is not a subtype
+     * of type 'String'". The response must match what GET returns.
+     */
+    public function test_the_create_response_carries_the_new_orders_status_like_a_fetch_does(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id, 'price' => 10000]);
+
+        $created = $this->actingAs($buyer)->postJson('/api/orders', [
+            'items' => [['product_id' => $product->id, 'qty' => 1]],
+            'delivery_method' => 'pickup',
+            'payment_method' => 'pay_on_pickup',
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.payment_status', 'unpaid')
+            ->assertJsonPath('data.delivery_fee', 0)
+            ->assertJsonPath('data.timeline.0.status', 'pending');
+
+        foreach (['code', 'status', 'delivery_method', 'payment_method', 'payment_status', 'created_at'] as $key) {
+            $this->assertIsString($created->json("data.{$key}"), "data.{$key} must be a string");
+        }
+
+        $fetched = $this->actingAs($buyer)->getJson('/api/orders/'.$created->json('data.id'))->assertOk();
+        foreach (['code', 'status', 'subtotal', 'delivery_fee', 'total', 'delivery_method', 'payment_method', 'payment_status'] as $key) {
+            $this->assertSame($fetched->json("data.{$key}"), $created->json("data.{$key}"), "data.{$key} differs between create and fetch");
+        }
+    }
+
     public function test_delivery_orders_get_a_delivery_fee(): void
     {
         $buyer = User::factory()->create();
