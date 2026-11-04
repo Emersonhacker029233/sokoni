@@ -8,6 +8,8 @@ import '../../features/chat/presentation/conversation_list_screen.dart';
 import '../../features/chat/presentation/conversation_thread_screen.dart';
 import '../../features/debug/motion_gallery_screen.dart';
 import '../../features/debug/theme_audit_screen.dart';
+import '../../features/delivery/presentation/delivery_location_picker_screen.dart';
+import '../../features/delivery/presentation/rate_driver_screen.dart';
 import '../../features/discovery/presentation/home_screen.dart';
 import '../../features/legal/presentation/privacy_screen.dart';
 import '../../features/legal/presentation/terms_acceptance_screen.dart';
@@ -30,6 +32,8 @@ import '../../features/social/presentation/offer_composer_screen.dart';
 import '../../features/social/presentation/showcase_composer_screen.dart';
 import '../../features/social/presentation/showcase_screen.dart';
 import '../../features/social/presentation/update_composer_screen.dart';
+import '../../features/orders/providers/order_providers.dart';
+import '../providers.dart';
 import 'app_shell.dart';
 import 'routes.dart';
 import 'splash_screen.dart';
@@ -37,6 +41,23 @@ import 'transitions.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
+
+/// Push notifications (Sokoni 1.1): tapping one with an `order_id` opens
+/// that order, and one that arrives while the app is open refreshes the
+/// order wherever it is shown. Watched once from the app root.
+final pushNavigationProvider = Provider<void>((ref) {
+  final push = ref.watch(pushServiceProvider);
+  final opens = push.orderOpens.listen((orderId) => ref.read(routerProvider).push(SokoniRoutes.orderDetail(orderId)));
+  final updates = push.orderUpdates.listen((orderId) {
+    ref.invalidate(orderDetailProvider(orderId));
+    ref.invalidate(myOrdersProvider);
+    ref.invalidate(shopOrdersProvider);
+  });
+  ref.onDispose(() {
+    opens.cancel();
+    updates.cancel();
+  });
+});
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -132,6 +153,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: SokoniRoutes.checkout,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const CheckoutScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.deliveryLocation,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisZPage(
+          key: state.pageKey,
+          child: DeliveryLocationPickerScreen(initial: state.extra as PickedDeliveryLocation?),
+        ),
+      ),
+      GoRoute(
+        path: SokoniRoutes.rateDriverPattern,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisZPage(
+          key: state.pageKey,
+          child: RateDriverScreen(orderId: int.parse(state.pathParameters['id']!)),
+        ),
       ),
       GoRoute(
         path: SokoniRoutes.orderDetailPattern,

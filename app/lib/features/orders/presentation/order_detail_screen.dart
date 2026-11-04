@@ -7,9 +7,13 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../data/models/delivery.dart';
 import '../../../data/models/order.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../delivery/presentation/buyer_delivery_section.dart';
+import '../../delivery/presentation/seller_delivery_section.dart';
+import '../../delivery/providers/delivery_providers.dart';
 import '../../seller/providers/seller_providers.dart';
 import '../providers/order_providers.dart';
 import 'order_labels.dart';
@@ -111,6 +115,7 @@ class _OrderDetailBodyState extends ConsumerState<_OrderDetailBody> {
       data: (user) => user.id != order.buyer?.id,
       orElse: () => false,
     );
+    final delivery = order.isDispatch ? ref.watch(deliveryTrackingProvider(order.id)).value : null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(SokoniDimens.space20),
@@ -120,13 +125,17 @@ class _OrderDetailBodyState extends ConsumerState<_OrderDetailBody> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(order.code, style: Theme.of(context).textTheme.titleLarge),
+              Flexible(child: Text(order.code, style: Theme.of(context).textTheme.titleLarge)),
               _StatusChip(status: order.status),
             ],
           ),
-          if (order.status != 'cancelled') ...[
+          if (order.status != 'cancelled' && !order.isDispatch) ...[
             const SizedBox(height: SokoniDimens.space12),
             _DeliveryNotice(text: l10n.orderDeliveryNotice),
+          ],
+          if (order.isDispatch) ...[
+            const SizedBox(height: SokoniDimens.space16),
+            if (isSeller) SellerDeliverySection(order: order) else BuyerDeliverySection(order: order),
           ],
           const SizedBox(height: SokoniDimens.space20),
           Text(l10n.orderTimelineTitle, style: Theme.of(context).textTheme.titleSmall),
@@ -151,28 +160,42 @@ class _OrderDetailBodyState extends ConsumerState<_OrderDetailBody> {
               ),
             ),
           const Divider(),
-          _SummaryRow(label: l10n.cartSubtotal, value: SokoniFormat.tzs(order.subtotal)),
-          _SummaryRow(label: l10n.checkoutDeliveryFee, value: SokoniFormat.tzs(order.deliveryFee)),
-          _SummaryRow(label: l10n.checkoutTotal, value: SokoniFormat.tzs(order.total), emphasize: true),
+          if (order.isDispatch && !isSeller)
+            _DispatchSummary(order: order, payment: delivery?.payment)
+          else if (order.isDispatch)
+            _SummaryRow(label: l10n.checkoutTotal, value: SokoniFormat.tzs(order.total), emphasize: true)
+          else ...[
+            _SummaryRow(label: l10n.cartSubtotal, value: SokoniFormat.tzs(order.subtotal)),
+            _SummaryRow(label: l10n.checkoutDeliveryFee, value: SokoniFormat.tzs(order.deliveryFee)),
+            _SummaryRow(label: l10n.checkoutTotal, value: SokoniFormat.tzs(order.total), emphasize: true),
+          ],
           const SizedBox(height: SokoniDimens.space20),
           Text(
             l10n.orderDeliveryMethod(orderDeliveryMethodLabel(l10n, order.deliveryMethod)),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           if (order.address != null) Text(order.address!, style: Theme.of(context).textTheme.bodySmall),
-          Text(
-            l10n.orderPaymentMethod(orderPaymentMethodLabel(l10n, order.paymentMethod)),
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          if (order.isDispatch && !isSeller) ...[
+            Text(l10n.checkoutGoodsPaidToShop, style: Theme.of(context).textTheme.bodyMedium),
+          ] else
+            Text(
+              l10n.orderPaymentMethod(orderPaymentMethodLabel(l10n, order.paymentMethod)),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           const SizedBox(height: SokoniDimens.space24),
-          if (isSeller && _nextStatus.containsKey(order.status))
+          if (isSeller && _nextStatus.containsKey(order.status) && !(order.isDispatch && _nextStatus[order.status] == 'completed'))
             FilledButton(
+              key: const Key('order-advance'),
               onPressed: _updating ? null : () => _advance(_nextStatus[order.status]!),
               child: _updating
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(l10n.orderAdvanceTo(orderStatusLabel(l10n, _nextStatus[order.status]!))),
+                  : Text(
+                      order.isDispatch && order.status == 'pending'
+                          ? l10n.sellerDeliveryAccept
+                          : l10n.orderAdvanceTo(orderStatusLabel(l10n, _nextStatus[order.status]!)),
+                    ),
             ),
-          if (order.status == 'pending' || order.status == 'accepted' || order.status == 'ready') ...[
+          if (_showOrderCancel(order, isSeller: isSeller, delivery: delivery)) ...[
             const SizedBox(height: SokoniDimens.space8),
             OutlinedButton(
               onPressed: _updating ? null : _cancel,
@@ -215,6 +238,40 @@ class _OrderDetailBodyState extends ConsumerState<_OrderDetailBody> {
     } finally {
       if (mounted) setState(() => _updating = false);
     }
+  }
+}
+
+/// The plain order cancel. On a dispatch order it is the way to cancel
+/// before the shop accepts; after that the buyer uses the delivery's own
+/// cancel (which applies the refund rules) and nobody can cancel once the
+/// rider has the goods.
+bool _showOrderCancel(Order order, {required bool isSeller, required DeliveryTracking? delivery}) {
+  if (!order.isCancellable) return false;
+  if (!order.isDispatch || delivery == null) return true;
+  if (!isSeller) return false;
+  return !delivery.isInTransit && !delivery.isTerminal;
+}
+
+/// Buyer's totals for a Sokoni delivery: goods from the order, the fee and
+/// total from the delivery job once the shop has accepted (both stored by
+/// the server). Before that, the fee is shown as not yet confirmed.
+class _DispatchSummary extends StatelessWidget {
+  const _DispatchSummary({required this.order, required this.payment});
+
+  final Order order;
+  final DeliveryPaymentState? payment;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final p = payment;
+    return Column(
+      children: [
+        _SummaryRow(label: l10n.checkoutGoods, value: SokoniFormat.tzs(order.subtotal)),
+        _SummaryRow(label: l10n.deliveryFeeLine, value: p == null ? l10n.deliveryFeeAfterAccept : SokoniFormat.tzs(p.deliveryFee)),
+        _SummaryRow(label: l10n.checkoutTotal, value: SokoniFormat.tzs(p?.total ?? order.subtotal), emphasize: true),
+      ],
+    );
   }
 }
 
@@ -403,7 +460,11 @@ class _SummaryRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: SokoniDimens.space4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [Text(label, style: style), Text(value, style: style)],
+        children: [
+          Flexible(child: Text(label, style: style)),
+          const SizedBox(width: SokoniDimens.space12),
+          Flexible(child: Text(value, style: style, textAlign: TextAlign.end)),
+        ],
       ),
     );
   }

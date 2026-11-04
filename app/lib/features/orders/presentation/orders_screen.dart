@@ -121,9 +121,20 @@ class _OrderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final counterparty = shopView ? order.buyer?.name : order.seller?.shopName;
+    final l10n = AppLocalizations.of(context);
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      title: Text(order.code),
+      title: Row(
+        children: [
+          Flexible(child: Text(order.code)),
+          if (order.isDispatch) ...[
+            const SizedBox(width: SokoniDimens.space8),
+            const Icon(Icons.two_wheeler_rounded, size: 16),
+            const SizedBox(width: 2),
+            Flexible(child: Text(l10n.ordersSokoniDelivery, style: Theme.of(context).textTheme.labelSmall, overflow: TextOverflow.ellipsis)),
+          ],
+        ],
+      ),
       subtitle: Text('${counterparty ?? ''} · ${SokoniFormat.tzs(order.total)}'),
       trailing: Text(orderStatusLabel(AppLocalizations.of(context), order.status)),
       onTap: () => context.push(SokoniRoutes.orderDetail(order.id)),

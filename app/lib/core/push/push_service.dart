@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:io';
 
@@ -27,6 +28,21 @@ class PushService {
 
   static const _stepTimeout = Duration(seconds: 8);
 
+  final _orderUpdates = StreamController<int>.broadcast();
+  final _orderOpens = StreamController<int>.broadcast();
+  bool _listening = false;
+
+  /// Order ids a push said changed while the app is open (Sokoni 1.1
+  /// `delivery_status` and the existing order pushes). Screens showing that
+  /// order refresh at once instead of waiting for their next poll.
+  Stream<int> get orderUpdates => _orderUpdates.stream;
+
+  /// Order ids from a notification the user tapped; the app opens the order.
+  Stream<int> get orderOpens => _orderOpens.stream;
+
+  /// `order_id` from an FCM data payload (all values are strings).
+  static int? orderIdFrom(Map<String, dynamic> data) => int.tryParse('${data['order_id'] ?? ''}');
+
   /// Every awaited step here is individually time-boxed. None of these
   /// calls have a timeout of their own, and this method already only ever
   /// runs `unawaited` from AuthStateController — but "not awaited by our
@@ -48,10 +64,25 @@ class PushService {
       final token = await messaging.getToken().timeout(_stepTimeout);
       if (token != null) await _register(token);
 
-      messaging.onTokenRefresh.listen(_register);
+      if (!_listening) {
+        _listening = true;
+        messaging.onTokenRefresh.listen(_register);
+        FirebaseMessaging.onMessage.listen((message) {
+          final orderId = orderIdFrom(message.data);
+          if (orderId != null) _orderUpdates.add(orderId);
+        });
+        FirebaseMessaging.onMessageOpenedApp.listen(_opened);
+        final initial = await messaging.getInitialMessage().timeout(_stepTimeout);
+        if (initial != null) _opened(initial);
+      }
     } catch (e) {
       developer.log('FCM registration failed or timed out.', name: 'PushService', error: e);
     }
+  }
+
+  void _opened(RemoteMessage message) {
+    final orderId = orderIdFrom(message.data);
+    if (orderId != null) _orderOpens.add(orderId);
   }
 
   Future<void> _register(String token) async {

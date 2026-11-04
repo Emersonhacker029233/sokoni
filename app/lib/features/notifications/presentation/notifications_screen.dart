@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../data/models/app_notification.dart';
@@ -81,6 +83,9 @@ class _NotificationTile extends ConsumerWidget {
           await ref.read(notificationRepositoryProvider).markRead(notification.id);
           ref.invalidate(notificationsProvider);
         }
+        // Order and delivery updates carry the order id (Sokoni 1.1).
+        final orderId = int.tryParse('${notification.payload?['order_id'] ?? ''}');
+        if (orderId != null && context.mounted) await context.push(SokoniRoutes.orderDetail(orderId));
       },
       leading: Icon(
         Icons.notifications_rounded,

@@ -43,6 +43,9 @@ class OrderRepository {
     double? deliveryLng,
     String? notes,
     required String paymentMethod,
+    // Sokoni 1.1 delivery flow only: 'dispatch' plus the rider's phone.
+    String? fulfilment,
+    String? deliveryPhone,
   }) async {
     try {
       final json = await _api.checkout({
@@ -55,6 +58,8 @@ class OrderRepository {
         'delivery_lng': ?deliveryLng,
         'notes': ?notes,
         'payment_method': paymentMethod,
+        'fulfilment': ?fulfilment,
+        'delivery_phone': ?deliveryPhone,
       });
       return Order.fromJson((json as Map<String, dynamic>)['data'] as Map<String, dynamic>);
     } catch (e) {

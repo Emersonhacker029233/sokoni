@@ -281,7 +281,7 @@ as DateTime,
 /// @nodoc
 mixin _$Order {
 
- int get id; String get code; String get status; int get subtotal;@JsonKey(name: 'delivery_fee') int get deliveryFee; int get total;@JsonKey(name: 'delivery_method') String get deliveryMethod; String? get address; String? get notes;@JsonKey(name: 'payment_method') String get paymentMethod;@JsonKey(name: 'payment_status') String? get paymentStatus;@JsonKey(name: 'cancelled_reason') String? get cancelledReason; SokoniUser? get buyer; SellerSummary? get seller; List<OrderItem> get items;@JsonKey(name: 'conversation_id') int? get conversationId; List<OrderTimelineStep> get timeline;@JsonKey(name: 'has_review') bool? get hasReview;@JsonKey(name: 'created_at') DateTime? get createdAt;
+ int get id; String get code; String get status; int get subtotal;@JsonKey(name: 'delivery_fee') int get deliveryFee; int get total;@JsonKey(name: 'delivery_method') String get deliveryMethod; String? get fulfilment; String? get address;@JsonKey(name: 'delivery_phone') String? get deliveryPhone; String? get notes;@JsonKey(name: 'payment_method') String get paymentMethod;@JsonKey(name: 'payment_status') String? get paymentStatus;@JsonKey(name: 'cancelled_reason') String? get cancelledReason; SokoniUser? get buyer; SellerSummary? get seller; List<OrderItem> get items;@JsonKey(name: 'conversation_id') int? get conversationId; List<OrderTimelineStep> get timeline;@JsonKey(name: 'has_review') bool? get hasReview;@JsonKey(name: 'created_at') DateTime? get createdAt;
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -294,16 +294,16 @@ $OrderCopyWith<Order> get copyWith => _$OrderCopyWithImpl<Order>(this as Order, 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Order&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.status, status) || other.status == status)&&(identical(other.subtotal, subtotal) || other.subtotal == subtotal)&&(identical(other.deliveryFee, deliveryFee) || other.deliveryFee == deliveryFee)&&(identical(other.total, total) || other.total == total)&&(identical(other.deliveryMethod, deliveryMethod) || other.deliveryMethod == deliveryMethod)&&(identical(other.address, address) || other.address == address)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.cancelledReason, cancelledReason) || other.cancelledReason == cancelledReason)&&(identical(other.buyer, buyer) || other.buyer == buyer)&&(identical(other.seller, seller) || other.seller == seller)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&const DeepCollectionEquality().equals(other.timeline, timeline)&&(identical(other.hasReview, hasReview) || other.hasReview == hasReview)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Order&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.status, status) || other.status == status)&&(identical(other.subtotal, subtotal) || other.subtotal == subtotal)&&(identical(other.deliveryFee, deliveryFee) || other.deliveryFee == deliveryFee)&&(identical(other.total, total) || other.total == total)&&(identical(other.deliveryMethod, deliveryMethod) || other.deliveryMethod == deliveryMethod)&&(identical(other.fulfilment, fulfilment) || other.fulfilment == fulfilment)&&(identical(other.address, address) || other.address == address)&&(identical(other.deliveryPhone, deliveryPhone) || other.deliveryPhone == deliveryPhone)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.cancelledReason, cancelledReason) || other.cancelledReason == cancelledReason)&&(identical(other.buyer, buyer) || other.buyer == buyer)&&(identical(other.seller, seller) || other.seller == seller)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&const DeepCollectionEquality().equals(other.timeline, timeline)&&(identical(other.hasReview, hasReview) || other.hasReview == hasReview)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,code,status,subtotal,deliveryFee,total,deliveryMethod,address,notes,paymentMethod,paymentStatus,cancelledReason,buyer,seller,const DeepCollectionEquality().hash(items),conversationId,const DeepCollectionEquality().hash(timeline),hasReview,createdAt]);
+int get hashCode => Object.hashAll([runtimeType,id,code,status,subtotal,deliveryFee,total,deliveryMethod,fulfilment,address,deliveryPhone,notes,paymentMethod,paymentStatus,cancelledReason,buyer,seller,const DeepCollectionEquality().hash(items),conversationId,const DeepCollectionEquality().hash(timeline),hasReview,createdAt]);
 
 @override
 String toString() {
-  return 'Order(id: $id, code: $code, status: $status, subtotal: $subtotal, deliveryFee: $deliveryFee, total: $total, deliveryMethod: $deliveryMethod, address: $address, notes: $notes, paymentMethod: $paymentMethod, paymentStatus: $paymentStatus, cancelledReason: $cancelledReason, buyer: $buyer, seller: $seller, items: $items, conversationId: $conversationId, timeline: $timeline, hasReview: $hasReview, createdAt: $createdAt)';
+  return 'Order(id: $id, code: $code, status: $status, subtotal: $subtotal, deliveryFee: $deliveryFee, total: $total, deliveryMethod: $deliveryMethod, fulfilment: $fulfilment, address: $address, deliveryPhone: $deliveryPhone, notes: $notes, paymentMethod: $paymentMethod, paymentStatus: $paymentStatus, cancelledReason: $cancelledReason, buyer: $buyer, seller: $seller, items: $items, conversationId: $conversationId, timeline: $timeline, hasReview: $hasReview, createdAt: $createdAt)';
 }
 
 
@@ -314,7 +314,7 @@ abstract mixin class $OrderCopyWith<$Res>  {
   factory $OrderCopyWith(Order value, $Res Function(Order) _then) = _$OrderCopyWithImpl;
 @useResult
 $Res call({
- int id, String code, String status, int subtotal,@JsonKey(name: 'delivery_fee') int deliveryFee, int total,@JsonKey(name: 'delivery_method') String deliveryMethod, String? address, String? notes,@JsonKey(name: 'payment_method') String paymentMethod,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cancelled_reason') String? cancelledReason, SokoniUser? buyer, SellerSummary? seller, List<OrderItem> items,@JsonKey(name: 'conversation_id') int? conversationId, List<OrderTimelineStep> timeline,@JsonKey(name: 'has_review') bool? hasReview,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id, String code, String status, int subtotal,@JsonKey(name: 'delivery_fee') int deliveryFee, int total,@JsonKey(name: 'delivery_method') String deliveryMethod, String? fulfilment, String? address,@JsonKey(name: 'delivery_phone') String? deliveryPhone, String? notes,@JsonKey(name: 'payment_method') String paymentMethod,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cancelled_reason') String? cancelledReason, SokoniUser? buyer, SellerSummary? seller, List<OrderItem> items,@JsonKey(name: 'conversation_id') int? conversationId, List<OrderTimelineStep> timeline,@JsonKey(name: 'has_review') bool? hasReview,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -331,7 +331,7 @@ class _$OrderCopyWithImpl<$Res>
 
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = null,Object? status = null,Object? subtotal = null,Object? deliveryFee = null,Object? total = null,Object? deliveryMethod = null,Object? address = freezed,Object? notes = freezed,Object? paymentMethod = null,Object? paymentStatus = freezed,Object? cancelledReason = freezed,Object? buyer = freezed,Object? seller = freezed,Object? items = null,Object? conversationId = freezed,Object? timeline = null,Object? hasReview = freezed,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = null,Object? status = null,Object? subtotal = null,Object? deliveryFee = null,Object? total = null,Object? deliveryMethod = null,Object? fulfilment = freezed,Object? address = freezed,Object? deliveryPhone = freezed,Object? notes = freezed,Object? paymentMethod = null,Object? paymentStatus = freezed,Object? cancelledReason = freezed,Object? buyer = freezed,Object? seller = freezed,Object? items = null,Object? conversationId = freezed,Object? timeline = null,Object? hasReview = freezed,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
@@ -340,7 +340,9 @@ as String,subtotal: null == subtotal ? _self.subtotal : subtotal // ignore: cast
 as int,deliveryFee: null == deliveryFee ? _self.deliveryFee : deliveryFee // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,deliveryMethod: null == deliveryMethod ? _self.deliveryMethod : deliveryMethod // ignore: cast_nullable_to_non_nullable
-as String,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String,fulfilment: freezed == fulfilment ? _self.fulfilment : fulfilment // ignore: cast_nullable_to_non_nullable
+as String?,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String?,deliveryPhone: freezed == deliveryPhone ? _self.deliveryPhone : deliveryPhone // ignore: cast_nullable_to_non_nullable
 as String?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
 as String?,paymentMethod: null == paymentMethod ? _self.paymentMethod : paymentMethod // ignore: cast_nullable_to_non_nullable
 as String,paymentStatus: freezed == paymentStatus ? _self.paymentStatus : paymentStatus // ignore: cast_nullable_to_non_nullable
@@ -461,10 +463,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? address,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Order() when $default != null:
-return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.address,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
+return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.fulfilment,_that.address,_that.deliveryPhone,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
   return orElse();
 
 }
@@ -482,10 +484,10 @@ return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? address,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Order():
-return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.address,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
+return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.fulfilment,_that.address,_that.deliveryPhone,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -502,10 +504,10 @@ return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? address,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Order() when $default != null:
-return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.address,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
+return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.fulfilment,_that.address,_that.deliveryPhone,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
   return null;
 
 }
@@ -517,7 +519,7 @@ return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFe
 @JsonSerializable()
 
 class _Order implements Order {
-  const _Order({required this.id, required this.code, required this.status, required this.subtotal, @JsonKey(name: 'delivery_fee') required this.deliveryFee, required this.total, @JsonKey(name: 'delivery_method') required this.deliveryMethod, this.address, this.notes, @JsonKey(name: 'payment_method') required this.paymentMethod, @JsonKey(name: 'payment_status') this.paymentStatus, @JsonKey(name: 'cancelled_reason') this.cancelledReason, this.buyer, this.seller, final  List<OrderItem> items = const <OrderItem>[], @JsonKey(name: 'conversation_id') this.conversationId, final  List<OrderTimelineStep> timeline = const <OrderTimelineStep>[], @JsonKey(name: 'has_review') this.hasReview, @JsonKey(name: 'created_at') this.createdAt}): _items = items,_timeline = timeline;
+  const _Order({required this.id, required this.code, required this.status, required this.subtotal, @JsonKey(name: 'delivery_fee') required this.deliveryFee, required this.total, @JsonKey(name: 'delivery_method') required this.deliveryMethod, this.fulfilment, this.address, @JsonKey(name: 'delivery_phone') this.deliveryPhone, this.notes, @JsonKey(name: 'payment_method') required this.paymentMethod, @JsonKey(name: 'payment_status') this.paymentStatus, @JsonKey(name: 'cancelled_reason') this.cancelledReason, this.buyer, this.seller, final  List<OrderItem> items = const <OrderItem>[], @JsonKey(name: 'conversation_id') this.conversationId, final  List<OrderTimelineStep> timeline = const <OrderTimelineStep>[], @JsonKey(name: 'has_review') this.hasReview, @JsonKey(name: 'created_at') this.createdAt}): _items = items,_timeline = timeline;
   factory _Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
 
 @override final  int id;
@@ -527,7 +529,9 @@ class _Order implements Order {
 @override@JsonKey(name: 'delivery_fee') final  int deliveryFee;
 @override final  int total;
 @override@JsonKey(name: 'delivery_method') final  String deliveryMethod;
+@override final  String? fulfilment;
 @override final  String? address;
+@override@JsonKey(name: 'delivery_phone') final  String? deliveryPhone;
 @override final  String? notes;
 @override@JsonKey(name: 'payment_method') final  String paymentMethod;
 @override@JsonKey(name: 'payment_status') final  String? paymentStatus;
@@ -565,16 +569,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Order&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.status, status) || other.status == status)&&(identical(other.subtotal, subtotal) || other.subtotal == subtotal)&&(identical(other.deliveryFee, deliveryFee) || other.deliveryFee == deliveryFee)&&(identical(other.total, total) || other.total == total)&&(identical(other.deliveryMethod, deliveryMethod) || other.deliveryMethod == deliveryMethod)&&(identical(other.address, address) || other.address == address)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.cancelledReason, cancelledReason) || other.cancelledReason == cancelledReason)&&(identical(other.buyer, buyer) || other.buyer == buyer)&&(identical(other.seller, seller) || other.seller == seller)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&const DeepCollectionEquality().equals(other._timeline, _timeline)&&(identical(other.hasReview, hasReview) || other.hasReview == hasReview)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Order&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.status, status) || other.status == status)&&(identical(other.subtotal, subtotal) || other.subtotal == subtotal)&&(identical(other.deliveryFee, deliveryFee) || other.deliveryFee == deliveryFee)&&(identical(other.total, total) || other.total == total)&&(identical(other.deliveryMethod, deliveryMethod) || other.deliveryMethod == deliveryMethod)&&(identical(other.fulfilment, fulfilment) || other.fulfilment == fulfilment)&&(identical(other.address, address) || other.address == address)&&(identical(other.deliveryPhone, deliveryPhone) || other.deliveryPhone == deliveryPhone)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.cancelledReason, cancelledReason) || other.cancelledReason == cancelledReason)&&(identical(other.buyer, buyer) || other.buyer == buyer)&&(identical(other.seller, seller) || other.seller == seller)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&const DeepCollectionEquality().equals(other._timeline, _timeline)&&(identical(other.hasReview, hasReview) || other.hasReview == hasReview)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,code,status,subtotal,deliveryFee,total,deliveryMethod,address,notes,paymentMethod,paymentStatus,cancelledReason,buyer,seller,const DeepCollectionEquality().hash(_items),conversationId,const DeepCollectionEquality().hash(_timeline),hasReview,createdAt]);
+int get hashCode => Object.hashAll([runtimeType,id,code,status,subtotal,deliveryFee,total,deliveryMethod,fulfilment,address,deliveryPhone,notes,paymentMethod,paymentStatus,cancelledReason,buyer,seller,const DeepCollectionEquality().hash(_items),conversationId,const DeepCollectionEquality().hash(_timeline),hasReview,createdAt]);
 
 @override
 String toString() {
-  return 'Order(id: $id, code: $code, status: $status, subtotal: $subtotal, deliveryFee: $deliveryFee, total: $total, deliveryMethod: $deliveryMethod, address: $address, notes: $notes, paymentMethod: $paymentMethod, paymentStatus: $paymentStatus, cancelledReason: $cancelledReason, buyer: $buyer, seller: $seller, items: $items, conversationId: $conversationId, timeline: $timeline, hasReview: $hasReview, createdAt: $createdAt)';
+  return 'Order(id: $id, code: $code, status: $status, subtotal: $subtotal, deliveryFee: $deliveryFee, total: $total, deliveryMethod: $deliveryMethod, fulfilment: $fulfilment, address: $address, deliveryPhone: $deliveryPhone, notes: $notes, paymentMethod: $paymentMethod, paymentStatus: $paymentStatus, cancelledReason: $cancelledReason, buyer: $buyer, seller: $seller, items: $items, conversationId: $conversationId, timeline: $timeline, hasReview: $hasReview, createdAt: $createdAt)';
 }
 
 
@@ -585,7 +589,7 @@ abstract mixin class _$OrderCopyWith<$Res> implements $OrderCopyWith<$Res> {
   factory _$OrderCopyWith(_Order value, $Res Function(_Order) _then) = __$OrderCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String code, String status, int subtotal,@JsonKey(name: 'delivery_fee') int deliveryFee, int total,@JsonKey(name: 'delivery_method') String deliveryMethod, String? address, String? notes,@JsonKey(name: 'payment_method') String paymentMethod,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cancelled_reason') String? cancelledReason, SokoniUser? buyer, SellerSummary? seller, List<OrderItem> items,@JsonKey(name: 'conversation_id') int? conversationId, List<OrderTimelineStep> timeline,@JsonKey(name: 'has_review') bool? hasReview,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id, String code, String status, int subtotal,@JsonKey(name: 'delivery_fee') int deliveryFee, int total,@JsonKey(name: 'delivery_method') String deliveryMethod, String? fulfilment, String? address,@JsonKey(name: 'delivery_phone') String? deliveryPhone, String? notes,@JsonKey(name: 'payment_method') String paymentMethod,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cancelled_reason') String? cancelledReason, SokoniUser? buyer, SellerSummary? seller, List<OrderItem> items,@JsonKey(name: 'conversation_id') int? conversationId, List<OrderTimelineStep> timeline,@JsonKey(name: 'has_review') bool? hasReview,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -602,7 +606,7 @@ class __$OrderCopyWithImpl<$Res>
 
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = null,Object? status = null,Object? subtotal = null,Object? deliveryFee = null,Object? total = null,Object? deliveryMethod = null,Object? address = freezed,Object? notes = freezed,Object? paymentMethod = null,Object? paymentStatus = freezed,Object? cancelledReason = freezed,Object? buyer = freezed,Object? seller = freezed,Object? items = null,Object? conversationId = freezed,Object? timeline = null,Object? hasReview = freezed,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = null,Object? status = null,Object? subtotal = null,Object? deliveryFee = null,Object? total = null,Object? deliveryMethod = null,Object? fulfilment = freezed,Object? address = freezed,Object? deliveryPhone = freezed,Object? notes = freezed,Object? paymentMethod = null,Object? paymentStatus = freezed,Object? cancelledReason = freezed,Object? buyer = freezed,Object? seller = freezed,Object? items = null,Object? conversationId = freezed,Object? timeline = null,Object? hasReview = freezed,Object? createdAt = freezed,}) {
   return _then(_Order(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
@@ -611,7 +615,9 @@ as String,subtotal: null == subtotal ? _self.subtotal : subtotal // ignore: cast
 as int,deliveryFee: null == deliveryFee ? _self.deliveryFee : deliveryFee // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,deliveryMethod: null == deliveryMethod ? _self.deliveryMethod : deliveryMethod // ignore: cast_nullable_to_non_nullable
-as String,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String,fulfilment: freezed == fulfilment ? _self.fulfilment : fulfilment // ignore: cast_nullable_to_non_nullable
+as String?,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String?,deliveryPhone: freezed == deliveryPhone ? _self.deliveryPhone : deliveryPhone // ignore: cast_nullable_to_non_nullable
 as String?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
 as String?,paymentMethod: null == paymentMethod ? _self.paymentMethod : paymentMethod // ignore: cast_nullable_to_non_nullable
 as String,paymentStatus: freezed == paymentStatus ? _self.paymentStatus : paymentStatus // ignore: cast_nullable_to_non_nullable

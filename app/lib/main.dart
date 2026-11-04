@@ -169,6 +169,7 @@ class SokoniApp extends ConsumerWidget {
     BootLog.step('SokoniApp.build() start');
     final router = ref.watch(routerProvider);
     BootLog.step('SokoniApp.build() router obtained');
+    ref.watch(pushNavigationProvider);
 
     // Part 1 (language audit, client feedback): an explicit saved choice
     // always wins; with none yet, `locale: null` makes MaterialApp fall

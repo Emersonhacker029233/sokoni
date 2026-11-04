@@ -29,7 +29,12 @@ abstract class Order with _$Order {
     @JsonKey(name: 'delivery_fee') required int deliveryFee,
     required int total,
     @JsonKey(name: 'delivery_method') required String deliveryMethod,
+    // Sokoni 1.1: 'dispatch' when a Sokoni rider delivers (docs/delivery/
+    // PLAN.md), null for every 1.0-style order.
+    String? fulfilment,
     String? address,
+    // Buyer only, dispatch orders: the number the rider calls.
+    @JsonKey(name: 'delivery_phone') String? deliveryPhone,
     String? notes,
     @JsonKey(name: 'payment_method') required String paymentMethod,
     @JsonKey(name: 'payment_status') String? paymentStatus,
@@ -48,4 +53,7 @@ abstract class Order with _$Order {
 
 extension OrderX on Order {
   bool get isCancellable => status == 'pending' || status == 'accepted' || status == 'ready';
+
+  /// Delivered by a Sokoni rider (Sokoni 1.1 delivery flow).
+  bool get isDispatch => fulfilment == 'dispatch';
 }
