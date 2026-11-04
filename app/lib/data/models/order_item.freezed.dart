@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$OrderItem {
 
- int get id;@JsonKey(name: 'product_id') int get productId; String get title; int get price; int get qty;@JsonKey(name: 'line_total') int get lineTotal;
+ int get id;@JsonKey(name: 'product_id') int get productId;@JsonKey(fromJson: readString) String get title; int get price; int get qty;@JsonKey(name: 'line_total') int get lineTotal;
 /// Create a copy of OrderItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $OrderItemCopyWith<$Res>  {
   factory $OrderItemCopyWith(OrderItem value, $Res Function(OrderItem) _then) = _$OrderItemCopyWithImpl;
 @useResult
 $Res call({
- int id,@JsonKey(name: 'product_id') int productId, String title, int price, int qty,@JsonKey(name: 'line_total') int lineTotal
+ int id,@JsonKey(name: 'product_id') int productId,@JsonKey(fromJson: readString) String title, int price, int qty,@JsonKey(name: 'line_total') int lineTotal
 });
 
 
@@ -158,7 +158,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'product_id')  int productId,  String title,  int price,  int qty, @JsonKey(name: 'line_total')  int lineTotal)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'product_id')  int productId, @JsonKey(fromJson: readString)  String title,  int price,  int qty, @JsonKey(name: 'line_total')  int lineTotal)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OrderItem() when $default != null:
 return $default(_that.id,_that.productId,_that.title,_that.price,_that.qty,_that.lineTotal);case _:
@@ -179,7 +179,7 @@ return $default(_that.id,_that.productId,_that.title,_that.price,_that.qty,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'product_id')  int productId,  String title,  int price,  int qty, @JsonKey(name: 'line_total')  int lineTotal)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'product_id')  int productId, @JsonKey(fromJson: readString)  String title,  int price,  int qty, @JsonKey(name: 'line_total')  int lineTotal)  $default,) {final _that = this;
 switch (_that) {
 case _OrderItem():
 return $default(_that.id,_that.productId,_that.title,_that.price,_that.qty,_that.lineTotal);case _:
@@ -199,7 +199,7 @@ return $default(_that.id,_that.productId,_that.title,_that.price,_that.qty,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(name: 'product_id')  int productId,  String title,  int price,  int qty, @JsonKey(name: 'line_total')  int lineTotal)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(name: 'product_id')  int productId, @JsonKey(fromJson: readString)  String title,  int price,  int qty, @JsonKey(name: 'line_total')  int lineTotal)?  $default,) {final _that = this;
 switch (_that) {
 case _OrderItem() when $default != null:
 return $default(_that.id,_that.productId,_that.title,_that.price,_that.qty,_that.lineTotal);case _:
@@ -214,12 +214,12 @@ return $default(_that.id,_that.productId,_that.title,_that.price,_that.qty,_that
 @JsonSerializable()
 
 class _OrderItem implements OrderItem {
-  const _OrderItem({required this.id, @JsonKey(name: 'product_id') required this.productId, required this.title, required this.price, required this.qty, @JsonKey(name: 'line_total') required this.lineTotal});
+  const _OrderItem({required this.id, @JsonKey(name: 'product_id') required this.productId, @JsonKey(fromJson: readString) required this.title, required this.price, required this.qty, @JsonKey(name: 'line_total') required this.lineTotal});
   factory _OrderItem.fromJson(Map<String, dynamic> json) => _$OrderItemFromJson(json);
 
 @override final  int id;
 @override@JsonKey(name: 'product_id') final  int productId;
-@override final  String title;
+@override@JsonKey(fromJson: readString) final  String title;
 @override final  int price;
 @override final  int qty;
 @override@JsonKey(name: 'line_total') final  int lineTotal;
@@ -257,7 +257,7 @@ abstract mixin class _$OrderItemCopyWith<$Res> implements $OrderItemCopyWith<$Re
   factory _$OrderItemCopyWith(_OrderItem value, $Res Function(_OrderItem) _then) = __$OrderItemCopyWithImpl;
 @override @useResult
 $Res call({
- int id,@JsonKey(name: 'product_id') int productId, String title, int price, int qty,@JsonKey(name: 'line_total') int lineTotal
+ int id,@JsonKey(name: 'product_id') int productId,@JsonKey(fromJson: readString) String title, int price, int qty,@JsonKey(name: 'line_total') int lineTotal
 });
 
 

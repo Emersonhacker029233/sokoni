@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$OrderTimelineStep {
 
- String get status; DateTime get at;
+@JsonKey(fromJson: readString) String get status;@JsonKey(fromJson: readDateTimeOrNull) DateTime? get at;
 /// Create a copy of OrderTimelineStep
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $OrderTimelineStepCopyWith<$Res>  {
   factory $OrderTimelineStepCopyWith(OrderTimelineStep value, $Res Function(OrderTimelineStep) _then) = _$OrderTimelineStepCopyWithImpl;
 @useResult
 $Res call({
- String status, DateTime at
+@JsonKey(fromJson: readString) String status,@JsonKey(fromJson: readDateTimeOrNull) DateTime? at
 });
 
 
@@ -65,11 +65,11 @@ class _$OrderTimelineStepCopyWithImpl<$Res>
 
 /// Create a copy of OrderTimelineStep
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? at = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? at = freezed,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,at: null == at ? _self.at : at // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as String,at: freezed == at ? _self.at : at // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -154,7 +154,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String status,  DateTime at)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(fromJson: readString)  String status, @JsonKey(fromJson: readDateTimeOrNull)  DateTime? at)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OrderTimelineStep() when $default != null:
 return $default(_that.status,_that.at);case _:
@@ -175,7 +175,7 @@ return $default(_that.status,_that.at);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String status,  DateTime at)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(fromJson: readString)  String status, @JsonKey(fromJson: readDateTimeOrNull)  DateTime? at)  $default,) {final _that = this;
 switch (_that) {
 case _OrderTimelineStep():
 return $default(_that.status,_that.at);case _:
@@ -195,7 +195,7 @@ return $default(_that.status,_that.at);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String status,  DateTime at)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(fromJson: readString)  String status, @JsonKey(fromJson: readDateTimeOrNull)  DateTime? at)?  $default,) {final _that = this;
 switch (_that) {
 case _OrderTimelineStep() when $default != null:
 return $default(_that.status,_that.at);case _:
@@ -210,11 +210,11 @@ return $default(_that.status,_that.at);case _:
 @JsonSerializable()
 
 class _OrderTimelineStep implements OrderTimelineStep {
-  const _OrderTimelineStep({required this.status, required this.at});
+  const _OrderTimelineStep({@JsonKey(fromJson: readString) required this.status, @JsonKey(fromJson: readDateTimeOrNull) this.at});
   factory _OrderTimelineStep.fromJson(Map<String, dynamic> json) => _$OrderTimelineStepFromJson(json);
 
-@override final  String status;
-@override final  DateTime at;
+@override@JsonKey(fromJson: readString) final  String status;
+@override@JsonKey(fromJson: readDateTimeOrNull) final  DateTime? at;
 
 /// Create a copy of OrderTimelineStep
 /// with the given fields replaced by the non-null parameter values.
@@ -249,7 +249,7 @@ abstract mixin class _$OrderTimelineStepCopyWith<$Res> implements $OrderTimeline
   factory _$OrderTimelineStepCopyWith(_OrderTimelineStep value, $Res Function(_OrderTimelineStep) _then) = __$OrderTimelineStepCopyWithImpl;
 @override @useResult
 $Res call({
- String status, DateTime at
+@JsonKey(fromJson: readString) String status,@JsonKey(fromJson: readDateTimeOrNull) DateTime? at
 });
 
 
@@ -266,11 +266,11 @@ class __$OrderTimelineStepCopyWithImpl<$Res>
 
 /// Create a copy of OrderTimelineStep
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? at = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? at = freezed,}) {
   return _then(_OrderTimelineStep(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,at: null == at ? _self.at : at // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as String,at: freezed == at ? _self.at : at // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -281,7 +281,7 @@ as DateTime,
 /// @nodoc
 mixin _$Order {
 
- int get id; String get code; String get status; int get subtotal;@JsonKey(name: 'delivery_fee') int get deliveryFee; int get total;@JsonKey(name: 'delivery_method') String get deliveryMethod; String? get fulfilment; String? get address;@JsonKey(name: 'delivery_phone') String? get deliveryPhone; String? get notes;@JsonKey(name: 'payment_method') String get paymentMethod;@JsonKey(name: 'payment_status') String? get paymentStatus;@JsonKey(name: 'cancelled_reason') String? get cancelledReason; SokoniUser? get buyer; SellerSummary? get seller; List<OrderItem> get items;@JsonKey(name: 'conversation_id') int? get conversationId; List<OrderTimelineStep> get timeline;@JsonKey(name: 'has_review') bool? get hasReview;@JsonKey(name: 'created_at') DateTime? get createdAt;
+ int get id;@JsonKey(fromJson: readString) String get code;@JsonKey(fromJson: readOrderStatus) String get status; int get subtotal;@JsonKey(name: 'delivery_fee') int get deliveryFee; int get total;@JsonKey(name: 'delivery_method', fromJson: readString) String get deliveryMethod; String? get fulfilment; String? get address;@JsonKey(name: 'delivery_phone') String? get deliveryPhone; String? get notes;@JsonKey(name: 'payment_method', fromJson: readString) String get paymentMethod;@JsonKey(name: 'payment_status') String? get paymentStatus;@JsonKey(name: 'cancelled_reason') String? get cancelledReason; SokoniUser? get buyer; SellerSummary? get seller; List<OrderItem> get items;@JsonKey(name: 'conversation_id') int? get conversationId; List<OrderTimelineStep> get timeline;@JsonKey(name: 'has_review') bool? get hasReview;@JsonKey(name: 'created_at') DateTime? get createdAt;
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -314,7 +314,7 @@ abstract mixin class $OrderCopyWith<$Res>  {
   factory $OrderCopyWith(Order value, $Res Function(Order) _then) = _$OrderCopyWithImpl;
 @useResult
 $Res call({
- int id, String code, String status, int subtotal,@JsonKey(name: 'delivery_fee') int deliveryFee, int total,@JsonKey(name: 'delivery_method') String deliveryMethod, String? fulfilment, String? address,@JsonKey(name: 'delivery_phone') String? deliveryPhone, String? notes,@JsonKey(name: 'payment_method') String paymentMethod,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cancelled_reason') String? cancelledReason, SokoniUser? buyer, SellerSummary? seller, List<OrderItem> items,@JsonKey(name: 'conversation_id') int? conversationId, List<OrderTimelineStep> timeline,@JsonKey(name: 'has_review') bool? hasReview,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id,@JsonKey(fromJson: readString) String code,@JsonKey(fromJson: readOrderStatus) String status, int subtotal,@JsonKey(name: 'delivery_fee') int deliveryFee, int total,@JsonKey(name: 'delivery_method', fromJson: readString) String deliveryMethod, String? fulfilment, String? address,@JsonKey(name: 'delivery_phone') String? deliveryPhone, String? notes,@JsonKey(name: 'payment_method', fromJson: readString) String paymentMethod,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cancelled_reason') String? cancelledReason, SokoniUser? buyer, SellerSummary? seller, List<OrderItem> items,@JsonKey(name: 'conversation_id') int? conversationId, List<OrderTimelineStep> timeline,@JsonKey(name: 'has_review') bool? hasReview,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -463,7 +463,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(fromJson: readString)  String code, @JsonKey(fromJson: readOrderStatus)  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method', fromJson: readString)  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method', fromJson: readString)  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Order() when $default != null:
 return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.fulfilment,_that.address,_that.deliveryPhone,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
@@ -484,7 +484,7 @@ return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(fromJson: readString)  String code, @JsonKey(fromJson: readOrderStatus)  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method', fromJson: readString)  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method', fromJson: readString)  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Order():
 return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.fulfilment,_that.address,_that.deliveryPhone,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
@@ -504,7 +504,7 @@ return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String code,  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method')  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method')  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(fromJson: readString)  String code, @JsonKey(fromJson: readOrderStatus)  String status,  int subtotal, @JsonKey(name: 'delivery_fee')  int deliveryFee,  int total, @JsonKey(name: 'delivery_method', fromJson: readString)  String deliveryMethod,  String? fulfilment,  String? address, @JsonKey(name: 'delivery_phone')  String? deliveryPhone,  String? notes, @JsonKey(name: 'payment_method', fromJson: readString)  String paymentMethod, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cancelled_reason')  String? cancelledReason,  SokoniUser? buyer,  SellerSummary? seller,  List<OrderItem> items, @JsonKey(name: 'conversation_id')  int? conversationId,  List<OrderTimelineStep> timeline, @JsonKey(name: 'has_review')  bool? hasReview, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Order() when $default != null:
 return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFee,_that.total,_that.deliveryMethod,_that.fulfilment,_that.address,_that.deliveryPhone,_that.notes,_that.paymentMethod,_that.paymentStatus,_that.cancelledReason,_that.buyer,_that.seller,_that.items,_that.conversationId,_that.timeline,_that.hasReview,_that.createdAt);case _:
@@ -519,21 +519,21 @@ return $default(_that.id,_that.code,_that.status,_that.subtotal,_that.deliveryFe
 @JsonSerializable()
 
 class _Order implements Order {
-  const _Order({required this.id, required this.code, required this.status, required this.subtotal, @JsonKey(name: 'delivery_fee') required this.deliveryFee, required this.total, @JsonKey(name: 'delivery_method') required this.deliveryMethod, this.fulfilment, this.address, @JsonKey(name: 'delivery_phone') this.deliveryPhone, this.notes, @JsonKey(name: 'payment_method') required this.paymentMethod, @JsonKey(name: 'payment_status') this.paymentStatus, @JsonKey(name: 'cancelled_reason') this.cancelledReason, this.buyer, this.seller, final  List<OrderItem> items = const <OrderItem>[], @JsonKey(name: 'conversation_id') this.conversationId, final  List<OrderTimelineStep> timeline = const <OrderTimelineStep>[], @JsonKey(name: 'has_review') this.hasReview, @JsonKey(name: 'created_at') this.createdAt}): _items = items,_timeline = timeline;
+  const _Order({required this.id, @JsonKey(fromJson: readString) required this.code, @JsonKey(fromJson: readOrderStatus) required this.status, required this.subtotal, @JsonKey(name: 'delivery_fee') required this.deliveryFee, required this.total, @JsonKey(name: 'delivery_method', fromJson: readString) required this.deliveryMethod, this.fulfilment, this.address, @JsonKey(name: 'delivery_phone') this.deliveryPhone, this.notes, @JsonKey(name: 'payment_method', fromJson: readString) required this.paymentMethod, @JsonKey(name: 'payment_status') this.paymentStatus, @JsonKey(name: 'cancelled_reason') this.cancelledReason, this.buyer, this.seller, final  List<OrderItem> items = const <OrderItem>[], @JsonKey(name: 'conversation_id') this.conversationId, final  List<OrderTimelineStep> timeline = const <OrderTimelineStep>[], @JsonKey(name: 'has_review') this.hasReview, @JsonKey(name: 'created_at') this.createdAt}): _items = items,_timeline = timeline;
   factory _Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
 
 @override final  int id;
-@override final  String code;
-@override final  String status;
+@override@JsonKey(fromJson: readString) final  String code;
+@override@JsonKey(fromJson: readOrderStatus) final  String status;
 @override final  int subtotal;
 @override@JsonKey(name: 'delivery_fee') final  int deliveryFee;
 @override final  int total;
-@override@JsonKey(name: 'delivery_method') final  String deliveryMethod;
+@override@JsonKey(name: 'delivery_method', fromJson: readString) final  String deliveryMethod;
 @override final  String? fulfilment;
 @override final  String? address;
 @override@JsonKey(name: 'delivery_phone') final  String? deliveryPhone;
 @override final  String? notes;
-@override@JsonKey(name: 'payment_method') final  String paymentMethod;
+@override@JsonKey(name: 'payment_method', fromJson: readString) final  String paymentMethod;
 @override@JsonKey(name: 'payment_status') final  String? paymentStatus;
 @override@JsonKey(name: 'cancelled_reason') final  String? cancelledReason;
 @override final  SokoniUser? buyer;
@@ -589,7 +589,7 @@ abstract mixin class _$OrderCopyWith<$Res> implements $OrderCopyWith<$Res> {
   factory _$OrderCopyWith(_Order value, $Res Function(_Order) _then) = __$OrderCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String code, String status, int subtotal,@JsonKey(name: 'delivery_fee') int deliveryFee, int total,@JsonKey(name: 'delivery_method') String deliveryMethod, String? fulfilment, String? address,@JsonKey(name: 'delivery_phone') String? deliveryPhone, String? notes,@JsonKey(name: 'payment_method') String paymentMethod,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cancelled_reason') String? cancelledReason, SokoniUser? buyer, SellerSummary? seller, List<OrderItem> items,@JsonKey(name: 'conversation_id') int? conversationId, List<OrderTimelineStep> timeline,@JsonKey(name: 'has_review') bool? hasReview,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id,@JsonKey(fromJson: readString) String code,@JsonKey(fromJson: readOrderStatus) String status, int subtotal,@JsonKey(name: 'delivery_fee') int deliveryFee, int total,@JsonKey(name: 'delivery_method', fromJson: readString) String deliveryMethod, String? fulfilment, String? address,@JsonKey(name: 'delivery_phone') String? deliveryPhone, String? notes,@JsonKey(name: 'payment_method', fromJson: readString) String paymentMethod,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cancelled_reason') String? cancelledReason, SokoniUser? buyer, SellerSummary? seller, List<OrderItem> items,@JsonKey(name: 'conversation_id') int? conversationId, List<OrderTimelineStep> timeline,@JsonKey(name: 'has_review') bool? hasReview,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 

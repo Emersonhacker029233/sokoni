@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'json_readers.dart';
+
 part 'seller_summary.freezed.dart';
 part 'seller_summary.g.dart';
 
@@ -10,9 +12,9 @@ part 'seller_summary.g.dart';
 abstract class SellerSummary with _$SellerSummary {
   const factory SellerSummary({
     required int id,
-    @JsonKey(name: 'shop_name') required String shopName,
+    @JsonKey(name: 'shop_name', fromJson: readString) required String shopName,
     String? logo,
-    required String handle,
+    @JsonKey(fromJson: readString) required String handle,
     @JsonKey(name: 'is_verified') @Default(false) bool isVerified,
     @JsonKey(name: 'rating_avg') @Default(0) double ratingAvg,
     @JsonKey(name: 'rating_count') @Default(0) int ratingCount,

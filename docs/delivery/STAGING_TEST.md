@@ -66,7 +66,7 @@ Open `https://staging-api.sokoni.co.tz/admin/drivers`, enter the directory passw
 
 ## 2. Build the two apps
 
-Customer app, Sokoni 1.1.0 (9), pointed at staging:
+Customer app, Sokoni 1.1.0 (10), pointed at staging. Build 10 fixes the "Unexpected error … type 'Null' is not a subtype of type 'String'" shown after Place order in build 9, and installs over it:
 
 ```powershell
 cd D:\Projects\sokoni\app

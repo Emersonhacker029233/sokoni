@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'json_readers.dart';
+
 part 'user.freezed.dart';
 part 'user.g.dart';
 
@@ -8,7 +10,7 @@ part 'user.g.dart';
 abstract class SokoniUser with _$SokoniUser {
   const factory SokoniUser({
     required int id,
-    required String name,
+    @JsonKey(fromJson: readString) required String name,
     String? email,
     @JsonKey(name: 'email_verified') @Default(false) bool emailVerified,
     String? phone,
@@ -20,11 +22,11 @@ abstract class SokoniUser with _$SokoniUser {
     @JsonKey(name: 'two_factor_enabled') @Default(false) bool twoFactorEnabled,
     String? avatar,
     String? locale,
-    @JsonKey(name: 'is_seller') required bool isSeller,
+    @JsonKey(name: 'is_seller', fromJson: readBool) required bool isSeller,
     @JsonKey(name: 'seller_status') String? sellerStatus,
     @JsonKey(name: 'seller_handle') String? sellerHandle,
     @JsonKey(name: 'account_intent') String? accountIntent,
-    @JsonKey(name: 'terms_accepted') required bool termsAccepted,
+    @JsonKey(name: 'terms_accepted', fromJson: readBool) required bool termsAccepted,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     // Part 4 (client feedback): Settings' Notifications section.
     @JsonKey(name: 'notify_orders') @Default(true) bool notifyOrders,

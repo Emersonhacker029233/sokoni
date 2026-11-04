@@ -8,7 +8,7 @@ part of 'user.dart';
 
 _SokoniUser _$SokoniUserFromJson(Map<String, dynamic> json) => _SokoniUser(
   id: (json['id'] as num).toInt(),
-  name: json['name'] as String,
+  name: readString(json['name']),
   email: json['email'] as String?,
   emailVerified: json['email_verified'] as bool? ?? false,
   phone: json['phone'] as String?,
@@ -17,11 +17,11 @@ _SokoniUser _$SokoniUserFromJson(Map<String, dynamic> json) => _SokoniUser(
   twoFactorEnabled: json['two_factor_enabled'] as bool? ?? false,
   avatar: json['avatar'] as String?,
   locale: json['locale'] as String?,
-  isSeller: json['is_seller'] as bool,
+  isSeller: readBool(json['is_seller']),
   sellerStatus: json['seller_status'] as String?,
   sellerHandle: json['seller_handle'] as String?,
   accountIntent: json['account_intent'] as String?,
-  termsAccepted: json['terms_accepted'] as bool,
+  termsAccepted: readBool(json['terms_accepted']),
   createdAt: json['created_at'] == null
       ? null
       : DateTime.parse(json['created_at'] as String),

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,7 @@ import 'package:sokoni/features/delivery/providers/delivery_providers.dart';
 import 'package:sokoni/features/orders/presentation/checkout_screen.dart';
 import 'package:sokoni/features/orders/providers/order_providers.dart';
 
+import '../../fixtures/order_fixtures.dart';
 import 'delivery_test_support.dart';
 
 class _SeededCart extends CartController {
@@ -84,7 +87,27 @@ class _InstantPickerState extends State<_InstantPicker> {
   Widget build(BuildContext context) => const Scaffold();
 }
 
-Future<_CapturingOrders> _pump(WidgetTester tester, {required bool deliveryOn, Object? quoteError}) async {
+/// Answers POST /orders with raw bytes, as the server sent them.
+class _ServerBytes implements HttpClientAdapter {
+  _ServerBytes(this.status, this.body);
+
+  final int status;
+  final String body;
+  int calls = 0;
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    calls++;
+    return ResponseBody.fromString(body, status, headers: {
+      Headers.contentTypeHeader: [Headers.jsonContentType],
+    });
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+Future<_CapturingOrders> _pump(WidgetTester tester, {required bool deliveryOn, Object? quoteError, OrderRepository? realOrders}) async {
   final orders = _CapturingOrders();
   final router = GoRouter(
     initialLocation: SokoniRoutes.checkout,
@@ -103,7 +126,7 @@ Future<_CapturingOrders> _pump(WidgetTester tester, {required bool deliveryOn, O
       overrides: [
         ...deliveryOverrides(repo: FakeDeliveryRepository(), deliveryOn: deliveryOn),
         cartProvider.overrideWith(_SeededCart.new),
-        orderRepositoryProvider.overrideWithValue(orders),
+        orderRepositoryProvider.overrideWithValue(realOrders ?? orders),
         deliveryQuoteProvider.overrideWith((ref, request) async {
           if (quoteError != null) throw quoteError;
           return const DeliveryQuote(distanceKm: 4.23, fee: 4500, distanceSource: 'straight_line');
@@ -193,6 +216,36 @@ void main() {
     // After the success moment the order screen opens (not the chat), where Pay now lives.
     await tester.pumpAndSettle(const Duration(seconds: 3));
     expect(find.text('order 345'), findsOneWidget);
+  });
+
+  // Regression 2026-11-04 (staging order #72): the order was created but
+  // the app showed "Unexpected error: type 'Null' is not a subtype of type
+  // 'String' in type cast", left the cart full and invited a second order.
+  testWidgets('Place order with the real server response opens the order, no error, cart emptied', (tester) async {
+    final server = _ServerBytes(201, dispatchOrderCreatedResponse);
+    await _pump(
+      tester,
+      deliveryOn: true,
+      realOrders: OrderRepository(api: OrderApi(Dio(BaseOptions(baseUrl: 'https://staging-api.sokoni.co.tz/api'))..httpClientAdapter = server)),
+    );
+    final container = ProviderScope.containerOf(tester.element(find.byType(CheckoutScreen)));
+    await tester.tap(find.text('Delivery'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('checkout-choose-location')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('checkout-rider-phone')), '0765 000 123');
+
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(server.calls, 1);
+    expect(find.textContaining('Unexpected error'), findsNothing);
+    expect(find.textContaining('SKBJZLELSS'), findsWidgets);
+    expect(container.read(cartProvider), isEmpty);
+
+    await tester.pumpAndSettle(const Duration(seconds: 3));
+    expect(find.text('order 1'), findsOneWidget);
   });
 
   testWidgets('an invalid rider phone blocks the order', (tester) async {

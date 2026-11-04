@@ -8,29 +8,29 @@ part of 'order.dart';
 
 _OrderTimelineStep _$OrderTimelineStepFromJson(Map<String, dynamic> json) =>
     _OrderTimelineStep(
-      status: json['status'] as String,
-      at: DateTime.parse(json['at'] as String),
+      status: readString(json['status']),
+      at: readDateTimeOrNull(json['at']),
     );
 
 Map<String, dynamic> _$OrderTimelineStepToJson(_OrderTimelineStep instance) =>
     <String, dynamic>{
       'status': instance.status,
-      'at': instance.at.toIso8601String(),
+      'at': instance.at?.toIso8601String(),
     };
 
 _Order _$OrderFromJson(Map<String, dynamic> json) => _Order(
   id: (json['id'] as num).toInt(),
-  code: json['code'] as String,
-  status: json['status'] as String,
+  code: readString(json['code']),
+  status: readOrderStatus(json['status']),
   subtotal: (json['subtotal'] as num).toInt(),
   deliveryFee: (json['delivery_fee'] as num).toInt(),
   total: (json['total'] as num).toInt(),
-  deliveryMethod: json['delivery_method'] as String,
+  deliveryMethod: readString(json['delivery_method']),
   fulfilment: json['fulfilment'] as String?,
   address: json['address'] as String?,
   deliveryPhone: json['delivery_phone'] as String?,
   notes: json['notes'] as String?,
-  paymentMethod: json['payment_method'] as String,
+  paymentMethod: readString(json['payment_method']),
   paymentStatus: json['payment_status'] as String?,
   cancelledReason: json['cancelled_reason'] as String?,
   buyer: json['buyer'] == null

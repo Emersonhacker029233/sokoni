@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SellerSummary {
 
- int get id;@JsonKey(name: 'shop_name') String get shopName; String? get logo; String get handle;@JsonKey(name: 'is_verified') bool get isVerified;@JsonKey(name: 'rating_avg') double get ratingAvg;@JsonKey(name: 'rating_count') int get ratingCount; double? get lat; double? get lng; String? get whatsapp;@JsonKey(name: 'is_following') bool get isFollowing;
+ int get id;@JsonKey(name: 'shop_name', fromJson: readString) String get shopName; String? get logo;@JsonKey(fromJson: readString) String get handle;@JsonKey(name: 'is_verified') bool get isVerified;@JsonKey(name: 'rating_avg') double get ratingAvg;@JsonKey(name: 'rating_count') int get ratingCount; double? get lat; double? get lng; String? get whatsapp;@JsonKey(name: 'is_following') bool get isFollowing;
 /// Create a copy of SellerSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $SellerSummaryCopyWith<$Res>  {
   factory $SellerSummaryCopyWith(SellerSummary value, $Res Function(SellerSummary) _then) = _$SellerSummaryCopyWithImpl;
 @useResult
 $Res call({
- int id,@JsonKey(name: 'shop_name') String shopName, String? logo, String handle,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'rating_avg') double ratingAvg,@JsonKey(name: 'rating_count') int ratingCount, double? lat, double? lng, String? whatsapp,@JsonKey(name: 'is_following') bool isFollowing
+ int id,@JsonKey(name: 'shop_name', fromJson: readString) String shopName, String? logo,@JsonKey(fromJson: readString) String handle,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'rating_avg') double ratingAvg,@JsonKey(name: 'rating_count') int ratingCount, double? lat, double? lng, String? whatsapp,@JsonKey(name: 'is_following') bool isFollowing
 });
 
 
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String? logo,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp, @JsonKey(name: 'is_following')  bool isFollowing)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'shop_name', fromJson: readString)  String shopName,  String? logo, @JsonKey(fromJson: readString)  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp, @JsonKey(name: 'is_following')  bool isFollowing)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SellerSummary() when $default != null:
 return $default(_that.id,_that.shopName,_that.logo,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng,_that.whatsapp,_that.isFollowing);case _:
@@ -184,7 +184,7 @@ return $default(_that.id,_that.shopName,_that.logo,_that.handle,_that.isVerified
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String? logo,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp, @JsonKey(name: 'is_following')  bool isFollowing)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'shop_name', fromJson: readString)  String shopName,  String? logo, @JsonKey(fromJson: readString)  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp, @JsonKey(name: 'is_following')  bool isFollowing)  $default,) {final _that = this;
 switch (_that) {
 case _SellerSummary():
 return $default(_that.id,_that.shopName,_that.logo,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng,_that.whatsapp,_that.isFollowing);case _:
@@ -204,7 +204,7 @@ return $default(_that.id,_that.shopName,_that.logo,_that.handle,_that.isVerified
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(name: 'shop_name')  String shopName,  String? logo,  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp, @JsonKey(name: 'is_following')  bool isFollowing)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(name: 'shop_name', fromJson: readString)  String shopName,  String? logo, @JsonKey(fromJson: readString)  String handle, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'rating_avg')  double ratingAvg, @JsonKey(name: 'rating_count')  int ratingCount,  double? lat,  double? lng,  String? whatsapp, @JsonKey(name: 'is_following')  bool isFollowing)?  $default,) {final _that = this;
 switch (_that) {
 case _SellerSummary() when $default != null:
 return $default(_that.id,_that.shopName,_that.logo,_that.handle,_that.isVerified,_that.ratingAvg,_that.ratingCount,_that.lat,_that.lng,_that.whatsapp,_that.isFollowing);case _:
@@ -219,13 +219,13 @@ return $default(_that.id,_that.shopName,_that.logo,_that.handle,_that.isVerified
 @JsonSerializable()
 
 class _SellerSummary implements SellerSummary {
-  const _SellerSummary({required this.id, @JsonKey(name: 'shop_name') required this.shopName, this.logo, required this.handle, @JsonKey(name: 'is_verified') this.isVerified = false, @JsonKey(name: 'rating_avg') this.ratingAvg = 0, @JsonKey(name: 'rating_count') this.ratingCount = 0, this.lat, this.lng, this.whatsapp, @JsonKey(name: 'is_following') this.isFollowing = false});
+  const _SellerSummary({required this.id, @JsonKey(name: 'shop_name', fromJson: readString) required this.shopName, this.logo, @JsonKey(fromJson: readString) required this.handle, @JsonKey(name: 'is_verified') this.isVerified = false, @JsonKey(name: 'rating_avg') this.ratingAvg = 0, @JsonKey(name: 'rating_count') this.ratingCount = 0, this.lat, this.lng, this.whatsapp, @JsonKey(name: 'is_following') this.isFollowing = false});
   factory _SellerSummary.fromJson(Map<String, dynamic> json) => _$SellerSummaryFromJson(json);
 
 @override final  int id;
-@override@JsonKey(name: 'shop_name') final  String shopName;
+@override@JsonKey(name: 'shop_name', fromJson: readString) final  String shopName;
 @override final  String? logo;
-@override final  String handle;
+@override@JsonKey(fromJson: readString) final  String handle;
 @override@JsonKey(name: 'is_verified') final  bool isVerified;
 @override@JsonKey(name: 'rating_avg') final  double ratingAvg;
 @override@JsonKey(name: 'rating_count') final  int ratingCount;
@@ -267,7 +267,7 @@ abstract mixin class _$SellerSummaryCopyWith<$Res> implements $SellerSummaryCopy
   factory _$SellerSummaryCopyWith(_SellerSummary value, $Res Function(_SellerSummary) _then) = __$SellerSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- int id,@JsonKey(name: 'shop_name') String shopName, String? logo, String handle,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'rating_avg') double ratingAvg,@JsonKey(name: 'rating_count') int ratingCount, double? lat, double? lng, String? whatsapp,@JsonKey(name: 'is_following') bool isFollowing
+ int id,@JsonKey(name: 'shop_name', fromJson: readString) String shopName, String? logo,@JsonKey(fromJson: readString) String handle,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'rating_avg') double ratingAvg,@JsonKey(name: 'rating_count') int ratingCount, double? lat, double? lng, String? whatsapp,@JsonKey(name: 'is_following') bool isFollowing
 });
 
 

@@ -9,9 +9,9 @@ part of 'seller_summary.dart';
 _SellerSummary _$SellerSummaryFromJson(Map<String, dynamic> json) =>
     _SellerSummary(
       id: (json['id'] as num).toInt(),
-      shopName: json['shop_name'] as String,
+      shopName: readString(json['shop_name']),
       logo: json['logo'] as String?,
-      handle: json['handle'] as String,
+      handle: readString(json['handle']),
       isVerified: json['is_verified'] as bool? ?? false,
       ratingAvg: (json['rating_avg'] as num?)?.toDouble() ?? 0,
       ratingCount: (json['rating_count'] as num?)?.toInt() ?? 0,

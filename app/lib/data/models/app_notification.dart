@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'json_readers.dart';
+
 part 'app_notification.freezed.dart';
 part 'app_notification.g.dart';
 
@@ -8,8 +10,8 @@ part 'app_notification.g.dart';
 abstract class AppNotification with _$AppNotification {
   const factory AppNotification({
     required int id,
-    required String title,
-    required String body,
+    @JsonKey(fromJson: readString) required String title,
+    @JsonKey(fromJson: readString) required String body,
     Map<String, dynamic>? payload,
     @JsonKey(name: 'is_read') @Default(false) bool isRead,
     @JsonKey(name: 'created_at') DateTime? createdAt,

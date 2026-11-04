@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AppNotification {
 
- int get id; String get title; String get body; Map<String, dynamic>? get payload;@JsonKey(name: 'is_read') bool get isRead;@JsonKey(name: 'created_at') DateTime? get createdAt;
+ int get id;@JsonKey(fromJson: readString) String get title;@JsonKey(fromJson: readString) String get body; Map<String, dynamic>? get payload;@JsonKey(name: 'is_read') bool get isRead;@JsonKey(name: 'created_at') DateTime? get createdAt;
 /// Create a copy of AppNotification
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $AppNotificationCopyWith<$Res>  {
   factory $AppNotificationCopyWith(AppNotification value, $Res Function(AppNotification) _then) = _$AppNotificationCopyWithImpl;
 @useResult
 $Res call({
- int id, String title, String body, Map<String, dynamic>? payload,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id,@JsonKey(fromJson: readString) String title,@JsonKey(fromJson: readString) String body, Map<String, dynamic>? payload,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 
@@ -158,7 +158,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String body,  Map<String, dynamic>? payload, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(fromJson: readString)  String title, @JsonKey(fromJson: readString)  String body,  Map<String, dynamic>? payload, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AppNotification() when $default != null:
 return $default(_that.id,_that.title,_that.body,_that.payload,_that.isRead,_that.createdAt);case _:
@@ -179,7 +179,7 @@ return $default(_that.id,_that.title,_that.body,_that.payload,_that.isRead,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String body,  Map<String, dynamic>? payload, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(fromJson: readString)  String title, @JsonKey(fromJson: readString)  String body,  Map<String, dynamic>? payload, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _AppNotification():
 return $default(_that.id,_that.title,_that.body,_that.payload,_that.isRead,_that.createdAt);case _:
@@ -199,7 +199,7 @@ return $default(_that.id,_that.title,_that.body,_that.payload,_that.isRead,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String body,  Map<String, dynamic>? payload, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(fromJson: readString)  String title, @JsonKey(fromJson: readString)  String body,  Map<String, dynamic>? payload, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _AppNotification() when $default != null:
 return $default(_that.id,_that.title,_that.body,_that.payload,_that.isRead,_that.createdAt);case _:
@@ -214,12 +214,12 @@ return $default(_that.id,_that.title,_that.body,_that.payload,_that.isRead,_that
 @JsonSerializable()
 
 class _AppNotification implements AppNotification {
-  const _AppNotification({required this.id, required this.title, required this.body, final  Map<String, dynamic>? payload, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'created_at') this.createdAt}): _payload = payload;
+  const _AppNotification({required this.id, @JsonKey(fromJson: readString) required this.title, @JsonKey(fromJson: readString) required this.body, final  Map<String, dynamic>? payload, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'created_at') this.createdAt}): _payload = payload;
   factory _AppNotification.fromJson(Map<String, dynamic> json) => _$AppNotificationFromJson(json);
 
 @override final  int id;
-@override final  String title;
-@override final  String body;
+@override@JsonKey(fromJson: readString) final  String title;
+@override@JsonKey(fromJson: readString) final  String body;
  final  Map<String, dynamic>? _payload;
 @override Map<String, dynamic>? get payload {
   final value = _payload;
@@ -265,7 +265,7 @@ abstract mixin class _$AppNotificationCopyWith<$Res> implements $AppNotification
   factory _$AppNotificationCopyWith(_AppNotification value, $Res Function(_AppNotification) _then) = __$AppNotificationCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String title, String body, Map<String, dynamic>? payload,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'created_at') DateTime? createdAt
+ int id,@JsonKey(fromJson: readString) String title,@JsonKey(fromJson: readString) String body, Map<String, dynamic>? payload,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'created_at') DateTime? createdAt
 });
 
 

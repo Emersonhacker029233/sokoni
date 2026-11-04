@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'json_readers.dart';
 import 'order_item.dart';
 import 'seller_summary.dart';
 import 'user.dart';
@@ -11,8 +12,10 @@ part 'order.g.dart';
 @freezed
 abstract class OrderTimelineStep with _$OrderTimelineStep {
   const factory OrderTimelineStep({
-    required String status,
-    required DateTime at,
+    @JsonKey(fromJson: readString) required String status,
+    // Null only if the server ever sends a step without a time; the
+    // timeline then shows the step without one instead of failing.
+    @JsonKey(fromJson: readDateTimeOrNull) DateTime? at,
   }) = _OrderTimelineStep;
 
   factory OrderTimelineStep.fromJson(Map<String, dynamic> json) => _$OrderTimelineStepFromJson(json);
@@ -23,12 +26,14 @@ abstract class OrderTimelineStep with _$OrderTimelineStep {
 abstract class Order with _$Order {
   const factory Order({
     required int id,
-    required String code,
-    required String status,
+    @JsonKey(fromJson: readString) required String code,
+    // Read null-safely: the order-placing response used to send null here
+    // (2026-11-04). Amounts below stay strict on purpose (json_readers.dart).
+    @JsonKey(fromJson: readOrderStatus) required String status,
     required int subtotal,
     @JsonKey(name: 'delivery_fee') required int deliveryFee,
     required int total,
-    @JsonKey(name: 'delivery_method') required String deliveryMethod,
+    @JsonKey(name: 'delivery_method', fromJson: readString) required String deliveryMethod,
     // Sokoni 1.1: 'dispatch' when a Sokoni rider delivers (docs/delivery/
     // PLAN.md), null for every 1.0-style order.
     String? fulfilment,
@@ -36,7 +41,7 @@ abstract class Order with _$Order {
     // Buyer only, dispatch orders: the number the rider calls.
     @JsonKey(name: 'delivery_phone') String? deliveryPhone,
     String? notes,
-    @JsonKey(name: 'payment_method') required String paymentMethod,
+    @JsonKey(name: 'payment_method', fromJson: readString) required String paymentMethod,
     @JsonKey(name: 'payment_status') String? paymentStatus,
     @JsonKey(name: 'cancelled_reason') String? cancelledReason,
     SokoniUser? buyer,

@@ -435,7 +435,7 @@ class _Timeline extends StatelessWidget {
                 const Icon(Icons.check_circle_rounded, size: 16, color: SokoniColors.success),
                 const SizedBox(width: SokoniDimens.space8),
                 Expanded(child: Text(orderStatusLabel(l10n, step.status))),
-                Text(formatter.format(step.at), style: Theme.of(context).textTheme.bodySmall),
+                if (step.at case final at?) Text(formatter.format(at), style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ),

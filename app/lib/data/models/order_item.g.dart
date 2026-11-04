@@ -9,7 +9,7 @@ part of 'order_item.dart';
 _OrderItem _$OrderItemFromJson(Map<String, dynamic> json) => _OrderItem(
   id: (json['id'] as num).toInt(),
   productId: (json['product_id'] as num).toInt(),
-  title: json['title'] as String,
+  title: readString(json['title']),
   price: (json['price'] as num).toInt(),
   qty: (json['qty'] as num).toInt(),
   lineTotal: (json['line_total'] as num).toInt(),

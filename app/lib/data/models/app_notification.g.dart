@@ -9,8 +9,8 @@ part of 'app_notification.dart';
 _AppNotification _$AppNotificationFromJson(Map<String, dynamic> json) =>
     _AppNotification(
       id: (json['id'] as num).toInt(),
-      title: json['title'] as String,
-      body: json['body'] as String,
+      title: readString(json['title']),
+      body: readString(json['body']),
       payload: json['payload'] as Map<String, dynamic>?,
       isRead: json['is_read'] as bool? ?? false,
       createdAt: json['created_at'] == null
