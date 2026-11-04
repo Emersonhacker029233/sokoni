@@ -49,6 +49,7 @@ abstract final class SokoniRoutes {
   static const terms = '/terms';
   static const privacy = '/privacy';
   static const termsAcceptance = '/terms-acceptance';
+  static const blockedAccounts = '/settings/blocked';
 
   static const notifications = '/notifications';
   static const settings = '/settings';

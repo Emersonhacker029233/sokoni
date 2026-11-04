@@ -11,16 +11,27 @@ import '../models/user.dart';
 /// touches [SokoniSecureStorage] directly, since every other repository
 /// gets its auth handled transparently by the Dio auth interceptor.
 class AuthRepository {
-  AuthRepository({required AuthApi api, required SokoniSecureStorage storage, required Dio dio})
-    : _api = api,
-      _storage = storage,
-      _dio = dio;
+  AuthRepository({
+    required AuthApi api,
+    required SokoniSecureStorage storage,
+    required Dio dio,
+    String? Function()? agreedTermsVersion,
+  }) : _api = api,
+       _storage = storage,
+       _dio = dio,
+       _agreedTermsVersion = agreedTermsVersion ?? (() => null);
 
   final AuthApi _api;
   final SokoniSecureStorage _storage;
   // Avatar upload is multipart and goes straight through Dio — same
   // reasoning as ProductRepository's media uploads.
   final Dio _dio;
+
+  /// The Terms version agreed to on the sign-in sheet (Apple Guideline
+  /// 1.2), sent as `terms_version` with every sign-in request so the
+  /// server records it on the account in the same request — including an
+  /// account the sign-in itself creates. Null sends nothing.
+  final String? Function() _agreedTermsVersion;
 
   /// [isNewAccount]: true if this phone number has never signed in
   /// before — lets the UI say plainly, right when the code is sent,
@@ -46,6 +57,7 @@ class AuthRepository {
         'phone': phoneE164,
         'code': code,
         'name': name,
+        'terms_version': ?_agreedTermsVersion(),
       });
       await _persistAccount(response);
       return response;
@@ -119,7 +131,11 @@ class AuthRepository {
 
   Future<AuthResponse> socialLogin({required String provider, required String token}) async {
     try {
-      final response = await _api.socialLogin({'provider': provider, 'token': token});
+      final response = await _api.socialLogin({
+        'provider': provider,
+        'token': token,
+        'terms_version': ?_agreedTermsVersion(),
+      });
       await _persistAccount(response);
       return response;
     } catch (e) {
@@ -149,6 +165,7 @@ class AuthRepository {
         'login': login,
         'password': password,
         'device_token': ?deviceToken,
+        'terms_version': ?_agreedTermsVersion(),
       });
 
       if (json['requires_code'] == true) {
@@ -169,7 +186,11 @@ class AuthRepository {
   /// can skip this step.
   Future<AuthResponse> verifyLogin({required String login, required String code}) async {
     try {
-      final json = await _api.verifyLogin({'login': login, 'code': code});
+      final json = await _api.verifyLogin({
+        'login': login,
+        'code': code,
+        'terms_version': ?_agreedTermsVersion(),
+      });
       final response = AuthResponse.fromJson(json as Map<String, dynamic>);
       await _persistAccount(response);
       if (json['device_token'] is String) {
@@ -227,6 +248,7 @@ class AuthRepository {
         'code': code,
         'password': password,
         'password_confirmation': password,
+        'terms_version': ?_agreedTermsVersion(),
       });
       final response = AuthResponse.fromJson(json as Map<String, dynamic>);
       await _persistAccount(response);

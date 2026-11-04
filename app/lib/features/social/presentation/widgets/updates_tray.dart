@@ -5,6 +5,7 @@ import '../../../../core/motion/motion.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/social_update.dart';
+import '../../../moderation/providers/block_providers.dart';
 import '../../providers/social_providers.dart';
 import '../story_viewer_screen.dart';
 import '../../../../shared/widgets/sokoni_network_image.dart';
@@ -22,7 +23,11 @@ class UpdatesTray extends ConsumerWidget {
     final updatesAsync = ref.watch(updatesTrayProvider);
     final seenMarksAsync = ref.watch(updateSeenMarksProvider);
 
-    final updates = updatesAsync.value?.items ?? const <SocialUpdate>[];
+    // Apple Guideline 1.2: a blocked shop's ring leaves the tray at once.
+    final blocked = ref.watch(blockedFilterProvider);
+    final updates = (updatesAsync.value?.items ?? const <SocialUpdate>[])
+        .where((u) => !blocked.hidesShop(u.seller?.id))
+        .toList();
     if (updates.isEmpty) return const SizedBox.shrink();
 
     final bySeller = <int, List<SocialUpdate>>{};

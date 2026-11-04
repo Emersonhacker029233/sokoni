@@ -19,6 +19,7 @@ import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/feed_card.dart';
 import '../../../shared/widgets/product_card.dart';
 import '../../chat/providers/chat_providers.dart';
+import '../../moderation/providers/block_providers.dart';
 import '../../notifications/providers/notification_providers.dart';
 import '../../orders/providers/order_providers.dart';
 import '../../social/presentation/widgets/offers_row.dart';
@@ -639,13 +640,17 @@ class _SortSelector extends ConsumerWidget {
   }
 }
 
-class _ProductGrid extends StatelessWidget {
-  const _ProductGrid({required this.items});
+class _ProductGrid extends ConsumerWidget {
+  const _ProductGrid({required List<Product> items}) : _items = items;
 
-  final List<Product> items;
+  final List<Product> _items;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Apple Guideline 1.2: a blocked shop's listings leave the grid the
+    // moment Block is tapped, cached results included.
+    final blocked = ref.watch(blockedFilterProvider);
+    final items = _items.where((p) => !blocked.hidesShop(p.seller?.id)).toList();
     const staggeredCount = 8;
     return SliverPadding(
       padding: const EdgeInsets.all(SokoniDimens.space16),

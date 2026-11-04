@@ -74,7 +74,14 @@ Future<T?> showSokoniBottomSheet<T>({
                         SokoniDimens.space20,
                         SokoniDimens.space24,
                       ),
-                      child: builder(context),
+                      // A transparent Material between the coloured box
+                      // and the content, so list tiles in any sheet (the
+                      // report reasons, the report/block menu) show their
+                      // tap ripple instead of painting under the colour.
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: builder(context),
+                      ),
                     ),
                   ),
                 ],

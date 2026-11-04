@@ -84,9 +84,12 @@ void main() {
     await _pumpScreen(tester, shouldSucceed: true);
 
     expect(find.byType(TermsAcceptanceScreen), findsOneWidget);
+    // Apple Guideline 1.2 (1.0 (9)): one clear Agree action, no checkbox,
+    // and the zero-tolerance terms on screen.
+    expect(find.byType(Checkbox), findsNothing);
+    expect(find.text('Zero tolerance'), findsOneWidget);
 
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pump();
+    await tester.ensureVisible(find.byType(FilledButton));
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
 
@@ -99,8 +102,7 @@ void main() {
   ) async {
     await _pumpScreen(tester, shouldSucceed: false);
 
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pump();
+    await tester.ensureVisible(find.byType(FilledButton));
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
 

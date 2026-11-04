@@ -16,12 +16,14 @@ import '../../../data/models/seller_profile.dart';
 import '../../../shared/widgets/connectivity_banner.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
-import '../../../shared/widgets/report_sheet.dart';
 import '../../../shared/widgets/shop_location_map.dart';
 import '../../../shared/widgets/sokoni_avatar.dart';
 import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../discovery/presentation/widgets/sticky_category_header.dart';
+import '../../moderation/presentation/blocked_state.dart';
+import '../../moderation/presentation/moderation_menu.dart';
+import '../../moderation/providers/block_providers.dart';
 import '../../social/presentation/widgets/showcase_thumb_grid.dart';
 import '../../social/presentation/widgets/updates_list.dart';
 import '../providers/seller_providers.dart';
@@ -51,6 +53,16 @@ class ShopProfileScreen extends ConsumerWidget {
     // place while it's in flight, instead of blanking the whole screen to
     // a spinner on every single follow/unfollow tap.
     final seller = sellerAsync.value;
+    // Apple Guideline 1.2: blocking from this very page swaps it for the
+    // blocked state at once, without waiting for the refetch.
+    final blockedAccount = ref.watch(blockedFilterProvider).forShop(seller?.id);
+
+    if (blockedAccount != null || sellerAsync.error is BlockedException) {
+      final error = sellerAsync.error is BlockedException
+          ? sellerAsync.error! as BlockedException
+          : BlockedException(l10n.blockedStateTitle, blockedUserId: blockedAccount!.userId);
+      return Scaffold(appBar: AppBar(), body: BlockedState(error: error, name: seller?.shopName));
+    }
 
     return Scaffold(
       body: ConnectivityBanner(
@@ -81,13 +93,14 @@ class ShopProfileScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.flag_outlined),
-                          onPressed: () => showReportSheet(
-                            context,
-                            ref,
-                            reportableType: 'shop',
-                            reportableId: seller.id,
+                        ModerationMenuButton(
+                          target: ModerationTarget(
+                            reportType: 'shop',
+                            reportId: seller.id,
+                            reportLabel: l10n.moderationReportShop,
+                            authorName: seller.shopName,
+                            authorSellerId: seller.id,
+                            authorHandle: seller.handle,
                           ),
                         ),
                       ],
@@ -620,6 +633,7 @@ class _ShopReviewsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final reviewsAsync = ref.watch(sellerReviewsProvider(handle));
+    final blocked = ref.watch(blockedFilterProvider);
 
     return reviewsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -645,7 +659,8 @@ class _ShopReviewsTab extends ConsumerWidget {
             ),
             const SizedBox(height: SokoniDimens.space16),
             for (final review in page.items)
-              _ReviewTile(review: review, shopHandle: handle),
+              if (!blocked.hidesUser(review.buyer?.id))
+                _ReviewTile(review: review, shopHandle: handle),
           ],
         );
       },
@@ -698,6 +713,17 @@ class _ReviewTile extends ConsumerWidget {
                   ),
                 ),
               ),
+              const Spacer(),
+              if (review.buyer case final buyer?)
+                ModerationMenuButton(
+                  target: ModerationTarget(
+                    reportType: 'review',
+                    reportId: review.id,
+                    reportLabel: l10n.moderationReportReview,
+                    authorName: buyer.name,
+                    authorUserId: buyer.id,
+                  ),
+                ),
             ],
           ),
           if (review.comment != null) ...[

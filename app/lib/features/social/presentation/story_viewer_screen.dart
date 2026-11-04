@@ -7,6 +7,8 @@ import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../data/models/social_update.dart';
+import '../../moderation/presentation/moderation_menu.dart';
+import '../../moderation/providers/block_providers.dart';
 import '../providers/social_providers.dart';
 import '../../../shared/widgets/sokoni_network_image.dart';
 
@@ -89,6 +91,38 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen> with Sing
     _loadCurrent();
   }
 
+  /// Apple Guideline 1.2: report the update or block its shop. The story
+  /// holds still while the menu is open (it would otherwise advance, or
+  /// close itself, underneath it), and closes once the shop is blocked.
+  Future<void> _openModerationMenu(SocialUpdate update) async {
+    final seller = update.seller!;
+    final l10n = AppLocalizations.of(context);
+    _progress.stop();
+    await _videoController?.pause();
+    if (!mounted) return;
+
+    await showModerationMenu(
+      context,
+      ref,
+      ModerationTarget(
+        reportType: 'update',
+        reportId: update.id,
+        reportLabel: l10n.moderationReportPost,
+        authorName: seller.shopName,
+        authorSellerId: seller.id,
+        authorHandle: seller.handle,
+      ),
+    );
+    if (!mounted) return;
+
+    if (ref.read(blockedFilterProvider).hidesShop(seller.id)) {
+      Navigator.of(context).pop();
+      return;
+    }
+    await _videoController?.play();
+    _progress.forward();
+  }
+
   @override
   void dispose() {
     _progress.dispose();
@@ -161,6 +195,12 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen> with Sing
                               seller.shopName,
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                             ),
+                          ),
+                        if (seller != null)
+                          IconButton(
+                            icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
+                            tooltip: l10n.moderationMenuTooltip,
+                            onPressed: () => _openModerationMenu(update),
                           ),
                         IconButton(
                           icon: const Icon(Icons.close_rounded, color: Colors.white),

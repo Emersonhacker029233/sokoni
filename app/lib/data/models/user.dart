@@ -25,6 +25,9 @@ abstract class SokoniUser with _$SokoniUser {
     @JsonKey(name: 'seller_handle') String? sellerHandle,
     @JsonKey(name: 'account_intent') String? accountIntent,
     @JsonKey(name: 'terms_accepted') required bool termsAccepted,
+    // Apple Guideline 1.2 (1.0 (9)): the Terms version this account last
+    // agreed to. Anything but the version the app ships with asks again.
+    @JsonKey(name: 'terms_version') String? termsVersion,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     // Part 4 (client feedback): Settings' Notifications section.
     @JsonKey(name: 'notify_orders') @Default(true) bool notifyOrders,

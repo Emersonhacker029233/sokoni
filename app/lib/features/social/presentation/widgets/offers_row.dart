@@ -8,6 +8,8 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../data/models/offer.dart';
+import '../../../moderation/presentation/moderation_menu.dart';
+import '../../../moderation/providers/block_providers.dart';
 import '../../providers/social_providers.dart';
 import '../../../../shared/widgets/sokoni_network_image.dart';
 
@@ -21,7 +23,11 @@ class OffersRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final offersAsync = ref.watch(offersRowProvider);
-    final offers = offersAsync.value?.items ?? const <Offer>[];
+    // Apple Guideline 1.2: a blocked shop's offers leave the row at once.
+    final blocked = ref.watch(blockedFilterProvider);
+    final offers = (offersAsync.value?.items ?? const <Offer>[])
+        .where((o) => !blocked.hidesShop(o.seller?.id))
+        .toList();
     if (offers.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -47,13 +53,13 @@ class OffersRow extends ConsumerWidget {
   }
 }
 
-class _OfferCard extends StatelessWidget {
+class _OfferCard extends ConsumerWidget {
   const _OfferCard({required this.offer});
 
   final Offer offer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final outline = isDark ? SokoniColors.darkOutline : SokoniColors.outline;
@@ -64,8 +70,27 @@ class _OfferCard extends StatelessWidget {
         ? l10n.offerCountdownDays(remaining.inDays)
         : l10n.offerCountdownHours(remaining.inHours.clamp(0, 23));
 
+    final seller = offer.seller;
+
     return GestureDetector(
       onTap: product == null ? null : () => context.push(SokoniRoutes.product(product.id)),
+      // Apple Guideline 1.2: press and hold to report the offer or block
+      // its shop (the card is too small for its own "⋯" button; the same
+      // menu is on the product page it opens).
+      onLongPress: seller == null
+          ? null
+          : () => showModerationMenu(
+              context,
+              ref,
+              ModerationTarget(
+                reportType: 'offer',
+                reportId: offer.id,
+                reportLabel: l10n.moderationReportPost,
+                authorName: seller.shopName,
+                authorSellerId: seller.id,
+                authorHandle: seller.handle,
+              ),
+            ),
       child: Container(
         width: 150,
         decoration: BoxDecoration(

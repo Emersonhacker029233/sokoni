@@ -10,6 +10,7 @@ import '../../features/debug/motion_gallery_screen.dart';
 import '../../features/debug/theme_audit_screen.dart';
 import '../../features/discovery/presentation/home_screen.dart';
 import '../../features/legal/presentation/privacy_screen.dart';
+import '../../features/moderation/presentation/blocked_accounts_screen.dart';
 import '../../features/legal/presentation/terms_acceptance_screen.dart';
 import '../../features/legal/presentation/terms_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
@@ -188,6 +189,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: SokoniRoutes.termsAcceptance,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const TermsAcceptanceScreen()),
+      ),
+      GoRoute(
+        path: SokoniRoutes.blockedAccounts,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisXPage(key: state.pageKey, child: const BlockedAccountsScreen()),
       ),
       GoRoute(
         path: SokoniRoutes.notifications,

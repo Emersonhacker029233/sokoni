@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/providers/auth_providers.dart';
+import '../../features/moderation/providers/block_providers.dart';
 import '../../features/social/presentation/widgets/create_sheet.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../motion/motion.dart';
 import '../theme/colors.dart';
+import 'routes.dart';
 
 /// Branch order in the app's [StatefulShellRoute] (see app_router.dart): home, search,
 /// sell, orders, profile. [AnimatedNavBar] only shows 4 tab icons (Sell is
@@ -27,6 +30,17 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final currentItemIndex = _navItemBranchIndexes.indexOf(navigationShell.currentIndex);
+
+    // Apple Guideline 1.2: a session signed in before Terms 1.1 (or one
+    // closed on the acceptance screen) is asked once, at app start.
+    ref.listen(termsOutdatedProvider, (previous, next) {
+      if (next.value == true && previous?.value != true) {
+        context.push(SokoniRoutes.termsAcceptance);
+      }
+    });
+    // Keeps who-you-blocked loaded for the whole signed-in session, so
+    // every list can leave their content out without waiting for a refetch.
+    ref.watch(blockedAccountsProvider);
 
     return Scaffold(
       body: navigationShell,

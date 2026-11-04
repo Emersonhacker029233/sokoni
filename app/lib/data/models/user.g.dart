@@ -22,6 +22,7 @@ _SokoniUser _$SokoniUserFromJson(Map<String, dynamic> json) => _SokoniUser(
   sellerHandle: json['seller_handle'] as String?,
   accountIntent: json['account_intent'] as String?,
   termsAccepted: json['terms_accepted'] as bool,
+  termsVersion: json['terms_version'] as String?,
   createdAt: json['created_at'] == null
       ? null
       : DateTime.parse(json['created_at'] as String),
@@ -48,6 +49,7 @@ Map<String, dynamic> _$SokoniUserToJson(_SokoniUser instance) =>
       'seller_handle': instance.sellerHandle,
       'account_intent': instance.accountIntent,
       'terms_accepted': instance.termsAccepted,
+      'terms_version': instance.termsVersion,
       'created_at': instance.createdAt?.toIso8601String(),
       'notify_orders': instance.notifyOrders,
       'notify_messages': instance.notifyMessages,

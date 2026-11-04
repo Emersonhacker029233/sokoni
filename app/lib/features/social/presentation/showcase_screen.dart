@@ -15,6 +15,8 @@ import '../../../data/models/showcase.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../auth/presentation/sign_in_prompt_sheet.dart';
+import '../../moderation/presentation/moderation_menu.dart';
+import '../../moderation/providers/block_providers.dart';
 import '../../product/providers/favorites_providers.dart';
 import '../providers/social_providers.dart';
 import '../../../shared/widgets/sokoni_network_image.dart';
@@ -64,7 +66,10 @@ class _ShowcaseScreenState extends ConsumerState<ShowcaseScreen> {
           onRetry: () => ref.invalidate(showcaseFeedProvider),
         ),
         data: (state) {
-          if (state.items.isEmpty) {
+          // Apple Guideline 1.2: a blocked shop's videos drop out at once.
+          final blocked = ref.watch(blockedFilterProvider);
+          final items = state.items.where((s) => !blocked.hidesShop(s.seller?.id)).toList();
+          if (items.isEmpty) {
             return SokoniEmptyState(
               icon: Icons.video_collection_outlined,
               title: l10n.showcaseEmptyTitle,
@@ -74,19 +79,19 @@ class _ShowcaseScreenState extends ConsumerState<ShowcaseScreen> {
           return PageView.builder(
             controller: _pageController,
             scrollDirection: Axis.vertical,
-            itemCount: state.items.length,
+            itemCount: items.length,
             onPageChanged: (index) {
               setState(() => _activeIndex = index);
               // Preload one page ahead (CLAUDE.md: "preload one ahead").
               // Not awaited (a page-change callback, not async) — see
               // home_screen.dart's own _onScroll() for why a failure here
               // must not become an unhandled Future rejection.
-              if (index >= state.items.length - 2) {
+              if (index >= items.length - 2) {
                 ref.read(showcaseFeedProvider.notifier).loadMore().catchError((_) {});
               }
             },
             itemBuilder: (context, index) {
-              return _ShowcasePage(showcase: state.items[index], isActive: index == _activeIndex);
+              return _ShowcasePage(showcase: items[index], isActive: index == _activeIndex);
             },
           );
         },
@@ -193,6 +198,23 @@ class _ShowcasePageState extends ConsumerState<_ShowcasePage> {
               right: SokoniDimens.space12,
               bottom: 140,
               child: _ShowcaseSaveButton(product: product),
+            ),
+          // Apple Guideline 1.2: report the video or block its shop.
+          if (showcase.seller case final seller?)
+            Positioned(
+              right: SokoniDimens.space12,
+              bottom: 192,
+              child: ModerationMenuButton(
+                color: Colors.white,
+                target: ModerationTarget(
+                  reportType: 'showcase',
+                  reportId: showcase.id,
+                  reportLabel: AppLocalizations.of(context).moderationReportPost,
+                  authorName: seller.shopName,
+                  authorSellerId: seller.id,
+                  authorHandle: seller.handle,
+                ),
+              ),
             ),
           Positioned(
             left: 0,

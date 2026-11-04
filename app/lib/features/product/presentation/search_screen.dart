@@ -13,8 +13,17 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/product_card.dart';
 import '../../../data/models/category.dart';
+import '../../../data/models/product.dart';
 import '../../discovery/providers/discovery_providers.dart';
+import '../../moderation/providers/block_providers.dart';
 import '../providers/search_providers.dart';
+
+/// Apple Guideline 1.2: results from a shop blocked after this search ran
+/// disappear at once (the server leaves them out of the next search).
+List<Product> _withoutBlocked(WidgetRef ref, List<Product> items) {
+  final blocked = ref.watch(blockedFilterProvider);
+  return items.where((p) => !blocked.hidesShop(p.seller?.id)).toList();
+}
 
 /// Debounced search with history (CLAUDE.md feature 1: "debounced search
 /// with history").
@@ -107,28 +116,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       .read(searchResultsProvider.notifier)
                       .search(_controller.text),
                 ),
-                data: (items) => items.isEmpty
+                data: (allItems) => _withoutBlocked(ref, allItems).isEmpty
                     ? SokoniEmptyState(
                         icon: Icons.search_off_rounded,
                         title: l10n.feedEmptyTitle,
                         message: l10n.feedEmptyBody,
                       )
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(SokoniDimens.space16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: SokoniDimens.space12,
-                              crossAxisSpacing: SokoniDimens.space12,
-                              childAspectRatio: 0.62,
+                    : Builder(
+                        builder: (context) {
+                          final items = _withoutBlocked(ref, allItems);
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(SokoniDimens.space16),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: SokoniDimens.space12,
+                                  crossAxisSpacing: SokoniDimens.space12,
+                                  childAspectRatio: 0.62,
+                                ),
+                            itemCount: items.length,
+                            itemBuilder: (context, index) => ProductCard(
+                              product: items[index],
+                              onTap: () => context.push(
+                                SokoniRoutes.product(items[index].id),
+                              ),
                             ),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) => ProductCard(
-                          product: items[index],
-                          onTap: () => context.push(
-                            SokoniRoutes.product(items[index].id),
-                          ),
-                        ),
+                          );
+                        },
                       ),
               ),
             ),

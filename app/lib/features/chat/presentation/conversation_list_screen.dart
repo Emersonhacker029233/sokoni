@@ -11,6 +11,7 @@ import '../../../core/theme/dimens.dart';
 import '../../../data/models/conversation.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../moderation/providers/block_providers.dart';
 import '../providers/chat_providers.dart';
 
 class ConversationListScreen extends ConsumerWidget {
@@ -29,7 +30,14 @@ class ConversationListScreen extends ConsumerWidget {
           message: error is ApiException ? error.message : '$error',
           onRetry: () => ref.invalidate(conversationsProvider),
         ),
-        data: (conversations) {
+        data: (allConversations) {
+          // Apple Guideline 1.2: a chat with someone just blocked leaves
+          // the list at once; the other person is either the shop or the
+          // buyer, never the viewer themselves.
+          final blocked = ref.watch(blockedFilterProvider);
+          final conversations = allConversations
+              .where((c) => !blocked.hidesShop(c.seller?.id) && !blocked.hidesUser(c.buyer?.id))
+              .toList();
           if (conversations.isEmpty) {
             return SokoniEmptyState(
               icon: Icons.chat_bubble_outline_rounded,

@@ -57,6 +57,17 @@ final class ForbiddenException extends ApiException {
   const ForbiddenException([super.message = 'Not allowed.']);
 }
 
+/// 403 with `code: blocked` — one of the two people blocked the other
+/// (Apple Guideline 1.2). [blockedUserId] is set only when the viewer is
+/// the one who blocked, so the screen can offer Unblock; when the other
+/// person blocked the viewer it stays null and the screen just says the
+/// account isn't available.
+final class BlockedException extends ApiException {
+  const BlockedException(super.message, {this.blockedUserId});
+
+  final int? blockedUserId;
+}
+
 /// 404.
 final class NotFoundException extends ApiException {
   const NotFoundException([super.message = 'Not found.']);
