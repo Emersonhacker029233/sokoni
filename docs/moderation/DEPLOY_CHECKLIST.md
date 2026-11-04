@@ -202,4 +202,15 @@ Dropping `user_blocks` loses every block users made, and dropping `is_hidden` un
 
 ## Staging
 
-`staging-api.sokoni.co.tz` currently runs `feature/delivery`. Deploying this branch there would remove the delivery screens until `feature/delivery` is redeployed. The moderation code merges into `feature/delivery` cleanly later: its migrations are dated after the delivery ones and touch different columns.
+`staging-api.sokoni.co.tz` currently runs `feature/delivery`. Deploying this branch there would remove the delivery screens until `feature/delivery` is redeployed.
+
+**Merging into `feature/delivery` later.** The migrations don't clash: these five are dated after the delivery ones and touch different columns and tables. A test merge (`git merge-tree`) does show small text conflicts in 9 files, where both branches added lines at the end of the same place:
+
+- `ConversationController.php`
+- `AppServiceProvider.php`
+- `routes/console.php`
+- both ARB files
+- `user.dart` and its generated files
+- `pubspec.yaml` (version)
+
+Keep both sides in each, then regenerate with `dart run build_runner build` and `flutter gen-l10n`.
