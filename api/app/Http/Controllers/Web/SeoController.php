@@ -52,7 +52,7 @@ class SeoController extends Controller
     public function sitemapShops(): Response
     {
         $xml = Cache::remember('web:sitemap:shops', self::TTL_SECONDS, function () {
-            $urls = SellerProfile::query()->verified()->select(['handle', 'updated_at'])->cursor()
+            $urls = SellerProfile::query()->listed()->select(['handle', 'updated_at'])->cursor()
                 ->map(fn (SellerProfile $seller) => [
                     'loc' => route('web.shop', $seller->handle),
                     'lastmod' => $seller->updated_at?->toAtomString(),

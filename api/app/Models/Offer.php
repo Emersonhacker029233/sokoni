@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HidesBlockedAuthors;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['seller_id', 'product_id', 'discount_type', 'discount_value', 'price_snapshot', 'starts_at', 'ends_at'])]
 class Offer extends Model
 {
-    use HasFactory;
+    use HasFactory, HidesBlockedAuthors;
 
     protected function casts(): array
     {
@@ -56,13 +57,18 @@ class Offer extends Model
         return $query->where('starts_at', '<=', now())->where('ends_at', '>=', now());
     }
 
-    /** Publicly visible: currently running, seller verified, Listing still visible. */
+    /** Publicly visible: currently running, shop listed, Listing still visible. */
     public function scopeVisible(Builder $query): Builder
     {
         return $query
             ->active()
-            ->whereHas('seller', fn (Builder $q) => $q->where('status', 'verified'))
+            ->whereHas('seller', fn (Builder $q) => $q->listed())
             ->whereHas('product', fn (Builder $q) => $q->where('is_active', true)->where('is_hidden', false));
+    }
+
+    protected function withoutAuthors(Builder $query, array $userIds): Builder
+    {
+        return $this->withoutShopsOwnedBy($query, $userIds);
     }
 
     public function scopeFollowedBy(Builder $query, int $buyerId): Builder

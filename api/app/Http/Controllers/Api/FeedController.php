@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\FeedItemResource;
 use App\Services\Feed\FeedService;
+use App\Services\Moderation\BlockList;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -25,7 +26,9 @@ class FeedController extends Controller
         $lng = $request->filled('lng') ? $request->float('lng') : null;
         $page = (int) ($request->integer('page') ?: 1);
 
-        $paginated = $this->feed->paginate($request->user(), $lat, $lng, $page);
+        // BlockList::viewer, not $request->user(): this public route has no
+        // auth middleware, so only the sanctum guard sees the app's token.
+        $paginated = $this->feed->paginate(BlockList::viewer($request), $lat, $lng, $page);
 
         return FeedItemResource::collection($paginated);
     }

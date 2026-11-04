@@ -7,6 +7,7 @@ use App\Http\Requests\StoreShowcaseRequest;
 use App\Http\Resources\ShowcaseResource;
 use App\Models\Showcase;
 use App\Services\Media\ImageVariants;
+use App\Services\Moderation\BlockList;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -19,11 +20,12 @@ class ShowcaseController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Showcase::query()->visible()->with(['seller', 'product.media']);
+        $viewer = BlockList::viewer($request);
+        $query = Showcase::query()->visible()->notBlockedBy($viewer)->with(['seller', 'product.media']);
 
         if ($request->boolean('following')) {
-            abort_unless($request->user(), 401);
-            $query->followedBy($request->user()->id);
+            abort_unless($viewer, 401);
+            $query->followedBy($viewer->id);
         }
 
         if ($sellerId = $request->integer('seller_id')) {
@@ -35,9 +37,17 @@ class ShowcaseController extends Controller
         return ShowcaseResource::collection($showcases);
     }
 
-    public function show(Showcase $showcase): ShowcaseResource
+    public function show(Request $request, Showcase $showcase): ShowcaseResource|JsonResponse
     {
-        $showcase->load(['seller', 'product.media']);
+        $showcase->load(['seller.user', 'product.media']);
+        $viewer = BlockList::viewer($request);
+        $isOwner = $viewer !== null && $viewer->id === $showcase->seller?->user_id;
+        abort_unless($isOwner || $showcase->isPubliclyVisible(), 404);
+
+        if (! $isOwner && app(BlockList::class)->hasBlocked($viewer, $showcase->seller?->user_id)) {
+            return BlockList::forbidden('You blocked this account.', $showcase->seller?->user_id);
+        }
+
         $showcase->increment('views');
 
         return new ShowcaseResource($showcase);

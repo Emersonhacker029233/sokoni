@@ -16,6 +16,7 @@ class Message extends Model
     {
         return [
             'read_at' => 'datetime',
+            'is_hidden' => 'boolean',
         ];
     }
 

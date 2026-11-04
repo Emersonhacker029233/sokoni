@@ -97,6 +97,7 @@ class ProductSearchService
     private function baseQuery(ProductSearchFilters $filters): Builder
     {
         $query = Product::visible()
+            ->notBlockedBy($filters->viewer)
             ->with(['category', 'seller', 'media'])
             ->search($filters->query)
             ->inCategory($filters->categoryId)

@@ -18,13 +18,21 @@ class ReportController extends Controller
             throw ValidationException::withMessages(['reportable_id' => 'Not found.']);
         }
 
-        Report::query()->create([
-            'reporter_id' => $request->user()->id,
-            'reportable_type' => $modelClass,
-            'reportable_id' => $request->integer('reportable_id'),
-            'reason' => $request->string('reason'),
-            'note' => $request->string('note') ?: null,
-        ]);
+        // Reporting the same thing again while the first report is still
+        // pending changes nothing for the moderators, so it doesn't file
+        // (and alert) a second time. The reporter gets the same answer.
+        Report::query()->firstOrCreate(
+            [
+                'reporter_id' => $request->user()->id,
+                'reportable_type' => $modelClass,
+                'reportable_id' => $request->integer('reportable_id'),
+                'status' => 'pending',
+            ],
+            [
+                'reason' => $request->string('reason')->toString(),
+                'note' => $request->string('note')->toString() ?: null,
+            ],
+        );
 
         return response()->json(['message' => 'Report submitted for review.'], 201);
     }

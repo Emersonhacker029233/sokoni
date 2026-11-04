@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HidesBlockedAuthors;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,7 +25,7 @@ class Product extends Model
     // than the permanent DELETE this model previously had no protection
     // against at all (every query, including `visible()`, automatically
     // excludes a soft-deleted row without needing its own change).
-    use HasFactory, SoftDeletes;
+    use HasFactory, HidesBlockedAuthors, SoftDeletes;
 
     protected function casts(): array
     {
@@ -119,13 +120,24 @@ class Product extends Model
         return $locale === 'sw' && $this->description_sw ? $this->description_sw : $this->description;
     }
 
-    /** Publicly visible: active, not hidden, and the seller is verified. */
+    /** Publicly visible: active, not hidden, and the shop is listed (verified, not hidden, owner not banned). */
     public function scopeVisible(Builder $query): Builder
     {
         return $query
             ->where('is_active', true)
             ->where('is_hidden', false)
-            ->whereHas('seller', fn (Builder $q) => $q->where('status', 'verified'));
+            ->whereHas('seller', fn (Builder $q) => $q->listed());
+    }
+
+    /** The same rule as `visible()`, for one already-loaded product. */
+    public function isPubliclyVisible(): bool
+    {
+        return $this->is_active && ! $this->is_hidden && ($this->seller?->isListed() ?? false);
+    }
+
+    protected function withoutAuthors(Builder $query, array $userIds): Builder
+    {
+        return $this->withoutShopsOwnedBy($query, $userIds);
     }
 
     /** Currently boosted — CLAUDE.md Part 3's "Sponsored" feed cards. */

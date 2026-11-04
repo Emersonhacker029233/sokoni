@@ -31,7 +31,7 @@ class HomeController extends Controller
                 ->limit(8)
                 ->get(),
             'featuredShops' => SellerProfile::query()
-                ->verified()
+                ->listed()
                 ->orderByDesc('rating_count')
                 ->orderByDesc('rating_avg')
                 ->limit(8)

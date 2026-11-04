@@ -69,11 +69,22 @@ class ShowcaseTest extends TestCase
 
     public function test_viewing_a_showcase_increments_its_view_count(): void
     {
-        $showcase = Showcase::factory()->create(['views' => 0]);
+        // A listed shop: since 1.0 (9) a showcase that isn't publicly
+        // visible answers 404, the same as its product does.
+        $seller = SellerProfile::factory()->verified()->create();
+        $product = Product::factory()->create(['seller_id' => $seller->id]);
+        $showcase = Showcase::factory()->create(['seller_id' => $seller->id, 'product_id' => $product->id, 'views' => 0]);
 
         $this->getJson("/api/showcases/{$showcase->id}")->assertOk();
 
         $this->assertEquals(1, $showcase->fresh()->views);
+    }
+
+    public function test_a_showcase_from_a_shop_that_is_not_listed_is_not_found(): void
+    {
+        $showcase = Showcase::factory()->create();
+
+        $this->getJson("/api/showcases/{$showcase->id}")->assertNotFound();
     }
 
     public function test_showcases_for_hidden_products_are_not_publicly_visible(): void

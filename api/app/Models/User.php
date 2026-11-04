@@ -13,6 +13,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -156,6 +157,12 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
         return $this->hasMany(Report::class, 'reporter_id');
     }
 
+    /** People this user blocked (Apple Guideline 1.2) — see BlockList. */
+    public function blocks(): HasMany
+    {
+        return $this->hasMany(UserBlock::class, 'blocker_id');
+    }
+
     /**
      * Deliberately queries fresh rather than reading the (possibly already
      * loaded-as-null, now-stale) `sellerProfile` relation — this gates
@@ -207,6 +214,16 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
         }
 
         return $this->banned_until === null || $this->banned_until->isFuture();
+    }
+
+    /** The query form of isBanned(): banned for good, or suspended until a time still in the future. */
+    public function scopeBanned(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull($this->qualifyColumn('banned_at'))
+            ->where(fn (Builder $q) => $q
+                ->whereNull($this->qualifyColumn('banned_until'))
+                ->orWhere($this->qualifyColumn('banned_until'), '>', now()));
     }
 
     public function canAccessPanel(Panel $panel): bool

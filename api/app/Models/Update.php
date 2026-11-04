@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HidesBlockedAuthors;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,12 +17,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['seller_id', 'product_id', 'type', 'media_path', 'thumb_path', 'caption', 'expires_at'])]
 class Update extends Model
 {
-    use HasFactory;
+    use HasFactory, HidesBlockedAuthors;
 
     protected function casts(): array
     {
         return [
             'expires_at' => 'datetime',
+            'is_hidden' => 'boolean',
         ];
     }
 
@@ -45,18 +47,24 @@ class Update extends Model
         return $query->where('expires_at', '>', now());
     }
 
-    /** Publicly visible: not expired, the seller is verified, and any referenced Listing hasn't been pulled. */
+    /** Publicly visible: not expired, not hidden by a moderator, the shop is listed, and any referenced Listing hasn't been pulled. */
     public function scopeVisible(Builder $query): Builder
     {
         return $query
             ->active()
-            ->whereHas('seller', fn (Builder $q) => $q->where('status', 'verified'))
+            ->where($this->qualifyColumn('is_hidden'), false)
+            ->whereHas('seller', fn (Builder $q) => $q->listed())
             ->where(function (Builder $q) {
                 $q->whereNull('product_id')->orWhereHas(
                     'product',
                     fn (Builder $p) => $p->where('is_active', true)->where('is_hidden', false)
                 );
             });
+    }
+
+    protected function withoutAuthors(Builder $query, array $userIds): Builder
+    {
+        return $this->withoutShopsOwnedBy($query, $userIds);
     }
 
     /** Restricts to shops the given buyer follows — powers the "Following" tray/filter. */

@@ -4,15 +4,24 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AppNotificationResource;
+use App\Services\Moderation\BlockList;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class NotificationController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, BlockList $blocks): AnonymousResourceCollection
     {
-        $notifications = $request->user()->appNotifications()->latest()->paginate(20);
+        // Notifications caused by someone the user later blocked drop out
+        // too. Ones with no actor (system notices, and everything written
+        // before actor_id existed) always stay.
+        $blocked = $blocks->blockedUserIds($request->user());
+
+        $notifications = $request->user()->appNotifications()
+            ->when($blocked !== [], fn ($q) => $q->where(fn ($q) => $q->whereNull('actor_id')->orWhereNotIn('actor_id', $blocked)))
+            ->latest()
+            ->paginate(20);
 
         return AppNotificationResource::collection($notifications);
     }

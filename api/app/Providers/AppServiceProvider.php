@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Moderation\BlockList;
 use App\Services\Nida\ManualReviewNidaVerifier;
 use App\Services\Nida\NidaVerifier;
 use App\Services\Payment\PaymentGateway;
@@ -70,6 +71,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PaymentGateway::class, UnimplementedPaymentGateway::class);
         $this->app->bind(SocialAuthVerifier::class, HttpSocialAuthVerifier::class);
         $this->app->bind(PushNotifier::class, LogPushNotifier::class);
+
+        // One block-list lookup per viewer per request, however many lists
+        // the request filters (see BlockList).
+        $this->app->scoped(BlockList::class);
     }
 
     /**

@@ -16,9 +16,11 @@ class ShopController extends Controller
 {
     public function __invoke(Request $request, string $handle): View
     {
+        // listed(): verified, not hidden by a moderator, owner not banned
+        // (Apple Guideline 1.2 — a ban ejects the shop from the website too).
         $seller = SellerProfile::query()
             ->where('handle', $handle)
-            ->where('status', 'verified')
+            ->listed()
             ->with('category')
             ->firstOrFail();
 
@@ -32,14 +34,14 @@ class ShopController extends Controller
             ->paginate(24, pageName: 'page')
             ->withQueryString();
 
-        $showcases = $tab === 'gallery' ? Showcase::query()->where('seller_id', $seller->id)->latest()->get() : collect();
-        $updates = $tab === 'gallery' ? Update::query()->where('seller_id', $seller->id)->active()->latest()->get() : collect();
+        $showcases = $tab === 'gallery' ? Showcase::query()->where('seller_id', $seller->id)->where('is_hidden', false)->latest()->get() : collect();
+        $updates = $tab === 'gallery' ? Update::query()->where('seller_id', $seller->id)->where('is_hidden', false)->active()->latest()->get() : collect();
 
         $reviews = $tab === 'reviews'
-            ? $seller->reviews()->where('is_hidden', false)->with('buyer')->latest()->paginate(20)->withQueryString()
+            ? $seller->reviews()->publiclyVisible()->with('buyer')->latest()->paginate(20)->withQueryString()
             : null;
 
-        $distribution = $seller->reviews()->where('is_hidden', false)->selectRaw('rating, count(*) as total')->groupBy('rating')->pluck('total', 'rating');
+        $distribution = $seller->reviews()->publiclyVisible()->selectRaw('rating, count(*) as total')->groupBy('rating')->pluck('total', 'rating');
 
         // A1 (tester feedback): the shop page's Reviews tab had no way to
         // leave a review at all, and no explanation either way — a buyer

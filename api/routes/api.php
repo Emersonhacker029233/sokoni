@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BlockController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\ConversationController;
@@ -196,4 +197,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store']);
 
     Route::post('/reports', [ReportController::class, 'store']);
+
+    // Apple Guideline 1.2: block abusive users. See BlockController.
+    Route::get('/blocks', [BlockController::class, 'index']);
+    Route::middleware('throttle:api-write')->group(function () {
+        Route::post('/blocks', [BlockController::class, 'store']);
+        Route::delete('/blocks/{user}', [BlockController::class, 'destroy'])->whereNumber('user');
+    });
 });

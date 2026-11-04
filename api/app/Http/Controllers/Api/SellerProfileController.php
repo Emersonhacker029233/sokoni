@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateSellerLogoRequest;
 use App\Http\Resources\SellerProfileResource;
 use App\Models\SellerProfile;
 use App\Services\Geo\DistanceQuery;
+use App\Services\Moderation\BlockList;
 use App\Services\Nida\NidaVerifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class SellerProfileController extends Controller
     /** Browse sellers — "New Sellers" (sort=newest) or nearby, verified only. */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = SellerProfile::query()->verified()->with('category');
+        $query = SellerProfile::query()->listed()->notBlockedBy(BlockList::viewer($request))->with('category');
 
         if ($request->filled('lat') && $request->filled('lng')) {
             // Reuses the same distance engine as product discovery.
@@ -43,9 +44,20 @@ class SellerProfileController extends Controller
         return SellerProfileResource::collection($sellers);
     }
 
-    public function show(string $handle): SellerProfileResource
+    public function show(Request $request, string $handle): SellerProfileResource|JsonResponse
     {
-        $seller = SellerProfile::query()->where('handle', $handle)->with('category')->firstOrFail();
+        $seller = SellerProfile::query()->where('handle', $handle)->with(['category', 'user'])->firstOrFail();
+        $viewer = BlockList::viewer($request);
+        $isOwner = $viewer !== null && $viewer->id === $seller->user_id;
+
+        // A shop a moderator hid, or whose owner is banned, is gone for
+        // everyone but its owner. Pending shops stay reachable by handle,
+        // as before.
+        abort_if(! $isOwner && ($seller->is_hidden || ($seller->user?->isBanned() ?? false)), 404);
+
+        if (! $isOwner && app(BlockList::class)->hasBlocked($viewer, $seller->user_id)) {
+            return BlockList::forbidden('You blocked this account.', $seller->user_id);
+        }
 
         return new SellerProfileResource($seller);
     }

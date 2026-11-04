@@ -31,6 +31,7 @@ class SokoniStatsOverview extends StatsOverviewWidget
 
         $pendingSellers = SellerProfile::query()->where('status', 'pending')->count();
         $pendingReports = Report::query()->where('status', 'pending')->count();
+        $overdueReports = Report::query()->overdue()->count();
 
         return [
             Stat::make('Users', number_format(User::query()->count()))
@@ -51,9 +52,14 @@ class SokoniStatsOverview extends StatsOverviewWidget
                 ->description('Sellers awaiting review — see Seller Verification')
                 ->color($pendingSellers > 0 ? 'warning' : 'success'),
 
+            // Apple Guideline 1.2: every report is acted on within 24 hours.
             Stat::make('Pending reports', $pendingReports)
-                ->description('Moderation queue')
-                ->color($pendingReports > 0 ? 'danger' : 'success'),
+                ->description($overdueReports > 0
+                    ? "{$overdueReports} overdue (waiting over 24 hours)"
+                    : 'Moderation queue — act within 24 hours')
+                ->descriptionIcon($overdueReports > 0 ? 'heroicon-o-exclamation-circle' : null)
+                ->color($overdueReports > 0 ? 'danger' : ($pendingReports > 0 ? 'warning' : 'success'))
+                ->url(route('filament.admin.resources.reports.index')),
 
             Stat::make('Live products', number_format(Product::query()->visible()->count()))
                 ->description($this->trendDescription(

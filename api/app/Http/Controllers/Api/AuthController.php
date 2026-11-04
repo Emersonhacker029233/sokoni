@@ -23,6 +23,7 @@ use App\Services\Otp\PhoneOtpService;
 use App\Services\SocialAuth\SocialAuthVerifier;
 use App\Services\SocialAuth\SocialUserResolver;
 use App\Support\HandlesEmailChange;
+use App\Support\TermsAcceptance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -347,6 +348,8 @@ class AuthController extends Controller
         if ($user->isBanned()) {
             throw ValidationException::withMessages(['phone' => 'This account has been suspended.']);
         }
+
+        TermsAcceptance::recordFrom(request(), $user);
 
         $token = $user->createToken('sokoni-app')->plainTextToken;
 

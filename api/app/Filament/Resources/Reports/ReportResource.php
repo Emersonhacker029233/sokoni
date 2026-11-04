@@ -59,4 +59,17 @@ class ReportResource extends Resource
     {
         return (string) static::getModel()::where('status', 'pending')->count() ?: null;
     }
+
+    /** Red as soon as any pending report is past its 24 hours. */
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return Report::query()->overdue()->exists() ? 'danger' : 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        $overdue = Report::query()->overdue()->count();
+
+        return $overdue > 0 ? "{$overdue} report(s) waiting over 24 hours" : 'Pending reports';
+    }
 }

@@ -9,7 +9,9 @@ use App\Http\Resources\ReviewResource;
 use App\Models\Order;
 use App\Models\Review;
 use App\Models\SellerProfile;
+use App\Services\Moderation\BlockList;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -40,11 +42,16 @@ class ReviewController extends Controller
     }
 
     /** Paginated reviews for a shop, for the seller profile's review list + distribution bar. */
-    public function forSeller(string $handle): AnonymousResourceCollection
+    public function forSeller(Request $request, string $handle): AnonymousResourceCollection
     {
         $seller = SellerProfile::query()->where('handle', $handle)->firstOrFail();
+        $viewer = BlockList::viewer($request);
 
-        $reviews = $seller->reviews()->where('is_hidden', false)->with('buyer')->latest()->paginate(20);
+        // Reviews by banned users and by people the viewer blocked are left
+        // out of both the list and the distribution bar, so the two agree.
+        $visible = fn () => $seller->reviews()->publiclyVisible()->notBlockedBy($viewer);
+
+        $reviews = $visible()->with('buyer')->latest()->paginate(20);
 
         // BUG (client feedback): a seller with zero reviews yet (any
         // brand-new shop) makes this pluck() empty, and json_encode() of
@@ -54,8 +61,7 @@ class ReviewController extends Controller
         // Map<String, dynamic>?`, which throws on exactly that `[]`.
         return ReviewResource::collection($reviews)->additional([
             'meta' => [
-                'distribution' => (object) $seller->reviews()
-                    ->where('is_hidden', false)
+                'distribution' => (object) $visible()
                     ->selectRaw('rating, count(*) as total')
                     ->groupBy('rating')
                     ->pluck('total', 'rating')

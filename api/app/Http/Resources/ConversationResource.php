@@ -10,7 +10,9 @@ class ConversationResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $lastMessage = $this->messages->last();
+        // Messages a moderator hid never show up as the preview or in the unread count.
+        $messages = $this->messages->where('is_hidden', false);
+        $lastMessage = $messages->last();
 
         return [
             'id' => $this->id,
@@ -22,7 +24,7 @@ class ConversationResource extends JsonResource
             'last_message_at' => $this->last_message_at,
             'unread_count' => $this->when(
                 $request->user() !== null,
-                fn () => $this->messages->where('sender_id', '!=', $request->user()->id)->whereNull('read_at')->count()
+                fn () => $messages->where('sender_id', '!=', $request->user()->id)->whereNull('read_at')->count()
             ),
             'other_party_typing' => $this->when(
                 $request->user() !== null,

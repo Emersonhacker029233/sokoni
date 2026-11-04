@@ -20,7 +20,7 @@ class ProductController extends Controller
         // hidden/pending id — matches the API's own show() rule exactly
         // (visitors browsing the website have no owner-preview concept,
         // unlike the app's signed-in seller).
-        abort_unless($record->is_active && ! $record->is_hidden && $record->seller?->isVerified(), 404);
+        abort_unless($record->isPubliclyVisible(), 404);
 
         $canonicalSlug = Str::slug($record->title);
         if ($slug !== $canonicalSlug) {
@@ -50,7 +50,7 @@ class ProductController extends Controller
             ->get();
 
         $reviews = $seller->reviews()
-            ->where('is_hidden', false)
+            ->publiclyVisible()
             ->with('buyer')
             ->latest()
             ->limit(10)

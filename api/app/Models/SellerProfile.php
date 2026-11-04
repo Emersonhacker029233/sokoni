@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HidesBlockedAuthors;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,7 +25,7 @@ class SellerProfile extends Model
 {
     // C2 (tester feedback): a deleted user's shop must be recoverable
     // right alongside them — see UsersTable's cascading delete action.
-    use HasFactory, SoftDeletes;
+    use HasFactory, HidesBlockedAuthors, SoftDeletes;
 
     /** 3-20 chars, lowercase letters/digits/underscore. */
     public const HANDLE_PATTERN = '/^[a-z0-9_]{3,20}$/';
@@ -44,6 +45,7 @@ class SellerProfile extends Model
             'rating_avg' => 'decimal:2',
             'show_whatsapp' => 'boolean',
             'opening_hours' => 'array',
+            'is_hidden' => 'boolean',
         ];
     }
 
@@ -123,5 +125,31 @@ class SellerProfile extends Model
     public function scopeVerified(Builder $query): Builder
     {
         return $query->where('status', 'verified');
+    }
+
+    /**
+     * Shown to the public: verified, not hidden by a moderator, and the
+     * owner isn't banned or suspended. A ban "ejects" the user and
+     * everything they posted (Apple Guideline 1.2), so every public
+     * listing of shop content goes through this one scope.
+     */
+    public function scopeListed(Builder $query): Builder
+    {
+        return $query
+            ->where($this->qualifyColumn('status'), 'verified')
+            ->where($this->qualifyColumn('is_hidden'), false)
+            ->whereDoesntHave('user', fn (Builder $owner) => $owner->banned());
+    }
+
+    public function isListed(): bool
+    {
+        return $this->isVerified()
+            && ! $this->is_hidden
+            && ! ($this->user?->isBanned() ?? false);
+    }
+
+    protected function withoutAuthors(Builder $query, array $userIds): Builder
+    {
+        return $query->whereNotIn($this->qualifyColumn('user_id'), $userIds);
     }
 }

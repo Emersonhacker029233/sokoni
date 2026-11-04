@@ -32,6 +32,7 @@ class ReviewObserver
             'New review',
             "You received a {$review->rating}-star review.",
             ['review_id' => $review->id],
+            actor: $review->buyer,
         );
 
         if ($seller->email !== null) {

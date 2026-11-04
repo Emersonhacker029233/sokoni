@@ -22,8 +22,13 @@ class ModerationQueueTable extends TableWidget
             ->paginated(false)
             ->recordUrl(fn (Report $record) => route('filament.admin.resources.reports.view', $record))
             ->columns([
-                TextColumn::make('reportable_type')->label('Type')->formatStateUsing(fn (string $state) => class_basename($state)),
-                TextColumn::make('reason')->badge(),
+                TextColumn::make('due')
+                    ->label('Due')
+                    ->badge()
+                    ->state(fn (Report $record) => $record->dueLabel())
+                    ->color(fn (Report $record) => $record->dueColor()),
+                TextColumn::make('reportable_type')->label('Type')->formatStateUsing(fn (Report $record) => ucfirst($record->typeName())),
+                TextColumn::make('reason')->badge()->formatStateUsing(fn (Report $record) => $record->reasonLabel()),
                 TextColumn::make('reporter.name')->label('Reported by'),
                 TextColumn::make('created_at')->label('Waiting')->since(),
             ])

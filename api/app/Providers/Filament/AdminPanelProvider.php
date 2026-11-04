@@ -78,6 +78,11 @@ class AdminPanelProvider extends PanelProvider
             // 1080px source scaled down by the browser.
             ->favicon(asset('images/brand/favicon-32.png'))
             ->login()
+            // Apple Guideline 1.2: the bell in the top bar rings for every
+            // new report and block, and for the daily "waiting over 20
+            // hours" summary (ModerationAlerts). Polls every 30 seconds.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->colors([
                 'primary' => $this->sokoniYellowPalette(),
                 'danger' => Color::hex('#E5484D'),

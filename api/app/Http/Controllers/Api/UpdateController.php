@@ -8,6 +8,7 @@ use App\Http\Resources\UpdateResource;
 use App\Models\SellerProfile;
 use App\Models\Update;
 use App\Services\Media\ImageVariants;
+use App\Services\Moderation\BlockList;
 use App\Services\Push\PushNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,11 +25,12 @@ class UpdateController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Update::query()->visible()->with(['seller', 'product.media']);
+        $viewer = BlockList::viewer($request);
+        $query = Update::query()->visible()->notBlockedBy($viewer)->with(['seller', 'product.media']);
 
         if ($request->boolean('following')) {
-            abort_unless($request->user(), 401);
-            $query->followedBy($request->user()->id);
+            abort_unless($viewer, 401);
+            $query->followedBy($viewer->id);
         }
 
         if ($sellerId = $request->integer('seller_id')) {
@@ -98,7 +100,7 @@ class UpdateController extends Controller
     private function notifyFollowers(SellerProfile $seller, string $title, string $body, array $data): void
     {
         foreach ($seller->followers as $follower) {
-            $this->push->notify($follower, $title, $body, $data);
+            $this->push->notify($follower, $title, $body, $data, actor: $seller->user);
         }
     }
 }

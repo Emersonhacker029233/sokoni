@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Support\Legal;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -32,7 +33,9 @@ class UserFactory extends Factory
             'provider_id' => fake()->uuid(),
             'locale' => fake()->randomElement(['en', 'sw']),
             'terms_accepted_at' => now(),
-            'terms_version' => '1.0',
+            // The current version, so a factory user is "fully onboarded"
+            // on the website (EnsureWebOnboarded compares versions).
+            'terms_version' => Legal::TERMS_VERSION,
         ];
     }
 
