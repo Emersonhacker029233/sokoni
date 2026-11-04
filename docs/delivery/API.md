@@ -12,13 +12,26 @@ Validation errors keep Laravel's usual `422 { message, errors: {field: [..]} }` 
 
 ## Customer app (Sokoni 1.1+)
 
-### Checkout opt-in (existing endpoint, one new field)
-`POST /orders` with `"fulfilment": "dispatch"`, `delivery_method: "delivery"`, and `delivery_lat` / `delivery_lng` (required for dispatch). The order is created with `delivery_fee: 0` and `total = subtotal`, because the delivery fee is paid to Sokoni separately. Orders now include `"fulfilment": null | "dispatch"`.
+### `GET /delivery/config`
+Read by Sokoni 1.1 before checkout. **404 while `DELIVERY_ENABLED=false`**, which the app reads as "keep the 1.0 checkout".
+```json
+{ "data": { "enabled": true, "min_app_version": "1.1.0", "currency": "TZS", "max_distance_km": 10, "unpaid_timeout_minutes": 20,
+  "payment": { "mode": "online", "online_available": true, "sandbox": true, "channels": ["mpesa", "airtel", "mixx", "halopesa"],
+               "covers": ["delivery_fee"], "goods_paid_to": "shop" },
+  "tracking": { "poll_seconds": 5, "realtime": false } } }
+```
+`payment.mode` is `cash` when the setting `delivery_fee_cash_enabled` is on (buyer pays the rider; no Pay now). `online_available` is false when no payment provider is configured (`PAYMENT_PROVIDER=none`, or the sandbox `fake` on production, which is always refused).
+
+### Checkout opt-in (existing endpoint, new optional fields)
+`POST /orders` with `"fulfilment": "dispatch"`, `delivery_method: "delivery"`, and `delivery_lat` / `delivery_lng` (required for dispatch). Optional `delivery_phone` (E.164 `+2556…`/`+2557…`): the number the rider calls; empty means the buyer's account phone. The order is created with `delivery_fee: 0` and `total = subtotal`, because the delivery fee is paid to Sokoni separately. Orders now include `"fulfilment": null | "dispatch"`, and `delivery_phone` for the buyer of a dispatch order only.
 
 | Error | When |
 |---|---|
 | 422 `delivery_lat` | No map pin, or drop-off is beyond the max distance (10 km) |
 | 422 `fulfilment` | The shop has no map location |
+| 422 `delivery_phone` | Not a Tanzanian mobile number in E.164 |
+
+**Privacy on dispatch orders:** a seller reading the order (`GET /orders/{id}`, `/shop/orders`) or its chat thread gets the buyer's usual user object with `phone`, `email` and `username` set to null. The rider, not the seller, meets the buyer. Legacy orders are unchanged.
 
 ### `GET /delivery/quote?seller_id=&lat=&lng=`
 Estimate for the checkout screen. The binding quote is frozen when the seller accepts.
@@ -37,7 +50,13 @@ Buyer view:
   "distance_km": 4.23, "currency": "TZS", "fee": 4500, "payment_status": "paid", "amount_due": 0,
   "pay_cash_to_driver": false, "delivery_pin": "4821", "pin_locked": false, "dispatch_wave": null,
   "pickup": { "shop_name": "Duka la Juma", "lat": -6.819, "lng": 39.276 },
-  "dropoff": { "lat": -6.79, "lng": 39.28, "address": "Mtaa wa Uhuru 12" },
+  "dropoff": { "lat": -6.79, "lng": 39.28, "address": "Mtaa wa Uhuru 12", "phone": "+255765000123" },
+  "payment": { "mode": "online", "status": "paid", "amount_due": 0, "covers": ["delivery_fee"], "goods_paid_to": "shop",
+               "goods_total": 20000, "delivery_fee": 4500, "total": 24500, "deadline": null,
+               "online_available": true, "sandbox": true, "channels": ["mpesa", "airtel", "mixx", "halopesa"],
+               "attempt": { "id": 7, "status": "succeeded", "amount": 4500, "channel": "mpesa", "msisdn": "+25575••••456",
+                            "failure_reason": null, "created_at": "...", "expires_at": null },
+               "receipt": { "amount": 4500, "channel": "mpesa", "reference": "FAKE-approve-...", "paid_at": "..." } },
   "driver": { "name": "Asha", "photo_url": "https://...signed", "rating_avg": 4.8, "rating_count": 31,
               "phone": "+255754000000", "vehicle": { "type": "boda_boda", "plate_number": "MC123ABC", "make": "TVS", "colour": "Red" } },
   "driver_location": { "lat": -6.80, "lng": 39.279, "at": "2026-10-29T10:01:02Z" },
@@ -64,7 +83,20 @@ The seller view has no PIN, fee or location. It shows `driver` (name, photo, veh
 | `POST /delivery/orders/{order}/rating {rating 1-5, comment?}` | `delivered` | 201; once only |
 | `POST /delivery/realtime-token` | buyer or driver of an active job | `{ token, uid, database_url, expires_in }`; `503 { fallback: "poll" }` when Firebase isn't configured |
 
-Paying the fee (`POST /delivery/orders/{order}/pay`) lands in phase 5.
+### Paying the delivery fee: `POST /delivery/orders/{order}/pay`
+`{ channel: "mpesa"|"airtel"|"mixx"|"halopesa", msisdn: "+2557XXXXXXXX", idempotency_key: "<8-100 chars [A-Za-z0-9_-]>" }`, buyer only, while `actions.can_pay`.
+
+- Answers **202** with the buyer view; `payment.attempt.status` is `pending` while the prompt is on the phone. The amount is never in the request: the server charges the fee frozen on the job (`amount_due`).
+- The app never marks anything paid. The payment becomes `succeeded` only when the server asks the gateway (on the buyer's next poll, at most every 3 s, and on every minute cron tick). Then the job moves to `pending_driver` and dispatch starts.
+- The same `idempotency_key` returns the same attempt and never sends a second prompt. A new key while an attempt is still open answers `409 payment_in_progress`; an open attempt expires after 120 s (`failure_reason: "timeout"`) and the buyer can try again.
+- `failure_reason`: `declined`, `timeout`, `gateway_error`. The buyer also gets a `buyer_payment_failed` push and inbox entry.
+- `409 not_payable` (already paid, cash mode, or not waiting for payment), `409 idempotency_key_reused`, `503 payments_unavailable`.
+- A payment confirmed after the 20-minute unpaid cancel is kept, and the job shows `refund: { amount, status: "pending" }`.
+- While the wallet is off (WALLET_PLAN.md section 4) the payment covers the delivery fee only; goods are paid to the shop directly (`goods_paid_to: "shop"`).
+
+**Sandbox gateway** (`PAYMENT_PROVIDER=fake`, local and staging only, refused in production): the prompt is approved by itself after `PAYMENT_FAKE_APPROVE_AFTER_SECONDS` (default 8). A paying number ending `0001` is declined; ending `0002` never answers (times out). The real provider (Dalipay) replaces it in Part B behind the same `PaymentGateway` interface.
+
+**Pushes to the customer app** (FCM when configured, always an inbox entry with `order_id`): buyer on every status change plus `buyer_payment_failed`; seller on fee paid, driver assigned, driver at shop, picked up, delivered, failed, and cancelled (unless the seller cancelled it).
 
 ## Driver app (Sokoni Driver)
 
