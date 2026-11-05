@@ -27,17 +27,25 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('notifications', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('type', 191);
-            $table->string('notifiable_type', 191);
-            $table->unsignedBigInteger('notifiable_id');
-            $table->text('data');
-            $table->timestamp('read_at')->nullable();
-            $table->timestamps();
+        // A failed index (a separate statement after CREATE TABLE) removes
+        // the half-made table, so a retry can't record it as done without
+        // the index. See the user_blocks migration.
+        try {
+            Schema::create('notifications', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->string('type', 191);
+                $table->string('notifiable_type', 191);
+                $table->unsignedBigInteger('notifiable_id');
+                $table->text('data');
+                $table->timestamp('read_at')->nullable();
+                $table->timestamps();
 
-            $table->index(['notifiable_type', 'notifiable_id']);
-        });
+                $table->index(['notifiable_type', 'notifiable_id']);
+            });
+        } catch (\Throwable $e) {
+            rescue(fn () => Schema::dropIfExists('notifications'), report: false);
+            throw $e;
+        }
     }
 
     public function down(): void

@@ -25,16 +25,26 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('user_blocks', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('blocker_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('blocked_id')->constrained('users')->cascadeOnDelete();
-            $table->string('reason', 50)->nullable();
-            $table->timestamps();
+        // MySQL/MariaDB can't roll back DDL, and the keys are separate
+        // statements after CREATE TABLE. If one failed, a retry would see
+        // the table, skip it and record this migration as done without its
+        // keys. So a failure removes the half-made table and rethrows: the
+        // error shows in the log and a retry starts clean.
+        try {
+            Schema::create('user_blocks', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('blocker_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('blocked_id')->constrained('users')->cascadeOnDelete();
+                $table->string('reason', 50)->nullable();
+                $table->timestamps();
 
-            $table->unique(['blocker_id', 'blocked_id']);
-            $table->index('blocked_id');
-        });
+                $table->unique(['blocker_id', 'blocked_id']);
+                $table->index('blocked_id');
+            });
+        } catch (\Throwable $e) {
+            rescue(fn () => Schema::dropIfExists('user_blocks'), report: false);
+            throw $e;
+        }
     }
 
     public function down(): void

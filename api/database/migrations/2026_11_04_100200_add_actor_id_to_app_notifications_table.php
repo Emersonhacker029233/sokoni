@@ -28,13 +28,28 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('app_notifications', function (Blueprint $table) {
-            $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->index('actor_id');
-        });
+        // Column, foreign key and index are separate statements, and
+        // MySQL/MariaDB can't roll back DDL. If the key or index failed, a
+        // retry would see the column, skip it and record this migration as
+        // done without them. So a failure takes the column back out and
+        // rethrows: the error shows in the log and a retry starts clean.
+        try {
+            Schema::table('app_notifications', function (Blueprint $table) {
+                $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->index('actor_id');
+            });
+        } catch (\Throwable $e) {
+            rescue(fn () => $this->removeActorId(), report: false);
+            throw $e;
+        }
     }
 
     public function down(): void
+    {
+        $this->removeActorId();
+    }
+
+    private function removeActorId(): void
     {
         if (! Schema::hasColumn('app_notifications', 'actor_id')) {
             return;
