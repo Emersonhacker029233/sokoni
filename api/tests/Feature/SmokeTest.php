@@ -11,6 +11,7 @@ use App\Models\SellerProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -42,6 +43,10 @@ class SmokeTest extends TestCase
         $this->postJson('/api/auth/otp/request', ['phone' => '+255754111111'])->assertOk();
         $otpCode = Cache::get('otp:+255754111111');
         $this->postJson('/api/auth/otp/verify', ['phone' => '+255754111111', 'code' => $otpCode, 'name' => 'Smoke Test'])->assertOk();
+        // Google's own answer to a bad ID token, faked: the test must not
+        // depend on reaching oauth2.googleapis.com (or on the PC having a
+        // CA bundle for it). SocialLoginTest covers the verifier itself.
+        Http::fake(['oauth2.googleapis.com/*' => Http::response(['error' => 'invalid_token'], 400)]);
         $this->postJson('/api/auth/social', ['provider' => 'google', 'token' => 'invalid'])->assertStatus(422);
 
         $this->getJson('/api/categories')->assertOk();
