@@ -1,6 +1,8 @@
 # Building Sokoni 1.0 (9): iOS on the Mac, Android bundle for Play
 
-Branch `fix/ugc-moderation`, version `1.0.0+9`. **Deploy the production API first** ([DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md)). Release builds talk to `https://api.sokoni.co.tz/api` with no flag needed, and this build needs the new `/api/blocks` endpoint.
+> **For the production release, follow [RELEASE.md](RELEASE.md)**: step 9 there has Oswald's Mac steps. This file adds the Android bundle.
+
+Branch `fix/ugc-moderation`, version `1.0.0+9`. **Deploy the production API first** ([RELEASE.md](RELEASE.md)). Release builds talk to `https://api.sokoni.co.tz/api` with no flag needed, and this build needs the new `/api/blocks` endpoint.
 
 ## iOS 1.0 (9) on the Mac
 

@@ -1,5 +1,7 @@
 # Production API deployment: moderation release (pairs with iOS 1.0 (9))
 
+> **Superseded by [RELEASE.md](RELEASE.md).** Use RELEASE.md for the production deploy. It uploads the migrations first and runs them before the code goes live, so there is no window where new code meets the old database. This file uploads everything first. It is kept only for its SSH variants.
+
 For whoever updates `api.sokoni.co.tz` on cPanel (`/home/sokoftsn/sokoni-api`). The package comes from branch `fix/ugc-moderation`, which is `main` plus the moderation work. It contains nothing from `feature/delivery`.
 
 **Deploy before** building, testing or recording iOS 1.0 (9). The new app calls `/api/blocks` and sends `terms_version` at sign-in.
