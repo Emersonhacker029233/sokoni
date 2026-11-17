@@ -315,6 +315,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               _SectionHeader(l10n.settingsSectionAccount),
               const _AccountSection(),
+              // Apple Guideline 1.2: everyone you blocked, with Unblock.
+              ListTile(
+                leading: const Icon(Icons.block_rounded),
+                title: Text(l10n.blockedAccountsTitle),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(SokoniRoutes.blockedAccounts),
+              ),
 
               _SectionHeader(l10n.settingsSectionSupport),
               const _SupportLegalSection(),

@@ -79,7 +79,7 @@ class SearchController extends Controller
         }
 
         return SellerProfile::query()
-            ->verified()
+            ->listed()
             ->where(fn ($q) => $q->where('shop_name', 'like', "%{$term}%")->orWhere('handle', 'like', "%{$term}%"))
             ->withCount(['products' => fn ($q) => $q->visible()])
             ->orderByDesc('rating_count')

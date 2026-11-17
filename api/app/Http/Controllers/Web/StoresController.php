@@ -23,7 +23,7 @@ class StoresController extends Controller
     public function __invoke(Request $request): View
     {
         $query = SellerProfile::query()
-            ->verified()
+            ->listed()
             ->with('category')
             ->withCount(['products' => fn ($q) => $q->visible()]);
 

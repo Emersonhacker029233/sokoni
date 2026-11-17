@@ -71,8 +71,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Sign in to save items'), findsNothing, reason: 'the invitation prompt itself should be gone');
-      // The auth entry chooser is now showing — its own "Sign in" option,
-      // not the phone form yet.
+      // Apple Guideline 1.2: the auth entry chooser opens on its Terms
+      // step first — one Agree, then its own "Sign in" option, not the
+      // phone form yet.
+      expect(find.byType(TextFormField), findsNothing);
+      await tester.ensureVisible(find.text('Agree and continue'));
+      await tester.tap(find.text('Agree and continue'));
+      await tester.pumpAndSettle();
       expect(find.byType(TextFormField), findsNothing);
 
       await tester.tap(find.text('Sign in'));

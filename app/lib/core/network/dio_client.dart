@@ -115,6 +115,13 @@ ApiException _mapResponse(Response? response) {
     case 401:
       return UnauthenticatedException(message ?? 'Please sign in again.');
     case 403:
+      if (data is Map && data['code'] == 'blocked') {
+        final blockedUserId = data['blocked_user_id'];
+        return BlockedException(
+          message ?? 'Not available.',
+          blockedUserId: blockedUserId is int ? blockedUserId : null,
+        );
+      }
       return ForbiddenException(message ?? 'Not allowed.');
     case 404:
       return NotFoundException(message ?? 'Not found.');

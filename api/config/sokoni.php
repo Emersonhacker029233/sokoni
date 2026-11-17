@@ -49,6 +49,12 @@ return [
     // social/app links above, since a support contact is essential UI.
     'support_email' => env('SOKONI_SUPPORT_EMAIL', 'support@sokoni.co.tz'),
 
+    // Apple Guideline 1.2: moderators are emailed every new report and
+    // block, plus a daily summary of reports still waiting after 20 hours
+    // (see App\Services\Moderation\ModerationAlerts). Comma-separated for
+    // more than one inbox. Falls back to the support address when unset.
+    'moderation_alert_email' => env('MODERATION_ALERT_EMAIL') ?: env('SOKONI_SUPPORT_EMAIL', 'support@sokoni.co.tz'),
+
     // Hostname the beta deployment is served from — see
     // App\Http\Middleware\NoindexBetaHost. Once the site moves to the main
     // domain this simply never matches again; no manual toggle-off needed.

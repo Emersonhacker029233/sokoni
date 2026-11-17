@@ -11,13 +11,18 @@ use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\Catalog\ProductSearchFilters;
 use App\Services\Catalog\ProductSearchService;
+use App\Services\Moderation\BlockList;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
     private const PER_PAGE = 20;
 
-    public function __construct(private readonly ProductSearchService $search) {}
+    public function __construct(
+        private readonly ProductSearchService $search,
+        private readonly BlockList $blocks,
+    ) {}
 
     public function index(ProductIndexRequest $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
@@ -36,6 +41,7 @@ class ProductController extends Controller
             make: $request->string('make')->toString() ?: null,
             model: $request->string('model')->toString() ?: null,
             year: $request->string('year')->toString() ?: null,
+            viewer: BlockList::viewer($request),
         );
 
         $paginated = $this->search->search($filters, page: (int) ($request->integer('page') ?: 1), perPage: self::PER_PAGE);
@@ -61,11 +67,18 @@ class ProductController extends Controller
         return ProductResource::collection($products);
     }
 
-    public function show(Request $request, Product $product): ProductResource
+    public function show(Request $request, Product $product): ProductResource|JsonResponse
     {
-        $isOwner = $request->user()?->sellerProfileId() === $product->seller_id;
-        $isVisible = $product->is_active && ! $product->is_hidden && $product->seller->isVerified();
-        abort_unless($isOwner || $isVisible, 404);
+        $viewer = BlockList::viewer($request);
+        $isOwner = $viewer !== null && $viewer->sellerProfileId() === $product->seller_id;
+        abort_unless($isOwner || $product->isPubliclyVisible(), 404);
+
+        // Opened from an old link or notification after blocking the shop:
+        // the app shows "You blocked this account" with Unblock instead.
+        $ownerId = $product->seller?->user_id;
+        if (! $isOwner && $this->blocks->hasBlocked($viewer, $ownerId)) {
+            return BlockList::forbidden('You blocked this account.', $ownerId);
+        }
 
         $product->load(['category', 'seller', 'media', 'productAttributes']);
         $product->increment('views');

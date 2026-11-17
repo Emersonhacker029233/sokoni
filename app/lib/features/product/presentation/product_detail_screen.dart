@@ -15,6 +15,8 @@ import '../../../core/utils/formatters.dart';
 import '../../../data/models/product.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/report_sheet.dart';
+import '../../moderation/presentation/blocked_state.dart';
+import '../../moderation/presentation/moderation_menu.dart';
 import '../../orders/providers/order_providers.dart';
 import '../../seller/providers/seller_providers.dart';
 import '../providers/favorites_providers.dart';
@@ -34,7 +36,11 @@ class ProductDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: productAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => SokoniErrorState(
+        // Apple Guideline 1.2: a listing from a shop the viewer blocked,
+        // opened from an old link or notification.
+        error: (error, _) => error is BlockedException
+            ? Scaffold(appBar: AppBar(), body: BlockedState(error: error))
+            : SokoniErrorState(
           // Part 2 (client feedback): "a missing product shows a helpful
           // message rather than a bare 404" — a shared link to a
           // deleted/hidden product is exactly what a plain
@@ -106,15 +112,28 @@ class _ProductDetailBody extends ConsumerWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.flag_outlined),
-              onPressed: () => showReportSheet(
-                context,
-                ref,
-                reportableType: 'product',
-                reportableId: product.id,
+            if (product.seller case final seller?)
+              ModerationMenuButton(
+                target: ModerationTarget(
+                  reportType: 'product',
+                  reportId: product.id,
+                  reportLabel: l10n.moderationReportListing,
+                  authorName: seller.shopName,
+                  authorSellerId: seller.id,
+                  authorHandle: seller.handle,
+                ),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.flag_outlined),
+                tooltip: l10n.moderationReportListing,
+                onPressed: () => showReportSheet(
+                  context,
+                  ref,
+                  reportableType: 'product',
+                  reportableId: product.id,
+                ),
               ),
-            ),
           ],
         ),
         SliverPadding(

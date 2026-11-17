@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/social_auth_config.dart';
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
+import '../../legal/legal_content.dart';
+import '../../legal/presentation/terms_agreement_panel.dart';
+import '../../legal/providers/terms_agreement.dart';
 import 'password_sign_in_sheet.dart';
 import 'social_sign_in_buttons.dart';
 
@@ -31,20 +35,37 @@ Future<void> showAuthEntrySheet(BuildContext context) {
   );
 }
 
-class _AuthEntrySheetContent extends StatelessWidget {
+class _AuthEntrySheetContent extends ConsumerWidget {
   const _AuthEntrySheetContent();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final padding = EdgeInsets.only(
+      left: SokoniDimens.space20,
+      right: SokoniDimens.space20,
+      top: SokoniDimens.space20,
+      bottom: MediaQuery.viewInsetsOf(context).bottom + SokoniDimens.space24,
+    );
+
+    // Apple Guideline 1.2: the Terms come first, before any way to sign
+    // in or create an account, with one Agree button. Agreeing once per
+    // app session is enough; the agreed version then travels with every
+    // sign-in request (AuthRepository) and is stored on the account.
+    final agreed = ref.watch(signInTermsAgreementProvider) == sokoniTermsVersion;
+    if (!agreed) {
+      return SingleChildScrollView(
+        padding: padding,
+        child: TermsAgreementPanel(
+          title: l10n.termsGateTitle,
+          intro: l10n.termsGateIntro,
+          onAgree: () => ref.read(signInTermsAgreementProvider.notifier).agree(),
+        ),
+      );
+    }
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: SokoniDimens.space20,
-        right: SokoniDimens.space20,
-        top: SokoniDimens.space20,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + SokoniDimens.space24,
-      ),
+      padding: padding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

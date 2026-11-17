@@ -2,6 +2,8 @@
 
 namespace App\Services\Catalog;
 
+use App\Models\User;
+
 /**
  * One typed value object for every filter/sort input the API's
  * `ProductController::index` and the website's category/search pages both
@@ -31,6 +33,10 @@ class ProductSearchFilters
         public readonly ?string $make = null,
         public readonly ?string $model = null,
         public readonly ?string $year = null,
+        // Apple Guideline 1.2: the signed-in viewer, so products from shops
+        // they blocked never appear in their results. Null for guests and
+        // for the website, which has no block feature.
+        public readonly ?User $viewer = null,
     ) {}
 
     public function hasLocation(): bool
@@ -58,6 +64,7 @@ class ProductSearchFilters
             make: $this->make,
             model: $this->model,
             year: $this->year,
+            viewer: $this->viewer,
         );
     }
 }

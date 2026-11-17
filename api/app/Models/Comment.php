@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HidesBlockedAuthors;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +20,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['product_id', 'user_id', 'parent_id', 'body'])]
 class Comment extends Model
 {
-    use HasFactory;
+    use HasFactory, HidesBlockedAuthors;
+
+    /** Shown to the public: not hidden by a moderator, and the author isn't banned or suspended. */
+    public function scopePubliclyVisible(Builder $query): Builder
+    {
+        return $query
+            ->where($this->qualifyColumn('is_hidden'), false)
+            ->whereDoesntHave('user', fn (Builder $author) => $author->banned());
+    }
+
+    protected function withoutAuthors(Builder $query, array $userIds): Builder
+    {
+        return $query->whereNotIn($this->qualifyColumn('user_id'), $userIds);
+    }
 
     protected function casts(): array
     {

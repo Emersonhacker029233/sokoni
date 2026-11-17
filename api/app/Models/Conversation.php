@@ -56,6 +56,12 @@ class Conversation extends Model
         return $this->buyer_id === $user->id || $this->seller->user_id === $user->id;
     }
 
+    /** The person on the other side from $user: the shop's owner for the buyer, the buyer for the shop. */
+    public function otherParty(User $user): ?User
+    {
+        return $this->buyer_id === $user->id ? $this->seller?->user : $this->buyer;
+    }
+
     /** Whether the party opposite $user is currently (within the TTL) typing. */
     public function otherPartyTyping(User $user): bool
     {

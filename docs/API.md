@@ -193,7 +193,23 @@ Cart holds items from one seller at a time — enforced server-side (`422` if `i
 
 | Method | Path | Auth | Body | Notes |
 |---|---|---|---|---|
-| POST | `/reports` | ✓ | `{reportable_type: "product"\|"shop"\|"message", reportable_id, reason, note?}` | Three upheld reports against the same content auto-hide it pending admin review. |
+| POST | `/reports` | ✓ | `{reportable_type, reportable_id, reason, note?}` | `reportable_type`: `product`, `shop`, `message`, `comment`, `review`, `showcase`, `update`, `offer` or `user`. `reason`: a code (`abusive`, `harassment`, `sexual_violent`, `scam`, `prohibited`, `misleading`, `not_business`, `spam`, `other`); builds before 1.0 (9) send a translated label, stored as is. Reporting the same thing again while the first is pending files nothing new. Every new report emails `MODERATION_ALERT_EMAIL` and rings the admin-panel bell. Three upheld reports against the same content auto-hide it pending admin review. |
+| GET | `/blocks` | ✓ | — | Who the user blocked: `{data: [{user_id, name, avatar, seller_id?, shop_name?, handle?, logo?, blocked_at}]}`. Never phone, email or username. |
+| POST | `/blocks` | ✓ | `{user_id}` or `{seller_id}`, `reason?` (a report reason code) | Blocks a person, or the owner of a shop. 201 with the row; 200 if already blocked. Unfollows their shop and files a `user` report with reason `blocked`, which alerts the moderators. |
+| DELETE | `/blocks/{user}` | ✓ | — | Unblocks. |
+
+**Blocking** (Apple Guideline 1.2):
+
+- **What disappears for the blocker.** Every list leaves out content from users they blocked: feed, products and search, sellers, comments, reviews, showcases, updates, offers, conversations and notifications. The public routes read the bearer token for this, though they don't require one.
+- **The blocked-state answer.** Opening a blocked shop, product, showcase or chat answers `403 {message, code: "blocked", blocked_user_id}`.
+- **Contact stops both ways.** Messages, new conversations and orders between two people where either blocked the other answer `403 {code: "blocked"}`, with no `blocked_user_id`.
+
+**Bans and hidden content.**
+
+- **Banned users.** A banned or suspended user's shop, listings, showcases, updates, offers, comments and reviews are left out of every public list until the ban ends.
+- **Moderator-hidden items.** Shops, messages, showcases and updates hidden by a moderator (`is_hidden`) are left out too.
+
+**Sign-in records the Terms.** Every sign-in endpoint accepts an optional `terms_version`. When sent, it is stored on the account (`terms_accepted_at`, `terms_version`) in the same request. User objects carry `terms_version`.
 
 ## Devices (push notifications)
 

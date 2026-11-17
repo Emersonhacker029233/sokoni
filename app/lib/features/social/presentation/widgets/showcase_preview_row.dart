@@ -7,6 +7,7 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/showcase.dart';
+import '../../../moderation/providers/block_providers.dart';
 import '../../providers/social_providers.dart';
 import '../../../../shared/widgets/sokoni_network_image.dart';
 
@@ -22,7 +23,11 @@ class ShowcasePreviewRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final feedAsync = ref.watch(showcaseFeedProvider);
-    final items = feedAsync.value?.items ?? const <Showcase>[];
+    // Apple Guideline 1.2: a blocked shop's videos leave the row at once.
+    final blocked = ref.watch(blockedFilterProvider);
+    final items = (feedAsync.value?.items ?? const <Showcase>[])
+        .where((s) => !blocked.hidesShop(s.seller?.id))
+        .toList();
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(

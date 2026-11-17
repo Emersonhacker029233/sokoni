@@ -44,7 +44,7 @@ class FeedService
     public function paginate(?User $viewer, ?float $lat, ?float $lng, int $page): LengthAwarePaginator
     {
         $spine = $this->buildSpine($viewer, $lat, $lng);
-        $woven = $this->weaveShowcases($spine);
+        $woven = $this->weaveShowcases($spine, $viewer);
 
         $offset = ($page - 1) * self::PER_PAGE;
         $slice = $woven->slice($offset, self::PER_PAGE)->values();
@@ -60,12 +60,14 @@ class FeedService
             : [];
 
         $followed = Product::visible()
+            ->notBlockedBy($viewer)
             ->with(['category', 'seller', 'media'])
             ->whereIn('seller_id', $followedSellerIds)
             ->orderByDesc('created_at')
             ->get();
 
         $restQuery = Product::visible()
+            ->notBlockedBy($viewer)
             ->with(['category', 'seller', 'media'])
             ->whereNotIn('seller_id', $followedSellerIds);
 
@@ -80,6 +82,7 @@ class FeedService
             ->values();
 
         $offers = Offer::visible()
+            ->notBlockedBy($viewer)
             ->with(['seller', 'product.media'])
             ->orderByDesc('ends_at')
             ->get();
@@ -91,9 +94,9 @@ class FeedService
     }
 
     /** @return Collection<int, FeedItem> */
-    private function weaveShowcases(Collection $spine): Collection
+    private function weaveShowcases(Collection $spine, ?User $viewer): Collection
     {
-        $showcases = Showcase::visible()->with(['seller', 'product'])->orderByDesc('created_at')->get();
+        $showcases = Showcase::visible()->notBlockedBy($viewer)->with(['seller', 'product'])->orderByDesc('created_at')->get();
 
         if ($showcases->isEmpty()) {
             return $spine;

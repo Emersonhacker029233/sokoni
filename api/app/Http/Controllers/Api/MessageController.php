@@ -6,14 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreMessageRequest;
 use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
+use App\Services\Moderation\BlockList;
 use App\Services\Push\PushNotifier;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
 {
-    public function __construct(private readonly PushNotifier $push) {}
+    public function __construct(
+        private readonly PushNotifier $push,
+        private readonly BlockList $blocks,
+    ) {}
 
     /**
      * Paginated messages, oldest first. Also marks every message from the
@@ -21,22 +26,36 @@ class MessageController extends Controller
      * thread is open (CLAUDE.md feature 5: no WebSocket server on shared
      * hosting), which doubles as the read-receipt mechanism.
      */
-    public function index(Request $request, Conversation $conversation): AnonymousResourceCollection
+    public function index(Request $request, Conversation $conversation): AnonymousResourceCollection|JsonResponse
     {
         $this->authorize('view', $conversation);
+
+        $other = $conversation->otherParty($request->user());
+        if ($this->blocks->hasBlocked($request->user(), $other?->id)) {
+            return BlockList::forbidden('You blocked this account.', $other?->id);
+        }
 
         $conversation->messages()
             ->where('sender_id', '!=', $request->user()->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
-        $messages = $conversation->messages()->with('sender')->paginate(30);
+        // A message a moderator hid is gone for both people in the thread.
+        $messages = $conversation->messages()->where('is_hidden', false)->with('sender')->paginate(30);
 
         return MessageResource::collection($messages);
     }
 
-    public function store(StoreMessageRequest $request, Conversation $conversation): MessageResource
+    public function store(StoreMessageRequest $request, Conversation $conversation): MessageResource|JsonResponse
     {
+        // Blocked either way: no new messages between the two (Apple
+        // Guideline 1.2). Same answer for both sides, so the blocked
+        // person can't tell who blocked whom.
+        $other = $conversation->otherParty($request->user());
+        if ($other !== null && $this->blocks->eitherBlocked($request->user(), $other)) {
+            return BlockList::forbidden("You can't send messages to this account.");
+        }
+
         // Stored as a full URL, not a disk-relative path — matches the
         // convention every other media field in the API already uses
         // (see ProductMediaController), so the client never needs to know
@@ -64,6 +83,7 @@ class MessageController extends Controller
                 'New message',
                 $message->body ?? 'Sent an image',
                 ['conversation_id' => $conversation->id],
+                actor: $request->user(),
             );
         }
 

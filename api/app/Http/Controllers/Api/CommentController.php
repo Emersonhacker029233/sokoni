@@ -7,6 +7,7 @@ use App\Http\Requests\CommentStoreRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Product;
+use App\Services\Moderation\BlockList;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -14,11 +15,22 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class CommentController extends Controller
 {
     /** Root comments, newest first, each with its one level of replies eager loaded. */
-    public function index(Product $product): AnonymousResourceCollection
+    public function index(Request $request, Product $product): AnonymousResourceCollection
     {
+        $viewer = BlockList::viewer($request);
+
+        // Hidden comments, comments by banned users and comments by anyone
+        // the viewer blocked are all left out, replies included.
         $comments = $product->comments()
-            ->where('is_hidden', false)
-            ->with(['user', 'product', 'replies' => fn ($query) => $query->where('is_hidden', false), 'replies.user', 'replies.product'])
+            ->publiclyVisible()
+            ->notBlockedBy($viewer)
+            ->with([
+                'user',
+                'product',
+                'replies' => fn ($query) => $query->publiclyVisible()->notBlockedBy($viewer),
+                'replies.user',
+                'replies.product',
+            ])
             ->paginate(20);
 
         return CommentResource::collection($comments);

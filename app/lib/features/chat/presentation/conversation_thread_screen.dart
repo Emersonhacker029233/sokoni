@@ -18,6 +18,10 @@ import '../../../data/models/message.dart';
 import '../../../data/models/product.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/report_sheet.dart';
+import '../../auth/providers/auth_providers.dart';
+import '../../moderation/presentation/blocked_state.dart';
+import '../../moderation/presentation/moderation_menu.dart';
+import '../../moderation/providers/block_providers.dart';
 import '../providers/chat_providers.dart';
 import '../../../shared/widgets/sokoni_network_image.dart';
 import 'chat_image_viewer_screen.dart';
@@ -78,6 +82,41 @@ class _ConversationThreadScreenState extends ConsumerState<ConversationThreadScr
     }
   }
 
+  /// The shop (seen by the buyer) or the buyer (seen by the shop). A shop
+  /// is reported as a shop: the app doesn't know its owner's user id.
+  ModerationTarget? _moderationTarget(
+    AppLocalizations l10n,
+    Conversation? conversation,
+    int? myId, {
+    required bool otherIsShop,
+  }) {
+    if (conversation == null || myId == null) return null;
+    final seller = conversation.seller;
+    final buyer = conversation.buyer;
+    if (otherIsShop && seller != null) {
+      return ModerationTarget(
+        reportType: 'shop',
+        reportId: seller.id,
+        reportLabel: l10n.moderationReportUser(seller.shopName),
+        authorName: seller.shopName,
+        authorSellerId: seller.id,
+        authorHandle: seller.handle,
+        hint: l10n.messageLongPressHint,
+      );
+    }
+    if (!otherIsShop && buyer != null) {
+      return ModerationTarget(
+        reportType: 'user',
+        reportId: buyer.id,
+        reportLabel: l10n.moderationReportUser(buyer.name),
+        authorName: buyer.name,
+        authorUserId: buyer.id,
+        hint: l10n.messageLongPressHint,
+      );
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -88,11 +127,33 @@ class _ConversationThreadScreenState extends ConsumerState<ConversationThreadScr
       orElse: () => null,
     );
 
+    // Apple Guideline 1.2: report or block the other person from the
+    // thread itself. The buyer sees the shop; the shop sees the buyer.
+    final me = ref.watch(currentUserProvider).value;
+    final otherIsShop = conversation != null && me != null && conversation.buyer?.id == me.id;
+    final moderationTarget = _moderationTarget(l10n, conversation, me?.id, otherIsShop: otherIsShop);
+    final blocked = ref.watch(blockedFilterProvider);
+    final blockedAccount = otherIsShop
+        ? blocked.forShop(conversation.seller?.id)
+        : blocked.forUser(conversation?.buyer?.id);
+    final threadError = threadAsync.error;
+    final blockedBody = blockedAccount != null || threadError is BlockedException
+        ? BlockedState(
+            error: threadError is BlockedException
+                ? threadError
+                : BlockedException(l10n.blockedStateTitle, blockedUserId: blockedAccount!.userId),
+            name: moderationTarget?.authorName,
+          )
+        : null;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(conversation?.seller?.shopName ?? conversation?.buyer?.name ?? l10n.chatTitle),
+        actions: [
+          if (moderationTarget != null && blockedBody == null) ModerationMenuButton(target: moderationTarget),
+        ],
       ),
-      body: Column(
+      body: blockedBody ?? Column(
         children: [
           if (conversation?.product != null) _PinnedProductContext(conversation: conversation!),
           Expanded(

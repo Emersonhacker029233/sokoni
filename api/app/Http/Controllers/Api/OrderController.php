@@ -12,6 +12,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Notifications\OrderPlacedNotification;
 use App\Notifications\OrderStatusUpdatedNotification;
+use App\Services\Moderation\BlockList;
 use App\Services\Push\PushNotifier;
 use App\Support\SafeMail;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +26,10 @@ class OrderController extends Controller
     /** Flat delivery fee in TZS when delivery_method is 'delivery'. No fee schedule is specified yet — see DECISIONS.md. */
     private const DELIVERY_FEE = 3000;
 
-    public function __construct(private readonly PushNotifier $push) {}
+    public function __construct(
+        private readonly PushNotifier $push,
+        private readonly BlockList $blocks,
+    ) {}
 
     /** The signed-in buyer's own orders. */
     public function index(Request $request): AnonymousResourceCollection
@@ -60,13 +64,26 @@ class OrderController extends Controller
         return new OrderResource($order);
     }
 
-    public function store(CheckoutRequest $request): OrderResource
+    public function store(CheckoutRequest $request): OrderResource|JsonResponse
     {
         $products = Product::query()
             ->visible()
+            ->with('seller.user')
             ->whereIn('id', collect($request->input('items'))->pluck('product_id'))
             ->get()
             ->keyBy('id');
+
+        // Every product can drop out of visible() between adding it to the
+        // cart and checking out (hidden, shop suspended, owner banned).
+        if ($products->isEmpty()) {
+            throw ValidationException::withMessages(['items' => 'One or more products are unavailable.']);
+        }
+
+        // No orders between two people when either blocked the other.
+        $shopOwner = $products->first()->seller?->user;
+        if ($shopOwner !== null && $this->blocks->eitherBlocked($request->user(), $shopOwner)) {
+            return BlockList::forbidden("You can't order from this shop.");
+        }
 
         $order = DB::transaction(function () use ($request, $products) {
             $sellerId = $products->first()->seller_id;

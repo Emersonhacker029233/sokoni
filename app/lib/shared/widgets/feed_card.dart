@@ -22,6 +22,8 @@ import '../../data/models/seller_summary.dart';
 import '../../data/models/showcase.dart';
 import '../../features/auth/presentation/sign_in_prompt_sheet.dart';
 import '../../features/discovery/presentation/widgets/comment_sheet.dart';
+import '../../features/moderation/presentation/moderation_menu.dart';
+import '../../features/moderation/providers/block_providers.dart';
 import '../../features/product/providers/favorites_providers.dart';
 import '../../features/seller/providers/seller_providers.dart';
 import 'bottom_gradient_scrim.dart';
@@ -33,13 +35,18 @@ import 'sokoni_network_image.dart';
 /// seller-header + full-width-media + action-row skeleton so the feed
 /// reads as one consistent surface, not three unrelated card designs
 /// stitched together.
-class FeedCard extends StatelessWidget {
+class FeedCard extends ConsumerWidget {
   const FeedCard({required this.item, super.key});
 
   final FeedItem item;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Apple Guideline 1.2: a blocked shop's cards leave the feed the
+    // moment Block is tapped, cached pages included.
+    final sellerId = item.product?.seller?.id ?? item.offer?.seller?.id ?? item.showcase?.seller?.id;
+    if (ref.watch(blockedFilterProvider).hidesShop(sellerId)) return const SizedBox.shrink();
+
     return switch (item.type) {
       FeedItemType.product => _ProductFeedCard(product: item.product!),
       FeedItemType.offer => _OfferFeedCard(offer: item.offer!),
@@ -58,9 +65,14 @@ class _FeedCardShell extends StatelessWidget {
     required this.distanceKm,
     required this.media,
     required this.footer,
+    required this.reportType,
+    required this.reportId,
     this.sponsoredContactMethod,
   });
 
+  /// What the header's "⋯" menu reports: product, offer or showcase.
+  final String reportType;
+  final int reportId;
   final SellerSummary? seller;
   final VoidCallback? onSellerTap;
   final double? distanceKm;
@@ -91,6 +103,8 @@ class _FeedCardShell extends StatelessWidget {
               seller: seller,
               onTap: onSellerTap,
               distanceKm: distanceKm,
+              reportType: reportType,
+              reportId: reportId,
             ),
           ),
           if (sponsoredContactMethod != null)
@@ -121,11 +135,15 @@ class _SellerHeader extends StatelessWidget {
   const _SellerHeader({
     required this.seller,
     required this.onTap,
+    required this.reportType,
+    required this.reportId,
     this.distanceKm,
   });
 
   final SellerSummary? seller;
   final VoidCallback? onTap;
+  final String reportType;
+  final int reportId;
   final double? distanceKm;
 
   @override
@@ -182,6 +200,18 @@ class _SellerHeader extends StatelessWidget {
             ),
           ),
           _FeedFollowButton(seller: s),
+          ModerationMenuButton(
+            target: ModerationTarget(
+              reportType: reportType,
+              reportId: reportId,
+              reportLabel: reportType == 'product'
+                  ? AppLocalizations.of(context).moderationReportListing
+                  : AppLocalizations.of(context).moderationReportPost,
+              authorName: s.shopName,
+              authorSellerId: s.id,
+              authorHandle: s.handle,
+            ),
+          ),
         ],
       ),
     );
@@ -356,6 +386,8 @@ class _ProductFeedCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _FeedCardShell(
+      reportType: 'product',
+      reportId: product.id,
       seller: product.seller,
       onSellerTap: product.seller == null
           ? null
@@ -648,6 +680,8 @@ class _OfferFeedCard extends StatelessWidget {
         : l10n.offerCountdownHours(remaining.inHours.clamp(0, 23));
 
     return _FeedCardShell(
+      reportType: 'offer',
+      reportId: offer.id,
       seller: offer.seller,
       onSellerTap: offer.seller == null
           ? null
@@ -735,6 +769,8 @@ class _ShowcaseFeedCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push(SokoniRoutes.showcaseFeed),
       child: _FeedCardShell(
+        reportType: 'showcase',
+        reportId: showcase.id,
         seller: showcase.seller,
         onSellerTap: showcase.seller == null
             ? null

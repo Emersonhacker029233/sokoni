@@ -33,3 +33,8 @@ Schedule::command('delivery:dispatch-tick')->everyMinute()->withoutOverlapping(5
 
 // Privacy: driver breadcrumbs older than 72 h are deleted.
 Schedule::command('delivery:purge-locations')->hourly();
+
+// Apple Guideline 1.2: a daily email to MODERATION_ALERT_EMAIL listing every
+// report still pending after 20 hours, before it breaks the 24-hour promise.
+// 05:00 UTC is 08:00 in Dar es Salaam. Sends nothing on a clear queue.
+Schedule::command('reports:waiting-summary')->dailyAt('05:00');

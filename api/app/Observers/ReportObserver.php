@@ -3,12 +3,22 @@
 namespace App\Observers;
 
 use App\Models\Report;
+use App\Services\Moderation\ModerationAlerts;
 use App\Support\Settings;
 use Illuminate\Database\Eloquent\Model;
 
-/** Upheld reports against the same content, at/above the configured threshold, auto-hide it pending review. */
+/**
+ * Every new report (and every block, which files one) alerts the
+ * moderators at once. Upheld reports against the same content, at/above
+ * the configured threshold, auto-hide it pending review.
+ */
 class ReportObserver
 {
+    public function created(Report $report): void
+    {
+        app(ModerationAlerts::class)->newReport($report);
+    }
+
     public function updated(Report $report): void
     {
         if (! $report->wasChanged('status') || $report->status !== 'upheld') {

@@ -13,6 +13,7 @@ use App\Services\Delivery\NullLiveTracking;
 use App\Services\Delivery\OpenRouteServiceDistance;
 use App\Services\Delivery\RouteDistance;
 use App\Services\Delivery\StraightLineDistance;
+use App\Services\Moderation\BlockList;
 use App\Services\Nida\ManualReviewNidaVerifier;
 use App\Services\Nida\NidaVerifier;
 use App\Services\Payment\FakePaymentGateway;
@@ -105,6 +106,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(LiveTracking::class, fn ($app) => $app->make(FirebaseConnection::class)->hasDatabase()
             ? $app->make(FirebaseLiveTracking::class)
             : $app->make(NullLiveTracking::class));
+        // One block-list lookup per viewer per request, however many lists
+        // the request filters (see BlockList).
+        $this->app->scoped(BlockList::class);
     }
 
     /**

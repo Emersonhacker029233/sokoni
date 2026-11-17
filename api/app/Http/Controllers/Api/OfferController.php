@@ -8,6 +8,7 @@ use App\Http\Resources\OfferResource;
 use App\Models\Offer;
 use App\Models\Product;
 use App\Models\SellerProfile;
+use App\Services\Moderation\BlockList;
 use App\Services\Push\PushNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,11 +23,12 @@ class OfferController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Offer::query()->visible()->with(['seller', 'product.media']);
+        $viewer = BlockList::viewer($request);
+        $query = Offer::query()->visible()->notBlockedBy($viewer)->with(['seller', 'product.media']);
 
         if ($request->boolean('following')) {
-            abort_unless($request->user(), 401);
-            $query->followedBy($request->user()->id);
+            abort_unless($viewer, 401);
+            $query->followedBy($viewer->id);
         }
 
         if ($sellerId = $request->integer('seller_id')) {
@@ -77,7 +79,7 @@ class OfferController extends Controller
     {
         foreach ($seller->followers as $follower) {
             if ($follower->notify_offers) {
-                $this->push->notify($follower, $title, $body, $data);
+                $this->push->notify($follower, $title, $body, $data, actor: $seller->user);
             }
         }
     }

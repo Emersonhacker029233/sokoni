@@ -15,6 +15,7 @@ use App\Models\TrustedDevice;
 use App\Models\User;
 use App\Services\Auth\ReviewAccount;
 use App\Services\Otp\PhoneOtpService;
+use App\Support\TermsAcceptance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -216,6 +217,8 @@ class PasswordAuthController extends Controller
 
     private function issueToken(User $user, array $extra = []): JsonResponse
     {
+        TermsAcceptance::recordFrom(request(), $user);
+
         $token = $user->createToken('sokoni-app')->plainTextToken;
 
         return response()->json([

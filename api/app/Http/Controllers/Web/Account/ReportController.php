@@ -30,8 +30,8 @@ class ReportController extends Controller
             'reporter_id' => $request->user()->id,
             'reportable_type' => $modelClass,
             'reportable_id' => $request->integer('reportable_id'),
-            'reason' => $request->string('reason'),
-            'note' => $request->string('note') ?: null,
+            'reason' => $request->string('reason')->toString(),
+            'note' => $request->string('note')->toString() ?: null,
         ]);
 
         return back()->with('status', __('site.report_submitted'));

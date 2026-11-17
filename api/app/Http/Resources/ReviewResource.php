@@ -17,7 +17,10 @@ class ReviewResource extends JsonResource
             'comment' => $this->comment,
             'reply' => $this->reply,
             'replied_at' => $this->replied_at,
-            'buyer' => new UserResource($this->whenLoaded('buyer')),
+            // Public shape only: the shop's review list is a public
+            // endpoint and used to expose every reviewer's phone, email
+            // and username here (docs/moderation/AUDIT.md §5.1).
+            'buyer' => new PublicUserResource($this->whenLoaded('buyer')),
             'created_at' => $this->created_at,
         ];
     }

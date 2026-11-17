@@ -6,6 +6,8 @@ import '../../../../core/l10n/gen/app_localizations.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../legal/legal_content.dart';
+import '../../../legal/presentation/terms_agreement_panel.dart';
+import '../../../legal/providers/terms_agreement.dart';
 import '../../providers/create_account_providers.dart';
 
 /// Step 3 — Terms. Acceptance is recorded exactly as it is elsewhere in
@@ -14,6 +16,11 @@ import '../../providers/create_account_providers.dart';
 /// records the acceptance into the local draft; `CreateAccountController.
 /// submit()` sends `terms_version` alongside everything else in the one
 /// request that actually creates the account.
+///
+/// Apple Guideline 1.2: the sign-in sheet's Terms step comes before the
+/// "Create an account" option, so normally the person has already agreed
+/// and this step only confirms it (plus the optional marketing consent).
+/// Reached any other way, it shows the same single Agree step first.
 class CreateAccountStep3Terms extends ConsumerStatefulWidget {
   const CreateAccountStep3Terms({required this.onSubmitted, super.key});
 
@@ -24,7 +31,6 @@ class CreateAccountStep3Terms extends ConsumerStatefulWidget {
 }
 
 class _CreateAccountStep3TermsState extends ConsumerState<CreateAccountStep3Terms> {
-  bool _accepted = false;
   bool _marketingConsent = false;
 
   Future<void> _continue() async {
@@ -35,6 +41,18 @@ class _CreateAccountStep3TermsState extends ConsumerState<CreateAccountStep3Term
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final agreed = ref.watch(signInTermsAgreementProvider) == sokoniTermsVersion;
+
+    if (!agreed) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(SokoniDimens.space20),
+        child: TermsAgreementPanel(
+          title: l10n.termsGateTitle,
+          intro: l10n.termsGateIntro,
+          onAgree: () => ref.read(signInTermsAgreementProvider.notifier).agree(),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.all(SokoniDimens.space20),
@@ -43,25 +61,28 @@ class _CreateAccountStep3TermsState extends ConsumerState<CreateAccountStep3Term
         children: [
           Text(l10n.legalAcceptanceTitle, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: SokoniDimens.space16),
-          Text(l10n.legalAcceptanceBody, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: SokoniDimens.space20),
-          OutlinedButton(
-            onPressed: () => context.push(SokoniRoutes.terms),
-            child: Text(l10n.legalTermsTitle),
+          Row(
+            children: [
+              const Icon(Icons.check_circle_rounded),
+              const SizedBox(width: SokoniDimens.space12),
+              Expanded(child: Text(l10n.termsAgreedNote(sokoniTermsVersion))),
+            ],
           ),
           const SizedBox(height: SokoniDimens.space8),
-          OutlinedButton(
-            onPressed: () => context.push(SokoniRoutes.privacy),
-            child: Text(l10n.legalPrivacyTitle),
+          Wrap(
+            spacing: SokoniDimens.space8,
+            children: [
+              TextButton(
+                onPressed: () => context.push(SokoniRoutes.terms),
+                child: Text(l10n.termsGateReadFull),
+              ),
+              TextButton(
+                onPressed: () => context.push(SokoniRoutes.privacy),
+                child: Text(l10n.legalPrivacyTitle),
+              ),
+            ],
           ),
-          const SizedBox(height: SokoniDimens.space20),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _accepted,
-            onChanged: (value) => setState(() => _accepted = value ?? false),
-            title: Text(l10n.legalAcceptCheckbox),
-            controlAffinity: ListTileControlAffinity.leading,
-          ),
+          const SizedBox(height: SokoniDimens.space12),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             value: _marketingConsent,
@@ -74,7 +95,7 @@ class _CreateAccountStep3TermsState extends ConsumerState<CreateAccountStep3Term
           ),
           const Spacer(),
           FilledButton(
-            onPressed: _accepted ? _continue : null,
+            onPressed: _continue,
             child: Text(l10n.legalContinue),
           ),
         ],

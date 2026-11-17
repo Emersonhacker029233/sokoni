@@ -2,47 +2,58 @@
 
 namespace App\Filament\Resources\Reports\Tables;
 
+use App\Filament\Resources\Reports\ReportActions;
 use App\Models\Report;
-use App\Services\Push\PushNotifier;
-use App\Support\ActivityLogger;
-use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 /**
- * The moderation queue (CLAUDE.md feature 9/11). Resolving a report as
- * "upheld" feeds `ReportObserver`'s 3-strikes auto-hide; the four direct
- * actions below (hide / warn / suspend / ban) are the admin's manual
- * override for anything that shouldn't wait for a third strike.
+ * The moderation queue (CLAUDE.md feature 9/11, Apple Guideline 1.2).
+ * Pending reports come first, oldest first, each with how long is left of
+ * its 24 hours; overdue ones show red and have their own filter.
+ * Resolving a report as "upheld" also feeds `ReportObserver`'s auto-hide.
  */
 class ReportsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            ->defaultSort('status')
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['reporter', 'reportable']))
+            ->defaultSort(fn (Builder $query) => $query
+                ->orderByRaw("case when status = 'pending' then 0 else 1 end")
+                ->orderByRaw("case when status = 'pending' then created_at end asc")
+                ->orderByDesc('created_at'))
             ->columns([
+                TextColumn::make('due')
+                    ->label('Due')
+                    ->badge()
+                    ->state(fn (Report $record) => $record->dueLabel())
+                    ->color(fn (Report $record) => $record->dueColor())
+                    ->icon(fn (Report $record) => $record->isOverdue() ? 'heroicon-o-exclamation-circle' : null),
                 TextColumn::make('reportable_type')
                     ->label('Type')
-                    ->formatStateUsing(fn (string $state) => class_basename($state)),
-                TextColumn::make('reportable_id')
-                    ->label('#')
-                    ->numeric(),
+                    ->formatStateUsing(fn (Report $record) => ucfirst($record->typeName())),
+                TextColumn::make('content')
+                    ->label('Content')
+                    ->state(fn (Report $record) => Str::limit($record->contentPreview()['text'] ?? $record->contentPreview()['title'], 60))
+                    ->wrap(),
+                TextColumn::make('reason')
+                    ->formatStateUsing(fn (Report $record) => $record->reasonLabel())
+                    ->searchable(),
                 TextColumn::make('reporter.name')
                     ->label('Reported by')
                     ->searchable(),
-                TextColumn::make('reason')
-                    ->searchable(),
-                TextColumn::make('note')
-                    ->limit(40)
-                    ->toggleable(),
+                TextColumn::make('author')
+                    ->label('Posted by')
+                    ->state(fn (Report $record) => $record->offendingUser()?->name ?? '-'),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state) => match ($state) {
@@ -56,6 +67,10 @@ class ReportsTable
                     ->sortable(),
             ])
             ->filters([
+                Filter::make('overdue')
+                    ->label('Overdue (pending over 24 hours)')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->overdue()),
                 SelectFilter::make('status')->options([
                     'pending' => 'Pending',
                     'upheld' => 'Upheld',
@@ -63,117 +78,11 @@ class ReportsTable
                 ]),
                 SelectFilter::make('reportable_type')
                     ->label('Type')
-                    ->options([
-                        \App\Models\Product::class => 'Product',
-                        \App\Models\SellerProfile::class => 'Shop',
-                        \App\Models\Message::class => 'Message',
-                    ]),
+                    ->options(collect(Report::TYPES)->mapWithKeys(fn (string $class, string $name) => [$class => ucfirst($name)])->all()),
             ])
             ->recordActions([
                 ViewAction::make(),
-                Action::make('uphold')
-                    ->label('Uphold')
-                    ->icon('heroicon-o-shield-exclamation')
-                    ->color('danger')
-                    ->visible(fn (Report $record) => $record->status === 'pending')
-                    ->requiresConfirmation()
-                    ->action(function (Report $record) {
-                        $record->forceFill([
-                            'status' => 'upheld',
-                            'resolved_by' => auth()->id(),
-                            'resolution' => 'Upheld by admin review.',
-                        ])->save();
-                        ActivityLogger::record(auth()->user(), 'report.upheld', $record);
-                        Notification::make()->title('Report upheld')->success()->send();
-                    }),
-                Action::make('dismiss')
-                    ->label('Dismiss')
-                    ->icon('heroicon-o-x-mark')
-                    ->color('gray')
-                    ->visible(fn (Report $record) => $record->status === 'pending')
-                    ->action(function (Report $record) {
-                        $record->forceFill([
-                            'status' => 'dismissed',
-                            'resolved_by' => auth()->id(),
-                            'resolution' => 'Dismissed — no action taken.',
-                        ])->save();
-                        ActivityLogger::record(auth()->user(), 'report.dismissed', $record);
-                        Notification::make()->title('Report dismissed')->send();
-                    }),
-                Action::make('hide')
-                    ->label('Hide content')
-                    ->icon('heroicon-o-eye-slash')
-                    ->color('warning')
-                    ->visible(
-                        fn (Report $record) => $record->reportable !== null
-                            && array_key_exists('is_hidden', $record->reportable->getAttributes())
-                            && ! $record->reportable->is_hidden
-                    )
-                    ->requiresConfirmation()
-                    ->action(function (Report $record) {
-                        $record->reportable->forceFill(['is_hidden' => true])->save();
-                        ActivityLogger::record(auth()->user(), 'content.hidden', $record->reportable, 'Reported: '.$record->reason);
-                        Notification::make()->title('Content hidden')->success()->send();
-                    }),
-                Action::make('warn')
-                    ->label('Warn user')
-                    ->icon('heroicon-o-exclamation-triangle')
-                    ->color('warning')
-                    ->visible(fn (Report $record) => $record->offendingUser() !== null)
-                    ->schema([
-                        Textarea::make('reason')->required(),
-                    ])
-                    ->action(function (Report $record, array $data) {
-                        app(PushNotifier::class)->notify(
-                            $record->offendingUser(),
-                            'Warning from Sokoni',
-                            $data['reason'],
-                        );
-                        ActivityLogger::record(auth()->user(), 'user.warned', $record->offendingUser(), $data['reason']);
-                        Notification::make()->title('Warning sent')->success()->send();
-                    }),
-                Action::make('suspend')
-                    ->label('Suspend user')
-                    ->icon('heroicon-o-pause-circle')
-                    ->color('danger')
-                    ->visible(fn (Report $record) => $record->offendingUser() !== null)
-                    ->schema([
-                        TextInput::make('days')->numeric()->required()->default(7),
-                        Textarea::make('reason')->required(),
-                    ])
-                    ->action(function (Report $record, array $data) {
-                        $user = $record->offendingUser();
-                        $user->forceFill([
-                            'banned_at' => now(),
-                            'banned_until' => now()->addDays((int) $data['days']),
-                            'ban_reason' => $data['reason'],
-                        ])->save();
-                        $user->tokens()->delete();
-                        app(PushNotifier::class)->notify($user, 'Account suspended', $data['reason']);
-                        ActivityLogger::record(auth()->user(), 'user.suspended', $user, $data['reason'], ['days' => (int) $data['days']]);
-                        Notification::make()->title('User suspended')->success()->send();
-                    }),
-                Action::make('ban')
-                    ->label('Ban user')
-                    ->icon('heroicon-o-no-symbol')
-                    ->color('danger')
-                    ->visible(fn (Report $record) => $record->offendingUser() !== null)
-                    ->schema([
-                        Textarea::make('reason')->required(),
-                    ])
-                    ->requiresConfirmation()
-                    ->action(function (Report $record, array $data) {
-                        $user = $record->offendingUser();
-                        $user->forceFill([
-                            'banned_at' => now(),
-                            'banned_until' => null,
-                            'ban_reason' => $data['reason'],
-                        ])->save();
-                        $user->tokens()->delete();
-                        app(PushNotifier::class)->notify($user, 'Account banned', $data['reason']);
-                        ActivityLogger::record(auth()->user(), 'user.banned', $user, $data['reason']);
-                        Notification::make()->title('User banned')->success()->send();
-                    }),
+                ActionGroup::make(ReportActions::all()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

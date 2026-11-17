@@ -3,6 +3,7 @@
 namespace App\Services\Push;
 
 use App\Models\User;
+use App\Services\Moderation\BlockList;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -23,11 +24,20 @@ use Illuminate\Support\Facades\Log;
  */
 class LogPushNotifier implements PushNotifier
 {
-    public function notify(User $user, string $title, string $body, array $data = []): void
+    public function notify(User $user, string $title, string $body, array $data = [], ?User $actor = null): void
     {
+        if ($actor !== null && app(BlockList::class)->hasBlocked($user, $actor->id)) {
+            return;
+        }
+
         $tokenCount = $user->devices()->count();
         Log::info("[MOCK PUSH] to user #{$user->id} ({$tokenCount} device(s)): {$title} — {$body}", $data);
 
-        $user->appNotifications()->create(['title' => $title, 'body' => $body, 'data' => $data]);
+        $user->appNotifications()->create([
+            'title' => $title,
+            'body' => $body,
+            'data' => $data,
+            'actor_id' => $actor?->id,
+        ]);
     }
 }

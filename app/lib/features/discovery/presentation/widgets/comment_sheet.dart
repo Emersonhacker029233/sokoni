@@ -8,6 +8,8 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/comment.dart';
 import '../../../auth/presentation/auth_entry_sheet.dart';
+import '../../../moderation/presentation/moderation_menu.dart';
+import '../../../moderation/providers/block_providers.dart';
 import '../../providers/feed_providers.dart';
 import '../../../../shared/widgets/sokoni_avatar.dart';
 
@@ -272,14 +274,19 @@ class _CommentSheetBodyState extends ConsumerState<_CommentSheetBody> {
   }
 }
 
-class _CommentTile extends StatelessWidget {
+class _CommentTile extends ConsumerWidget {
   const _CommentTile({required this.comment, required this.onReply});
 
   final ProductComment comment;
   final VoidCallback onReply;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Apple Guideline 1.2: comments by someone the viewer blocked vanish
+    // the moment they block, before the thread is refetched.
+    final blocked = ref.watch(blockedFilterProvider);
+    if (blocked.hidesUser(comment.user.id)) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: SokoniDimens.space8),
       child: Column(
@@ -287,13 +294,14 @@ class _CommentTile extends StatelessWidget {
         children: [
           _CommentRow(comment: comment, onReply: onReply),
           for (final reply in comment.replies)
-            Padding(
-              padding: const EdgeInsets.only(
-                left: SokoniDimens.space32,
-                top: SokoniDimens.space8,
+            if (!blocked.hidesUser(reply.user.id))
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: SokoniDimens.space32,
+                  top: SokoniDimens.space8,
+                ),
+                child: _CommentRow(comment: reply, onReply: null),
               ),
-              child: _CommentRow(comment: reply, onReply: null),
-            ),
         ],
       ),
     );
@@ -310,6 +318,15 @@ class _CommentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final menu = ModerationMenuButton(
+      target: ModerationTarget(
+        reportType: 'comment',
+        reportId: comment.id,
+        reportLabel: l10n.moderationReportComment,
+        authorName: comment.user.name,
+        authorUserId: comment.user.id,
+      ),
+    );
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,6 +393,7 @@ class _CommentRow extends StatelessWidget {
             ],
           ),
         ),
+        menu,
       ],
     );
   }
