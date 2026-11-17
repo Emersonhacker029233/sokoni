@@ -44,7 +44,7 @@ return [
         'buyer_cancelled' => ['title' => 'Usafirishaji umeghairiwa', 'body' => 'Usafirishaji wa oda :code umeghairiwa.'],
         'buyer_payment_expired' => ['title' => 'Oda imeghairiwa', 'body' => 'Ada ya usafirishaji ya oda :code haikulipwa kwa wakati, kwa hiyo oda imeghairiwa.'],
         'buyer_payment_failed' => ['title' => 'Malipo hayakukamilika', 'body' => 'Ada ya usafirishaji ya oda :code haikulipwa. Fungua programu ujaribu tena.'],
-        'seller_fee_paid' => ['title' => 'Usafirishaji umelipiwa', 'body' => 'Mnunuzi amelipia usafirishaji wa oda :code. Ifunge kisha gusa "Iko tayari": dereva wa Bolt ataagizwa mara moja.'],
+        'seller_fee_paid' => ['title' => 'Usafirishaji umelipiwa', 'body' => 'Mnunuzi amelipia usafirishaji wa oda :code. Ifunge kisha gusa "Weka kama Tayari": dereva wa Bolt ataagizwa mara moja.'],
         'seller_driver_assigned' => ['title' => 'Dereva wa Bolt anakuja', 'body' => ':driver (:plate) anakuja kuchukua oda :code.'],
         'seller_driver_at_shop' => ['title' => 'Dereva wa Bolt amefika', 'body' => ':driver (:plate) yuko dukani kwako. Mkabidhi oda :code.'],
         'seller_picked_up' => ['title' => 'Oda imechukuliwa', 'body' => ':driver amechukua oda :code.'],

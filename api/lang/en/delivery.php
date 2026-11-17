@@ -44,7 +44,7 @@ return [
         'buyer_cancelled' => ['title' => 'Delivery cancelled', 'body' => 'The delivery for order :code was cancelled.'],
         'buyer_payment_expired' => ['title' => 'Order cancelled', 'body' => 'The delivery fee for order :code was not paid in time, so the order was cancelled.'],
         'buyer_payment_failed' => ['title' => 'Payment not completed', 'body' => 'The delivery fee for order :code was not paid. Open the app to try again.'],
-        'seller_fee_paid' => ['title' => 'Delivery paid', 'body' => 'The buyer paid for delivery of order :code. Pack it and tap "Mark ready": a Bolt driver is booked straight away.'],
+        'seller_fee_paid' => ['title' => 'Delivery paid', 'body' => 'The buyer paid for delivery of order :code. Pack it and tap "Mark as Ready": a Bolt driver is booked straight away.'],
         'seller_driver_assigned' => ['title' => 'Bolt driver coming', 'body' => ':driver (:plate) is coming to collect order :code.'],
         'seller_driver_at_shop' => ['title' => 'Bolt driver has arrived', 'body' => ':driver (:plate) is at your shop. Hand over order :code.'],
         'seller_picked_up' => ['title' => 'Order collected', 'body' => ':driver has collected order :code.'],
