@@ -26,13 +26,18 @@ Schedule::command('products:purge-deleted-media')->daily();
 // inline from the Filament action that creates the blast.
 Schedule::command('sms:process-blasts')->everyMinute()->withoutOverlapping();
 
-// Delivery (docs/delivery/PLAN.md). Dispatch waves are 60 s apart; request
-// paths also advance them lazily, so a one-minute cron is enough. The tick
-// is a no-op while DELIVERY_ENABLED is false.
-Schedule::command('delivery:dispatch-tick')->everyMinute()->withoutOverlapping(5);
-
-// Privacy: driver breadcrumbs older than 72 h are deleted.
-Schedule::command('delivery:purge-locations')->hourly();
+// Delivery by Bolt (docs/delivery/BOLT.md). Registered only once Bolt is
+// switched on or its credentials are in .env, so a server without Bolt
+// (production today) schedules exactly what it did before.
+//  - delivery:tick, every minute: payments, the unpaid-fee timeout, Bolt
+//    quote/booking retries with backoff, Bolt receipts.
+//  - delivery:track, every 10 s (Bolt's fair-use limit for ride details):
+//    running rides. Sub-minute tasks keep `schedule:run` alive for the
+//    whole minute, which is why this one is never registered without Bolt.
+if (config('delivery.enabled') || filled(config('delivery.bolt.client_id'))) {
+    Schedule::command('delivery:tick')->everyMinute()->withoutOverlapping(5);
+    Schedule::command('delivery:track')->everyTenSeconds()->withoutOverlapping(1);
+}
 
 // Apple Guideline 1.2: a daily email to MODERATION_ALERT_EMAIL listing every
 // report still pending after 20 hours, before it breaks the 24-hour promise.

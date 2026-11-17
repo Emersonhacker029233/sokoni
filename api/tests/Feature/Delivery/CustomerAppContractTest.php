@@ -3,19 +3,20 @@
 namespace Tests\Feature\Delivery;
 
 use App\Models\Conversation;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Delivery\DeliveryJobService;
 use App\Services\Delivery\DeliveryNotifier;
 use App\Services\Delivery\LogDeliveryNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * API contract for the Sokoni 1.1 customer app (delivery flow), and the
+ * API contract for the Sokoni 1.1 customer app (Bolt delivery), and the
  * guarantees that Sokoni 1.0 and sellers keep. The Flutter tests in
- * app/test/data/repositories/delivery_repository_test.dart parse the same
- * shapes.
+ * app/test/data parse the same shapes.
  */
 class CustomerAppContractTest extends TestCase
 {
@@ -29,9 +30,9 @@ class CustomerAppContractTest extends TestCase
         config(['payments.provider' => 'fake']);
     }
 
-    private function dispatchOrderWithPhone(string $phone = '+255765000123'): \App\Models\Order
+    private function dispatchOrderWithPhone(string $phone = '+255765000123'): Order
     {
-        $buyer = User::factory()->create(['phone' => '+255711000111', 'email' => 'buyer@example.com']);
+        $buyer = User::factory()->create(['phone' => '+255711000111', 'email' => 'buyer@example.com', 'name' => 'Asha Mteja']);
         $shop = $this->shop();
         $product = Product::factory()->create(['seller_id' => $shop->id, 'price' => 20000]);
 
@@ -56,41 +57,64 @@ class CustomerAppContractTest extends TestCase
             ->assertJsonPath('data.code', fn ($code) => is_string($code) && $code !== '')
             ->json('data.id');
 
-        return \App\Models\Order::query()->findOrFail($id);
+        return Order::query()->findOrFail($id);
     }
 
-    public function test_config_tells_the_app_to_use_the_new_flow_and_how_the_fee_is_paid(): void
+    public function test_config_tells_the_app_how_the_bolt_fee_is_paid(): void
     {
         $this->actingAs(User::factory()->create())->getJson('/api/delivery/config')
             ->assertOk()
             ->assertJsonPath('data.enabled', true)
-            ->assertJsonPath('data.min_app_version', '1.1.0')
+            ->assertJsonPath('data.provider', 'bolt')
             ->assertJsonPath('data.unpaid_timeout_minutes', 20)
             ->assertJsonPath('data.payment.mode', 'online')
             ->assertJsonPath('data.payment.online_available', true)
             ->assertJsonPath('data.payment.covers', ['delivery_fee'])
             ->assertJsonPath('data.payment.goods_paid_to', 'shop')
-            ->assertJsonStructure(['data' => ['max_distance_km', 'payment' => ['channels', 'sandbox'], 'tracking' => ['poll_seconds', 'realtime']]]);
-
-        config(['sokoni.delivery_fee_cash_enabled' => true]);
-        $this->actingAs(User::factory()->create())->getJson('/api/delivery/config')->assertJsonPath('data.payment.mode', 'cash');
+            ->assertJsonPath('data.tracking.poll_seconds', 10)
+            ->assertJsonPath('data.returns_enabled', false)
+            ->assertJsonStructure(['data' => ['max_distance_km', 'payment' => ['channels', 'sandbox']]]);
     }
 
-    public function test_config_404s_when_delivery_is_off_so_the_app_keeps_the_1_0_checkout(): void
+    public function test_config_404s_when_delivery_is_off(): void
     {
         config(['delivery.enabled' => false]);
         $this->actingAs(User::factory()->create())->getJson('/api/delivery/config')->assertNotFound();
     }
 
-    public function test_quote_returns_the_server_fee_for_the_checkout_estimate(): void
+    public function test_quote_returns_the_bolt_range_and_the_upper_bound_the_buyer_pays(): void
     {
         $shop = $this->shop();
         $this->actingAs(User::factory()->create())
             ->getJson('/api/delivery/quote?'.http_build_query(['seller_id' => $shop->id, 'lat' => self::DROP_LAT, 'lng' => self::DROP_LNG]))
             ->assertOk()
+            ->assertJsonPath('data.provider', 'bolt')
             ->assertJsonPath('data.estimate', true)
             ->assertJsonPath('data.currency', 'TZS')
-            ->assertJsonStructure(['data' => ['distance_km', 'distance_source', 'base_fee', 'per_km_fee', 'fee']]);
+            ->assertJsonPath('data.min', 5200)
+            ->assertJsonPath('data.max', 6400)
+            ->assertJsonPath('data.fee', self::FEE)
+            ->assertJsonPath('data.category', 'bolt_send')
+            ->assertJsonPath('data.eta_seconds', 240)
+            ->assertJsonStructure(['data' => ['distance_km']]);
+
+        $this->assertArrayNotHasKey('fare_id', $this->getJson('/api/features')->json('data'));
+    }
+
+    public function test_quote_explains_why_delivery_is_unavailable(): void
+    {
+        $buyer = User::factory()->create();
+        $query = fn ($shop) => '/api/delivery/quote?'.http_build_query(['seller_id' => $shop->id, 'lat' => self::DROP_LAT, 'lng' => self::DROP_LNG]);
+
+        $this->boltFailNext('estimate', 422, 'RIDE_BOOKER_API_AREA_NOT_SERVICED');
+        $this->actingAs($buyer)->getJson($query($this->shop()))->assertStatus(422)->assertJsonPath('code', 'area_not_serviced');
+
+        foreach (range(1, 3) as $_) {
+            $this->boltFailNext('estimate', 500);
+        }
+        $this->actingAs($buyer)->getJson($query($this->shop(['shop_name' => 'Duka B'])))->assertStatus(503)->assertJsonPath('code', 'quote_unavailable');
+
+        $this->actingAs($buyer)->getJson($query($this->shop(['lat' => null, 'lng' => null])))->assertStatus(422)->assertJsonPath('code', 'shop_has_no_location');
     }
 
     public function test_sokoni_1_0_checkout_is_unchanged_and_the_seller_still_sees_the_buyer_phone(): void
@@ -105,7 +129,7 @@ class CustomerAppContractTest extends TestCase
             'address' => 'Mtaa wa Uhuru 12',
             'payment_method' => 'cash_on_delivery',
         ])->assertCreated()
-            ->assertJsonPath('data.fulfilment', null)
+            ->assertJsonMissingPath('data.fulfilment')
             ->assertJsonPath('data.delivery_fee', 3000)
             ->assertJsonPath('data.total', 23000)
             ->assertJsonMissingPath('data.delivery_phone')
@@ -116,7 +140,7 @@ class CustomerAppContractTest extends TestCase
             ->assertJsonPath('data.buyer.phone', '+255711000999');
     }
 
-    public function test_the_seller_never_gets_the_buyers_contact_details_on_a_dispatch_order(): void
+    public function test_the_seller_never_gets_the_buyers_contact_details_on_a_bolt_order(): void
     {
         $order = $this->dispatchOrderWithPhone();
         $seller = $order->seller->user;
@@ -142,60 +166,73 @@ class CustomerAppContractTest extends TestCase
             ->assertJsonPath('data.buyer.phone', '+255711000111')
             ->assertJsonPath('data.delivery_phone', '+255765000123');
 
-        // And the seller's delivery view has no PIN, fee, payment or drop-off.
+        // And the seller's delivery view has no fee, payment or drop-off.
         $job = $this->acceptAsSeller($order);
         app(DeliveryJobService::class)->markFeePaid($job, 'TEST');
         $seller->refresh();
-        $view = $this->actingAs($seller)->getJson("/api/delivery/orders/{$order->id}")->assertOk()->json('data');
-        foreach (['delivery_pin', 'fee', 'payment', 'dropoff', 'amount_due', 'driver_location'] as $hidden) {
+        $view = $this->actingAs($seller)->getJson("/api/delivery/orders/{$order->id}")->assertOk()
+            ->assertJsonPath('data.fee_paid', true)
+            ->json('data');
+        foreach (['fee', 'estimate', 'payment', 'dropoff', 'amount_due', 'refund', 'actions'] as $hidden) {
             $this->assertArrayNotHasKey($hidden, $view, "seller view leaks {$hidden}");
         }
     }
 
-    public function test_the_driver_calls_the_phone_given_at_checkout_and_only_while_active(): void
+    public function test_bolts_driver_is_told_the_order_code_and_who_to_hand_it_to(): void
     {
         $order = $this->dispatchOrderWithPhone('+255765000123');
         $job = $this->acceptAsSeller($order);
         app(DeliveryJobService::class)->markFeePaid($job, 'TEST');
-        $driver = $this->driverAt(1);
-        $this->artisan('delivery:dispatch-tick');
+        $this->markReady($order);
 
-        $this->asDriver($driver)->postJson("/api/driver/offers/{$job->id}/accept")->assertOk()
-            ->assertJsonPath('data.customer.phone', '+255765000123');
+        $created = $this->boltCreated[0];
+        $this->assertSame(['name' => 'Duka la Juma', 'phone' => $order->seller->user->phone], $created['user'], 'the shop is the rider');
+        $this->assertStringContainsString($order->code, $created['note_to_driver']);
+        $this->assertStringContainsString('Asha Mteja', $created['note_to_driver']);
+        $this->assertStringContainsString('+255765000123', $created['note_to_driver'], 'the phone given at checkout, not the account phone');
+        $this->assertStringContainsString('Collect parcel from shop, hand to customer', $created['note_to_driver']);
+        $this->assertSame([
+            ['lat' => self::SHOP_LAT, 'lng' => self::SHOP_LNG],
+            ['lat' => self::DROP_LAT, 'lng' => self::DROP_LNG],
+        ], $created['stops']);
 
         $this->actingAs($order->buyer)->getJson("/api/delivery/orders/{$order->id}")
             ->assertJsonPath('data.dropoff.phone', '+255765000123');
     }
 
-    public function test_buyer_view_has_every_field_the_1_1_tracking_screen_reads(): void
+    public function test_buyer_view_has_every_field_the_order_screen_reads(): void
     {
         $job = $this->acceptAsSeller($this->dispatchOrderWithPhone());
 
         $this->actingAs($job->order->buyer)->getJson("/api/delivery/orders/{$job->order_id}")
             ->assertOk()
+            ->assertJsonPath('data.provider', 'bolt')
             ->assertJsonPath('data.status', 'pending_payment')
-            ->assertJsonPath('data.amount_due', $job->fee)
+            ->assertJsonPath('data.amount_due', self::FEE)
+            ->assertJsonPath('data.estimate.min', 5200)
+            ->assertJsonPath('data.estimate.max', 6400)
             ->assertJsonPath('data.payment.goods_total', 20000)
-            ->assertJsonPath('data.payment.delivery_fee', $job->fee)
-            ->assertJsonPath('data.payment.total', 20000 + $job->fee)
+            ->assertJsonPath('data.payment.delivery_fee', self::FEE)
+            ->assertJsonPath('data.payment.total', 20000 + self::FEE)
             ->assertJsonPath('data.payment.attempt', null)
             ->assertJsonPath('data.actions.can_pay', true)
-            ->assertJsonPath('data.delivery_pin', null)
+            ->assertJsonPath('data.driver', null)
+            ->assertJsonPath('data.tracking_url', null)
             ->assertJsonStructure(['data' => [
-                'id', 'order_id', 'order_code', 'status', 'is_active', 'distance_km', 'currency', 'fee',
-                'payment_status', 'amount_due', 'pay_cash_to_driver', 'delivery_pin', 'pin_locked', 'dispatch_wave',
+                'id', 'order_id', 'order_code', 'provider', 'status', 'is_active', 'distance_km', 'currency', 'fee',
+                'estimate' => ['min', 'max', 'category'], 'payment_status', 'amount_due',
                 'pickup' => ['shop_name', 'lat', 'lng'],
                 'dropoff' => ['lat', 'lng', 'address', 'phone'],
                 'payment' => ['mode', 'status', 'amount_due', 'covers', 'goods_paid_to', 'goods_total', 'delivery_fee',
                     'total', 'deadline', 'online_available', 'sandbox', 'channels', 'attempt', 'receipt'],
-                'driver', 'driver_location', 'tracking', 'refund',
-                'actions' => ['can_pay', 'can_cancel', 'can_retry', 'can_switch_to_pickup', 'can_rate'],
+                'driver', 'tracking_url', 'refund',
+                'actions' => ['can_pay', 'can_cancel', 'can_retry', 'can_switch_to_pickup'],
                 'timeline', 'cancelled_by', 'cancel_reason', 'failure_reason', 'created_at',
             ]]);
 
-        // The deadline is the unpaid timeout counted from acceptance.
+        // The deadline is the unpaid timeout counted from when the price was set.
         $deadline = $this->actingAs($job->order->buyer)->getJson("/api/delivery/orders/{$job->order_id}")->json('data.payment.deadline');
-        $this->assertEquals($job->created_at->addMinutes(20)->toIso8601String(), \Illuminate\Support\Carbon::parse($deadline)->toIso8601String());
+        $this->assertEquals($job->pending_payment_at->addMinutes(20)->toIso8601String(), Carbon::parse($deadline)->toIso8601String());
     }
 
     public function test_every_status_change_lands_in_the_customer_inbox_with_the_order_id(): void
@@ -207,11 +244,11 @@ class CustomerAppContractTest extends TestCase
 
         $buyerInbox = $order->buyer->appNotifications()->get();
         $this->assertTrue($buyerInbox->contains(fn ($n) => ($n->data['status'] ?? null) === 'pending_payment'));
-        $this->assertTrue($buyerInbox->contains(fn ($n) => ($n->data['status'] ?? null) === 'pending_driver'));
+        $this->assertTrue($buyerInbox->contains(fn ($n) => ($n->data['status'] ?? null) === 'awaiting_ready'));
         $this->assertTrue($buyerInbox->every(fn ($n) => ($n->data['order_id'] ?? null) === $order->id || ! isset($n->data['type'])));
 
         $sellerInbox = $order->seller->user->appNotifications()->get();
-        $this->assertTrue($sellerInbox->contains(fn ($n) => ($n->data['type'] ?? null) === 'delivery_status' && ($n->data['status'] ?? null) === 'pending_driver'));
+        $this->assertTrue($sellerInbox->contains(fn ($n) => ($n->data['type'] ?? null) === 'delivery_status' && ($n->data['status'] ?? null) === 'awaiting_ready'));
 
         $this->actingAs($order->buyer)->getJson('/api/notifications')->assertOk()
             ->assertJsonPath('data.0.payload.order_id', $order->id);

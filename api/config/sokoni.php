@@ -77,34 +77,15 @@ return [
         ),
     ],
 
-    // Delivery dispatch (docs/delivery/PLAN.md). Placeholders agreed with
-    // the client 2026-10-29; every one is overridable through the
-    // `settings` table. Money values are whole TZS. Read them through
-    // App\Support\DeliverySettings, never directly.
-    'delivery_base_fee' => env('SOKONI_DELIVERY_BASE_FEE', 1500),
-    'delivery_per_km_fee' => env('SOKONI_DELIVERY_PER_KM_FEE', 700),
-    'delivery_min_fee' => env('SOKONI_DELIVERY_MIN_FEE', 2000),
+    // Delivery by Bolt (docs/delivery/BOLT.md). The fee itself is Bolt's
+    // estimate (its upper bound), so only these three are Sokoni's own.
+    // Each is overridable through the `settings` table. Money values are
+    // whole TZS. Read them through App\Support\DeliverySettings.
     'delivery_max_distance_km' => env('SOKONI_DELIVERY_MAX_DISTANCE_KM', 10),
-    'delivery_commission_pct' => env('SOKONI_DELIVERY_COMMISSION_PCT', 15),
-    // Straight-line distance is multiplied by this to approximate roads.
-    'delivery_road_multiplier' => env('SOKONI_DELIVERY_ROAD_MULTIPLIER', 1.3),
-    // Comma-separated dispatch waves in km, widest last.
-    'delivery_dispatch_radii_km' => env('SOKONI_DELIVERY_DISPATCH_RADII_KM', '3,5,8'),
-    'delivery_dispatch_wave_seconds' => env('SOKONI_DELIVERY_DISPATCH_WAVE_SECONDS', 60),
-    // Paid to the driver out of the delivery fee when the buyer cancels
-    // after a driver was assigned but before pickup (PLAN.md section 6).
+    // Kept out of the refund when the BUYER cancels after Bolt has assigned
+    // a driver (before pickup): it covers Bolt's own cancellation charge.
     'delivery_buyer_cancel_fee' => env('SOKONI_DELIVERY_BUYER_CANCEL_FEE', 1000),
-    // When the SELLER cancels after assignment: true = the platform pays
-    // the driver the same cancellation fee and the buyer is refunded in
-    // full; false = the driver gets nothing. Awaiting client decision.
-    'delivery_seller_cancel_compensates_driver' => env('SOKONI_DELIVERY_SELLER_CANCEL_COMPENSATES_DRIVER', true),
-    'delivery_proof_photo_required' => env('SOKONI_DELIVERY_PROOF_PHOTO_REQUIRED', false),
-    // false = the delivery fee must be paid by mobile money before
-    // dispatch. true = buyers may instead pay the delivery fee (never
-    // item money) to the driver in cash.
-    'delivery_fee_cash_enabled' => env('SOKONI_DELIVERY_FEE_CASH_ENABLED', false),
-    'delivery_location_retention_hours' => env('SOKONI_DELIVERY_LOCATION_RETENTION_HOURS', 72),
-    // A job still waiting for its delivery fee this many minutes after the
-    // seller accepted is cancelled, with its order, by delivery:dispatch-tick.
+    // A delivery still waiting for its fee this many minutes after the shop
+    // accepted is cancelled, with its order, by delivery:tick.
     'delivery_unpaid_timeout_minutes' => env('SOKONI_DELIVERY_UNPAID_TIMEOUT_MINUTES', 20),
 ];

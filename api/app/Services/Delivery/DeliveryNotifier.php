@@ -5,27 +5,18 @@ namespace App\Services\Delivery;
 use App\Models\User;
 
 /**
- * Push for delivery events only. Separate from App\Services\Push\PushNotifier
- * on purpose: that one (LogPushNotifier) serves the live Sokoni 1.0 order
- * notifications and must not change behaviour.
+ * Push + inbox for delivery and return events, to the Sokoni app.
+ * Separate from App\Services\Push\PushNotifier on purpose: that one
+ * (LogPushNotifier) serves the existing order notifications and must not
+ * change behaviour.
  */
 interface DeliveryNotifier
 {
-    public const APP_CUSTOMER = 'sokoni';
-
-    public const APP_DRIVER = 'driver';
-
     /**
-     * @param  string  $app  which installed app should receive it: 'sokoni' or 'driver'
+     * Writes an inbox entry (app_notifications) and, when Firebase is
+     * configured, pushes to the user's Sokoni app devices.
+     *
      * @param  array<string, scalar|null>  $data  delivered as FCM data (values stringified)
-     * @param  bool  $silent  data-only, no visible notification (e.g. offer withdrawn)
      */
-    public function send(User $user, string $app, string $title, string $body, array $data = [], bool $silent = false): void;
-
-    /**
-     * Whether a push would really arrive: real FCM is configured AND the
-     * user has a registered device for $app. Callers with an important
-     * one-off message (driver approval) fall back to SMS when this is false.
-     */
-    public function canReach(User $user, string $app): bool;
+    public function send(User $user, string $title, string $body, array $data = []): void;
 }

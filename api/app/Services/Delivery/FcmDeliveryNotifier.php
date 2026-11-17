@@ -12,32 +12,20 @@ use Throwable;
 /**
  * Real FCM via kreait/firebase-php. A push failure is logged and swallowed.
  * It must never roll back or 500 a status change, because every update is
- * also readable by polling the API.
+ * also in the inbox and readable by polling the API.
  */
 class FcmDeliveryNotifier extends BaseDeliveryNotifier
 {
     public function __construct(private readonly FirebaseConnection $firebase) {}
 
-    protected function isLive(): bool
-    {
-        return true;
-    }
-
-    protected function deliver(User $user, Collection $tokens, string $title, string $body, array $data, bool $silent): void
+    protected function deliver(User $user, Collection $tokens, string $title, string $body, array $data): void
     {
         try {
-            $apns = $silent
-                ? ['headers' => ['apns-priority' => '5', 'apns-push-type' => 'background'], 'payload' => ['aps' => ['content-available' => 1]]]
-                : ['headers' => ['apns-priority' => '10'], 'payload' => ['aps' => ['sound' => 'default']]];
-
             $message = CloudMessage::new()
                 ->withData($data)
+                ->withNotification(['title' => $title, 'body' => $body])
                 ->withAndroidConfig(['priority' => 'high'])
-                ->withApnsConfig($apns);
-
-            if (! $silent) {
-                $message = $message->withNotification(['title' => $title, 'body' => $body]);
-            }
+                ->withApnsConfig(['headers' => ['apns-priority' => '10'], 'payload' => ['aps' => ['sound' => 'default']]]);
 
             $report = $this->firebase->messaging()->sendMulticast($message, $tokens->values()->all());
 

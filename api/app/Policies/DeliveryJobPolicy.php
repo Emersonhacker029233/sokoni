@@ -5,26 +5,15 @@ namespace App\Policies;
 use App\Models\DeliveryJob;
 use App\Models\User;
 
-/**
- * Who may see a delivery job: its order's buyer, its order's seller
- * (read-only), its assigned driver, and admins. Nobody else, including
- * drivers who were merely offered it. They see DeliveryOfferResource only.
- */
+/** Who may see a delivery: its order's buyer and its order's seller (read-only), plus admins. */
 class DeliveryJobPolicy
 {
     public function view(User $user, DeliveryJob $job): bool
     {
-        return $user->is_admin
-            || $this->isBuyer($user, $job)
-            || $this->isSeller($user, $job)
-            || $this->isDriver($user, $job);
+        return $user->is_admin || $this->isBuyer($user, $job) || $this->isSeller($user, $job);
     }
 
-    /**
-     * The customer-app endpoint (GET /delivery/orders/{order}) is for the
-     * order's two parties only. The assigned driver has their own driver
-     * view; giving them this one would expose the seller's pickup code.
-     */
+    /** GET /delivery/orders/{order} is for the order's two parties only. */
     public function viewInCustomerApp(User $user, DeliveryJob $job): bool
     {
         return $this->isBuyer($user, $job) || $this->isSeller($user, $job);
@@ -33,11 +22,6 @@ class DeliveryJobPolicy
     public function actAsBuyer(User $user, DeliveryJob $job): bool
     {
         return $this->isBuyer($user, $job);
-    }
-
-    public function actAsDriver(User $user, DeliveryJob $job): bool
-    {
-        return $this->isDriver($user, $job);
     }
 
     public function isBuyer(User $user, DeliveryJob $job): bool
@@ -50,12 +34,5 @@ class DeliveryJobPolicy
         $sellerId = $user->sellerProfileId();
 
         return $sellerId !== null && $job->order !== null && $job->order->seller_id === $sellerId;
-    }
-
-    public function isDriver(User $user, DeliveryJob $job): bool
-    {
-        $driverId = $user->driverProfile?->id;
-
-        return $driverId !== null && $job->driver_profile_id === $driverId;
     }
 }

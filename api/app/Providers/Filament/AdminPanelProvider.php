@@ -2,9 +2,7 @@
 
 namespace App\Providers\Filament;
 
-use App\Http\Controllers\Admin\DriverDocumentController;
 use App\Http\Middleware\SetAdminLocale;
-use App\Support\DriverDocuments;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -156,12 +154,6 @@ class AdminPanelProvider extends PanelProvider
 
                     return redirect(url()->previous());
                 })->name('locale.update');
-
-                // Driver identity documents (private disk). Inside the panel's
-                // auth; the controller also requires the admin role.
-                Route::get('/driver-documents/{driver}/{document}', DriverDocumentController::class)
-                    ->whereIn('document', DriverDocuments::KEYS)
-                    ->name('driver-documents.show');
             })
             ->userMenuItems([
                 Action::make('language')

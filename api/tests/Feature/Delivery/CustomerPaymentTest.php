@@ -5,15 +5,17 @@ namespace Tests\Feature\Delivery;
 use App\Models\DeliveryJob;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\Delivery\DeliveryJobService;
 use App\Services\Payment\FakePaymentGateway;
 use App\Services\Payment\PaymentGateway;
 use App\Services\Payment\UnavailablePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
- * Sokoni 1.1 "Pay now" with the sandbox gateway. The app can start a
+ * Sokoni 1.1 "Pay now" for the Bolt delivery fee, with the sandbox gateway. The app can start a
  * payment but never finish one: only the server, asking the gateway,
  * marks the fee paid.
  */
@@ -39,7 +41,7 @@ class CustomerPaymentTest extends TestCase
         return $this->acceptAsSeller($this->placeDispatchOrder());
     }
 
-    private function pay(DeliveryJob $job, string $msisdn = '+255754123456', ?string $key = null): \Illuminate\Testing\TestResponse
+    private function pay(DeliveryJob $job, string $msisdn = '+255754123456', ?string $key = null): TestResponse
     {
         return $this->actingAs($job->order->buyer)->postJson("/api/delivery/orders/{$job->order_id}/pay", [
             'channel' => 'mpesa',
@@ -48,7 +50,7 @@ class CustomerPaymentTest extends TestCase
         ]);
     }
 
-    private function poll(DeliveryJob $job): \Illuminate\Testing\TestResponse
+    private function poll(DeliveryJob $job): TestResponse
     {
         return $this->actingAs($job->order->buyer)->getJson("/api/delivery/orders/{$job->order_id}")->assertOk();
     }
@@ -73,7 +75,7 @@ class CustomerPaymentTest extends TestCase
         // Approved on the phone: the next poll asks the gateway and the job moves on.
         $this->travel(5)->seconds();
         $this->poll($job)
-            ->assertJsonPath('data.status', 'pending_driver')
+            ->assertJsonPath('data.status', 'awaiting_ready')
             ->assertJsonPath('data.payment_status', 'paid')
             ->assertJsonPath('data.amount_due', 0)
             ->assertJsonPath('data.payment.receipt.amount', $job->fee)
@@ -86,7 +88,7 @@ class CustomerPaymentTest extends TestCase
         $this->assertSame((int) $job->fee, (int) $payment->amount);
         $this->assertNotNull($job->fresh()->paid_at);
 
-        // The seller hears the fee was paid and dispatch has started.
+        // The seller hears the fee was paid: pack it and mark it ready.
         $seller = $job->order->seller->user;
         $this->assertTrue($this->pushes->to($seller)->contains(
             fn ($p) => $p['body'] === __('delivery.push.seller_fee_paid.body', ['code' => $job->order->code], $seller->preferredLocale())
@@ -155,7 +157,7 @@ class CustomerPaymentTest extends TestCase
         $this->pay($job, '+255754120002')->assertStatus(202);
 
         $this->travel(121)->seconds();
-        $this->artisan('delivery:dispatch-tick')->expectsOutput('Settled 1 payment attempt(s).')->assertSuccessful();
+        $this->artisan('delivery:tick')->expectsOutput('settled: 1')->assertSuccessful();
 
         $payment = Payment::query()->sole();
         $this->assertSame('failed', $payment->status);
@@ -169,10 +171,10 @@ class CustomerPaymentTest extends TestCase
         $this->pay($job)->assertStatus(202);
 
         $this->travel(10)->seconds();
-        $this->artisan('delivery:dispatch-tick')->assertSuccessful();
+        $this->artisan('delivery:tick')->assertSuccessful();
 
         $this->assertSame('paid', $job->fresh()->payment_status);
-        $this->assertSame('pending_driver', $job->fresh()->status);
+        $this->assertSame('awaiting_ready', $job->fresh()->status);
     }
 
     public function test_a_payment_confirmed_after_the_twenty_minute_cancel_is_kept_for_a_full_refund(): void
@@ -183,10 +185,10 @@ class CustomerPaymentTest extends TestCase
 
         // The unpaid timeout fires before anyone asks the gateway again.
         $this->travel(61)->seconds();
-        app(\App\Services\Delivery\DeliveryJobService::class)->expireUnpaidJobs();
+        app(DeliveryJobService::class)->expireUnpaidJobs();
         $this->assertSame('cancelled', $job->fresh()->status);
 
-        $this->artisan('delivery:dispatch-tick')->assertSuccessful();
+        $this->artisan('delivery:tick')->assertSuccessful();
 
         $job->refresh();
         $this->assertSame('cancelled', $job->status);
@@ -248,19 +250,5 @@ class CustomerPaymentTest extends TestCase
 
         $this->app->detectEnvironment(fn () => 'staging');
         $this->assertInstanceOf(FakePaymentGateway::class, $this->app->make(PaymentGateway::class));
-    }
-
-    public function test_with_the_cash_switch_on_there_is_nothing_to_pay_online(): void
-    {
-        config(['sokoni.delivery_fee_cash_enabled' => true]);
-        $job = $this->unpaidJob();
-
-        $this->assertSame('pending_driver', $job->status);
-        $this->poll($job)
-            ->assertJsonPath('data.payment.mode', 'cash')
-            ->assertJsonPath('data.pay_cash_to_driver', true)
-            ->assertJsonPath('data.amount_due', 0)
-            ->assertJsonPath('data.actions.can_pay', false);
-        $this->pay($job)->assertStatus(409)->assertJsonPath('code', 'not_payable');
     }
 }

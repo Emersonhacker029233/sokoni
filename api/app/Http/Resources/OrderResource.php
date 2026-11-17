@@ -18,12 +18,12 @@ class OrderResource extends JsonResource
             'delivery_fee' => $this->delivery_fee,
             'total' => $this->total,
             'delivery_method' => $this->delivery_method,
-            // Additive (docs/delivery/PLAN.md): null for every legacy order,
-            // 'dispatch' when Sokoni Driver handles it. Details live at
-            // GET /api/delivery/orders/{id}. Sokoni 1.0 ignores unknown keys.
-            'fulfilment' => $this->fulfilment,
+            // Bolt delivery orders only (docs/delivery/BOLT.md): 'dispatch',
+            // with the details at GET /api/delivery/orders/{id}. Every other
+            // order carries no such key, exactly as before delivery existed.
+            'fulfilment' => $this->when($this->isDispatch(), 'dispatch'),
             'address' => $this->address,
-            // Sokoni 1.1 dispatch orders: the drop-off phone the rider calls.
+            // Bolt delivery orders: the drop-off phone the driver calls.
             // Only the buyer ever gets it back; the seller and 1.0 never do.
             'delivery_phone' => $this->when($this->isDispatch() && $this->viewerIsBuyer($request), $this->delivery_phone),
             'notes' => $this->notes,

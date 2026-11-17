@@ -4,20 +4,21 @@ namespace App\Http\Resources\Delivery;
 
 use App\Models\DeliveryJob;
 use App\Models\Payment;
+use App\Services\Delivery\Bolt\BoltStates;
 use App\Services\Delivery\DeliveryPaymentService;
 use App\Support\DeliverySettings;
-use App\Support\PrivateFileUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * One delivery job, shaped for whoever is looking at it.
+ * One Bolt delivery, shaped for whoever is looking at it
+ * (GET /api/delivery/orders/{order}).
  *
- * Privacy rules (client-approved 2026-10-29):
- *  - phone numbers only while the job is active (assigned through arrived),
- *  - live location only for the buyer, only while active,
- *  - the delivery PIN only for the buyer,
- *  - the seller never sees the PIN or the driver's location.
+ * Privacy rules:
+ *  - the Bolt driver's phone only while a driver is on the job (buyer),
+ *    and only until pickup (seller),
+ *  - the tracking link only while the ride is running,
+ *  - the seller never sees the fee, the drop-off or the buyer's phone.
  *
  * @mixin DeliveryJob
  */
@@ -26,8 +27,6 @@ class DeliveryJobResource extends JsonResource
     public const BUYER = 'buyer';
 
     public const SELLER = 'seller';
-
-    public const DRIVER = 'driver';
 
     private string $viewer = self::BUYER;
 
@@ -41,16 +40,17 @@ class DeliveryJobResource extends JsonResource
 
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['order.seller.user', 'order.buyer', 'order.items', 'driver.user', 'vehicle', 'events', 'ratings', 'payments']);
+        $this->resource->loadMissing(['order.seller.user', 'order.buyer', 'events', 'payments']);
 
         $base = [
             'id' => $this->id,
             'order_id' => $this->order_id,
-            'order_code' => $this->orderCodeForViewer(),
+            'order_code' => (string) $this->order->code,
+            'provider' => $this->provider ?? 'bolt',
             'status' => $this->status,
             'is_active' => $this->isDriverActive(),
             'distance_km' => $this->distance_km,
-            'currency' => 'TZS',
+            'currency' => $this->currency ?? 'TZS',
             'timeline' => $this->timeline(),
             'cancelled_by' => $this->cancelled_by,
             'cancel_reason' => $this->cancel_reason,
@@ -58,27 +58,25 @@ class DeliveryJobResource extends JsonResource
             'created_at' => $this->created_at,
         ];
 
-        return match ($this->viewer) {
-            self::DRIVER => [...$base, ...$this->driverView()],
-            self::SELLER => [...$base, ...$this->sellerView()],
-            default => [...$base, ...$this->buyerView()],
-        };
+        return $this->viewer === self::SELLER
+            ? [...$base, ...$this->sellerView()]
+            : [...$base, ...$this->buyerView()];
     }
 
     private function buyerView(): array
     {
-        $active = $this->isDriverActive();
-        $hasDriver = $this->driver !== null && in_array($this->status, [...DeliveryJob::DRIVER_ACTIVE_STATUSES, 'delivered'], true);
-        $reassignable = in_array($this->status, ['no_driver_found', 'failed'], true) && $this->failure_reason !== 'customer_unreachable';
+        $atShop = $this->parcelAtShop();
+        $retryable = in_array($this->status, ['no_driver_found', 'failed'], true) && BoltStates::retryable($this->failure_reason);
 
         return [
-            'fee' => $this->fee,
+            'fee' => (int) $this->fee,
+            'estimate' => $this->estimate_max === null ? null : [
+                'min' => $this->estimate_min,
+                'max' => $this->estimate_max,
+                'category' => $this->provider_category,
+            ],
             'payment_status' => $this->payment_status,
             'amount_due' => $this->amountDue(),
-            'pay_cash_to_driver' => $this->payment_status === 'cash',
-            'delivery_pin' => ! $this->isTerminal() && $this->status !== 'pending_payment' ? $this->delivery_pin : null,
-            'pin_locked' => $this->pin_locked_at !== null,
-            'dispatch_wave' => $this->status === 'pending_driver' ? $this->dispatch_wave : null,
             'pickup' => [
                 'shop_name' => $this->order->seller?->shop_name,
                 'lat' => $this->pickup_lat,
@@ -86,129 +84,72 @@ class DeliveryJobResource extends JsonResource
             ],
             'dropoff' => ['lat' => $this->dropoff_lat, 'lng' => $this->dropoff_lng, 'address' => $this->dropoff_address, 'phone' => $this->dropoffPhone()],
             'payment' => $this->paymentView(),
-            'driver' => $hasDriver ? [
-                'name' => $this->driver->user->name,
-                'photo_url' => PrivateFileUrl::for($this->driver->photo),
-                'rating_avg' => $this->driver->rating_avg,
-                'rating_count' => $this->driver->rating_count,
-                'phone' => $active ? $this->driver->user->phone : null,
-                'vehicle' => $this->vehicleArray(),
-            ] : null,
-            'driver_location' => $active && $this->driver?->last_lat !== null ? [
-                'lat' => $this->driver->last_lat,
-                'lng' => $this->driver->last_lng,
-                'at' => $this->driver->last_located_at,
-            ] : null,
-            'tracking' => $active ? ['channel' => "tracking/{$this->id}"] : null,
-            'refund' => $this->refund_amount ? ['amount' => $this->refund_amount, 'status' => $this->refund_status] : null,
+            'driver' => $this->driverView(phone: $this->isDriverActive()),
+            'tracking_url' => $this->trackingUrl(),
+            'refund' => $this->refund_amount ? ['amount' => (int) $this->refund_amount, 'status' => $this->refund_status] : null,
             'actions' => [
                 'can_pay' => $this->amountDue() > 0 && app(DeliveryPaymentService::class)->onlinePaymentAvailable(),
-                'can_cancel' => ! $this->isTerminal() && ! $this->isInTransit() && ! ($this->status === 'failed' && ! $reassignable),
-                'can_retry' => $reassignable,
-                'can_switch_to_pickup' => in_array($this->status, ['pending_payment', 'pending_driver', 'no_driver_found'], true) || ($this->status === 'failed' && $reassignable),
-                'can_rate' => $this->status === 'delivered' && ! $this->ratings->contains('direction', 'buyer_to_driver'),
+                'can_cancel' => ! $this->isTerminal() && $atShop,
+                'can_retry' => $retryable,
+                'can_switch_to_pickup' => ! $this->isTerminal() && $atShop
+                    && in_array($this->status, ['pending_quote', 'pending_payment', 'awaiting_ready', 'pending_driver', 'no_driver_found', 'failed'], true),
             ],
         ];
     }
 
     private function sellerView(): array
     {
-        $atShopPhase = in_array($this->status, ['driver_assigned', 'arrived_at_shop'], true);
+        $beforePickup = in_array($this->status, ['pending_driver', 'driver_assigned', 'arrived_at_shop'], true);
 
         return [
-            'driver' => $this->driver !== null && $this->isDriverActive() ? [
-                'name' => $this->driver->user->name,
-                'photo_url' => PrivateFileUrl::for($this->driver->photo),
-                'phone' => $atShopPhase ? $this->driver->user->phone : null,
-                'vehicle' => $this->vehicleArray(),
-            ] : null,
-            // The seller hands over only after the driver types these 4 characters.
-            'pickup_code' => $atShopPhase ? $this->pickupCode() : null,
+            // What the shop needs to know to act: has the buyer paid, and is it time to mark the order ready?
+            'fee_paid' => $this->payment_status === 'paid',
+            'driver' => $this->driverView(phone: in_array($this->status, ['driver_assigned', 'arrived_at_shop'], true)),
+            'tracking_url' => $beforePickup ? $this->trackingUrl() : null,
         ];
     }
 
-    private function driverView(): array
+    /** Bolt's driver: name, plate, model, photo; phone only when $phone. */
+    private function driverView(bool $phone): ?array
     {
-        $order = $this->order;
-        $active = $this->isDriverActive();
-        $beforePickup = in_array($this->status, ['driver_assigned', 'arrived_at_shop'], true);
-        $waitMinutes = (int) config('delivery.unreachable_wait_minutes');
-
-        return [
-            'fee' => $this->fee,
-            'commission' => $this->commission,
-            'driver_earnings' => $this->driver_earnings,
-            'earned_amount' => $this->earned_amount,
-            'payment_status' => $this->payment_status,
-            'collect_cash' => $this->payment_status === 'cash' ? $this->fee : 0,
-            'shop' => [
-                'name' => $order->seller?->shop_name,
-                'address' => $this->pickup_address,
-                'lat' => $this->pickup_lat,
-                'lng' => $this->pickup_lng,
-                'phone' => $beforePickup ? ($order->seller?->user?->phone ?? $order->seller?->whatsapp) : null,
-            ],
-            'customer' => [
-                'name' => $order->buyer?->name,
-                'phone' => $active ? $this->dropoffPhone() : null,
-                'address' => $this->dropoff_address,
-                'lat' => $this->dropoff_lat,
-                'lng' => $this->dropoff_lng,
-            ],
-            'items' => $order->items->map(fn ($i) => ['title' => $i->title_snapshot, 'qty' => $i->qty])->values(),
-            'notes' => $order->notes,
-            'call_attempts' => $this->call_attempts,
-            'pin_attempts_left' => max(0, (int) config('delivery.pin_max_attempts') - $this->pin_attempts),
-            'pin_locked' => $this->pin_locked_at !== null,
-            'proof_photo_required' => DeliverySettings::proofPhotoRequired(),
-            'unreachable_available_at' => $this->status === 'arrived' && $this->arrived_at ? $this->arrived_at->copy()->addMinutes($waitMinutes) : null,
-            'actions' => [
-                'next' => array_values(array_intersect(
-                    DeliveryJob::TRANSITIONS[$this->status] ?? [],
-                    ['arrived_at_shop', 'picked_up', 'on_the_way', 'arrived', 'delivered', 'failed'],
-                )),
-                'can_cancel' => $beforePickup,
-                'can_rate' => $this->status === 'delivered' && ! $this->ratings->contains('direction', 'driver_to_buyer'),
-            ],
-        ];
-    }
-
-    /**
-     * The pickup code is the last 4 characters of the order code, so a
-     * driver who could read the full code before pickup could "confirm"
-     * a pickup without ever meeting the seller. Drivers see it masked
-     * until the goods are in their hands.
-     */
-    private function orderCodeForViewer(): string
-    {
-        $code = (string) $this->order->code;
-        if ($this->viewer !== self::DRIVER || ! in_array($this->status, ['pending_driver', 'driver_assigned', 'arrived_at_shop'], true)) {
-            return $code;
+        $driver = (array) ($this->provider_driver ?? []);
+        $visible = in_array($this->status, [...DeliveryJob::DRIVER_ACTIVE_STATUSES, 'delivered'], true);
+        if (! $visible || ($driver['name'] ?? null) === null && ($driver['plate'] ?? null) === null) {
+            return null;
         }
 
-        return substr($code, 0, -4).'••••';
+        return [
+            'name' => $driver['name'] ?? null,
+            'phone' => $phone ? ($driver['phone'] ?? null) : null,
+            'plate' => $driver['plate'] ?? null,
+            'model' => $driver['model'] ?? null,
+            'photo_url' => $driver['photo_url'] ?? null,
+            'eta_seconds' => $this->isDriverActive() ? ($driver['eta_seconds'] ?? null) : null,
+        ];
     }
 
-    /** What "Pay now" would charge right now: the fee frozen at acceptance, only while it is still owed. */
+    private function trackingUrl(): ?string
+    {
+        return $this->isRideActive() ? (((array) ($this->provider_driver ?? []))['tracking_url'] ?? null) : null;
+    }
+
+    /** What "Pay now" would charge right now: the fee frozen when the shop accepted, only while it is owed. */
     private function amountDue(): int
     {
         return $this->payment_status === 'unpaid' && $this->status === 'pending_payment' ? (int) $this->fee : 0;
     }
 
-    /** Who the driver calls at the drop-off: the phone given at checkout (Sokoni 1.1), else the buyer's own. */
+    /** Who Bolt's driver hands the parcel to: the phone given at checkout, else the buyer's own. */
     private function dropoffPhone(): ?string
     {
         return $this->order->delivery_phone ?: $this->order->buyer?->phone;
     }
 
     /**
-     * Everything the buyer's payment card shows. Every amount is a stored
-     * number: the order's goods subtotal, the fee frozen on this job, and
-     * the amount of a recorded payment. The app adds nothing up itself
-     * except goods + delivery for the summary line, which is also returned.
-     *
-     * While the wallet is off (WALLET_PLAN.md section 4) "Pay now" covers
-     * the delivery fee only and the goods are paid to the shop directly.
+     * The buyer's payment card. Every amount is a stored number: the
+     * order's goods subtotal, the fee frozen on this job, the amount of a
+     * recorded payment. Goods are paid to the shop directly; "Pay now"
+     * covers the delivery fee only.
      */
     private function paymentView(): array
     {
@@ -219,7 +160,7 @@ class DeliveryJobResource extends JsonResource
         $goods = (int) $this->order->subtotal;
 
         return [
-            'mode' => $this->payment_status === 'cash' ? 'cash' : 'online',
+            'mode' => 'online',
             'status' => $this->payment_status,
             'amount_due' => $this->amountDue(),
             'covers' => ['delivery_fee'],
@@ -228,12 +169,12 @@ class DeliveryJobResource extends JsonResource
             'delivery_fee' => (int) $this->fee,
             'total' => $goods + (int) $this->fee,
             'deadline' => $this->status === 'pending_payment'
-                ? $this->created_at->copy()->addMinutes(DeliverySettings::unpaidTimeoutMinutes())
+                ? $this->paymentWindowStart()->copy()->addMinutes(DeliverySettings::unpaidTimeoutMinutes())
                 : null,
             'online_available' => $payments->onlinePaymentAvailable(),
             'sandbox' => $capabilities->sandbox,
             'channels' => $capabilities->channels,
-            'attempt' => $latest instanceof Payment ? $this->attemptArray($latest) : null,
+            'attempt' => $latest instanceof Payment ? self::attemptArray($latest) : null,
             'receipt' => $paid instanceof Payment ? [
                 'amount' => (int) $paid->amount,
                 'channel' => $paid->channel,
@@ -243,7 +184,7 @@ class DeliveryJobResource extends JsonResource
         ];
     }
 
-    private function attemptArray(Payment $payment): array
+    public static function attemptArray(Payment $payment): array
     {
         $timeout = max(10, (int) config('payments.attempt_timeout_seconds'));
 
@@ -267,16 +208,6 @@ class DeliveryJobResource extends JsonResource
         }
 
         return substr($phone, 0, 6).str_repeat('•', strlen($phone) - 9).substr($phone, -3);
-    }
-
-    private function vehicleArray(): ?array
-    {
-        return $this->vehicle ? [
-            'type' => $this->vehicle->type,
-            'plate_number' => $this->vehicle->plate_number,
-            'make' => $this->vehicle->make,
-            'colour' => $this->vehicle->colour,
-        ] : null;
     }
 
     private function timeline(): array

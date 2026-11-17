@@ -6,10 +6,12 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\Delivery\BoltWebhookController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\FeatureController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
@@ -208,8 +210,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Delivery + Sokoni Driver (docs/delivery/PLAN.md), additive only
+| Delivery by Bolt (docs/delivery/BOLT.md), additive only
 |--------------------------------------------------------------------------
-| 404s entirely while DELIVERY_ENABLED=false. See routes/api_delivery.php.
+| 404s entirely while BOLT_ENABLED=false, and for anyone outside
+| BOLT_TEST_PHONES or the App Store review account. See
+| routes/api_delivery.php. GET /features tells the app what to show.
 */
-Route::middleware(['delivery.enabled', 'auth:sanctum'])->group(base_path('routes/api_delivery.php'));
+Route::get('/features', [FeatureController::class, 'show']);
+Route::middleware(['delivery.enabled', 'auth:sanctum', 'delivery.access'])->group(base_path('routes/api_delivery.php'));
+
+// Bolt ride state webhook (live accounts, once Bolt enables it). Its own
+// bearer token and Bolt's source IPs, no user session.
+Route::post('/webhooks/bolt', BoltWebhookController::class)
+    ->middleware(['delivery.enabled', 'throttle:120,1']);

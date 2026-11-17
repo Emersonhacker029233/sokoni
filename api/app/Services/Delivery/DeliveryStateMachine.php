@@ -11,20 +11,20 @@ use Illuminate\Support\Facades\DB;
  * The single way a delivery job changes status. Each transition:
  *  1. re-reads the job under a row lock and checks the edge is legal,
  *  2. writes the status, its timestamp and any extra columns,
- *  3. appends a delivery_job_events row (the timeline both apps show),
- *  4. after commit: opens/closes live tracking and sends the pushes.
+ *  3. appends a delivery_job_events row (the timeline both sides see),
+ *  4. after commit: sends the pushes and inbox entries.
+ *
+ * Actor roles on the timeline: buyer, seller, admin, system, and
+ * `provider` for changes that came from Bolt.
  */
 class DeliveryStateMachine
 {
     private const TIMESTAMP_COLUMNS = [
-        'pending_driver', 'driver_assigned', 'arrived_at_shop', 'picked_up', 'on_the_way',
-        'arrived', 'delivered', 'cancelled', 'failed', 'no_driver_found',
+        'pending_payment', 'awaiting_ready', 'pending_driver', 'driver_assigned', 'arrived_at_shop', 'picked_up',
+        'on_the_way', 'arrived', 'delivered', 'cancelled', 'failed', 'no_driver_found',
     ];
 
-    public function __construct(
-        private readonly LiveTracking $tracking,
-        private readonly DeliveryMessages $messages,
-    ) {}
+    public function __construct(private readonly DeliveryMessages $messages) {}
 
     /**
      * @param  array<string, mixed>  $attributes  extra columns to write in the same update
@@ -55,7 +55,7 @@ class DeliveryStateMachine
 
             $fresh->forceFill([
                 'status' => $to,
-                ...(in_array($to, self::TIMESTAMP_COLUMNS, true) ? [$this->timestampColumn($to) => now()] : []),
+                ...(in_array($to, self::TIMESTAMP_COLUMNS, true) ? ["{$to}_at" => now()] : []),
                 ...$attributes,
             ])->save();
 
@@ -68,27 +68,9 @@ class DeliveryStateMachine
             return [$fresh, $from];
         });
 
-        $this->announce($fresh, $from, $to);
+        $this->messages->statusChanged($fresh, $from, $to);
 
         return $fresh;
-    }
-
-    /**
-     * Side effects for a change already committed by someone else (the
-     * race-safe accept in DispatchService claims the row with its own
-     * conditional UPDATE and then calls this).
-     */
-    public function announce(DeliveryJob $job, string $from, string $to): void
-    {
-        if ($to === 'driver_assigned') {
-            $this->tracking->open($job);
-        }
-        if (in_array($to, ['delivered', 'cancelled', 'failed', 'no_driver_found'], true)
-            || ($to === 'pending_driver' && in_array($from, ['driver_assigned', 'arrived_at_shop'], true))) {
-            $this->tracking->close($job);
-        }
-
-        $this->messages->statusChanged($job, $from, $to);
     }
 
     public function record(
@@ -108,13 +90,8 @@ class DeliveryStateMachine
             'type' => $type,
             'from_status' => $from,
             'to_status' => $to,
-            'note' => $note,
+            'note' => $note === null ? null : mb_substr($note, 0, 255),
             'meta' => $meta === [] ? null : $meta,
         ]);
-    }
-
-    public function timestampColumn(string $status): string
-    {
-        return "{$status}_at";
     }
 }

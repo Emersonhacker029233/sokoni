@@ -3,14 +3,21 @@
 namespace App\Http\Requests;
 
 use App\Models\Product;
+use App\Models\SellerProfile;
+use App\Services\Delivery\Bolt\BoltApiException;
+use App\Services\Delivery\DeliveryQuoter;
 use App\Services\Delivery\DeliveryUnavailableException;
-use App\Services\Delivery\FeeCalculator;
+use App\Support\DeliveryAccess;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class CheckoutRequest extends FormRequest
 {
+    private ?SellerProfile $shop = null;
+
+    private bool $shopResolved = false;
+
     public function authorize(): bool
     {
         return true;
@@ -18,7 +25,7 @@ class CheckoutRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
@@ -27,22 +34,31 @@ class CheckoutRequest extends FormRequest
             'delivery_lat' => ['nullable', 'numeric', 'between:-90,90'],
             'delivery_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            // Sokoni 1.1 dispatch only: who the rider calls at the drop-off
-            // (E.164). Optional for the API; empty means the buyer's phone.
-            'delivery_phone' => ['nullable', 'string', 'regex:/^\+255[67]\d{8}$/'],
             'payment_method' => ['required', Rule::in(['cash_on_delivery', 'pay_on_pickup'])],
-            // Sokoni 1.1+ only (docs/delivery/PLAN.md). Ignored entirely while
-            // DELIVERY_ENABLED is false; Sokoni 1.0 never sends it.
-            'fulfilment' => ['nullable', Rule::in(['dispatch'])],
         ];
+
+        // Bolt delivery (docs/delivery/BOLT.md). Only validated for users the
+        // dark launch includes; for everyone else these fields are ignored
+        // exactly as unknown fields always were.
+        if (DeliveryAccess::deliveryEnabledFor($this->user())) {
+            // Who the Bolt driver hands the parcel to (E.164). Optional; empty means the buyer's phone.
+            $rules['delivery_phone'] = ['nullable', 'string', 'regex:/^\+255[67]\d{8}$/'];
+            $rules['fulfilment'] = ['nullable', Rule::in(['dispatch'])];
+        }
+
+        return $rules;
     }
 
-    /** True when this checkout opts into Sokoni Driver delivery and the feature is on. */
+    /**
+     * True when this checkout is a Bolt delivery: the app asked for it,
+     * delivery is chosen, and BOTH the buyer and the shop owner are inside
+     * the launch (BOLT_TEST_PHONES). Otherwise the order is an ordinary one.
+     */
     public function wantsDispatch(): bool
     {
-        return (bool) config('delivery.enabled')
-            && $this->input('fulfilment') === 'dispatch'
-            && $this->input('delivery_method') === 'delivery';
+        return $this->input('fulfilment') === 'dispatch'
+            && $this->input('delivery_method') === 'delivery'
+            && DeliveryAccess::orderEligible($this->user(), $this->shop());
     }
 
     /** Cart holds items from one seller at a time (CLAUDE.md feature 8). */
@@ -61,16 +77,35 @@ class CheckoutRequest extends FormRequest
 
             if ($sellerCount > 1) {
                 $validator->errors()->add('items', 'All items in one order must be from the same seller.');
+
+                return;
             }
 
             if ($this->wantsDispatch()) {
-                $this->validateDispatch($validator, $productIds->first());
+                $this->validateDispatch($validator);
             }
         });
     }
 
-    /** Dispatch needs exact coordinates on both ends and a drop-off inside the delivery area. */
-    private function validateDispatch(Validator $validator, mixed $productId): void
+    /** The shop of the cart's first product (one shop per cart). */
+    public function shop(): ?SellerProfile
+    {
+        if (! $this->shopResolved) {
+            $this->shopResolved = true;
+            $productId = collect($this->input('items', []))->pluck('product_id')->filter()->first();
+            $this->shop = $productId === null ? null : Product::query()->with('seller.user')->find($productId)?->seller;
+        }
+
+        return $this->shop;
+    }
+
+    /**
+     * A Bolt delivery needs exact coordinates on both ends, a drop-off
+     * inside the delivery area, and Bolt serving the trip. If Bolt can't be
+     * asked right now the order still goes through: it is priced again when
+     * the shop accepts.
+     */
+    private function validateDispatch(Validator $validator): void
     {
         if ($this->input('delivery_lat') === null || $this->input('delivery_lng') === null) {
             $validator->errors()->add('delivery_lat', __('delivery.errors.dropoff_location_required'));
@@ -78,20 +113,12 @@ class CheckoutRequest extends FormRequest
             return;
         }
 
-        $seller = Product::query()->find($productId)?->seller;
-        if ($seller?->lat === null || $seller?->lng === null) {
-            $validator->errors()->add('fulfilment', __('delivery.errors.shop_has_no_location'));
-
-            return;
-        }
-
         try {
-            app(FeeCalculator::class)->quote(
-                (float) $seller->lat, (float) $seller->lng,
-                (float) $this->input('delivery_lat'), (float) $this->input('delivery_lng'),
-            );
+            app(DeliveryQuoter::class)->quote($this->shop(), (float) $this->input('delivery_lat'), (float) $this->input('delivery_lng'));
         } catch (DeliveryUnavailableException $e) {
-            $validator->errors()->add('delivery_lat', $e->getMessage());
+            $validator->errors()->add($e->reason === 'shop_has_no_location' ? 'fulfilment' : 'delivery_lat', $e->getMessage());
+        } catch (BoltApiException) {
+            // Bolt unreachable: accept the order; the job's quote retries after acceptance.
         }
     }
 }

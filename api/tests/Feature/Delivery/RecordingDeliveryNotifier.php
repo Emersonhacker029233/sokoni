@@ -6,31 +6,16 @@ use App\Models\User;
 use App\Services\Delivery\DeliveryNotifier;
 use Illuminate\Support\Collection;
 
-/** Test double: records every delivery push instead of sending it. */
+/** Test double: records every delivery/return push instead of sending it, and writes the inbox row like the real one. */
 class RecordingDeliveryNotifier implements DeliveryNotifier
 {
-    /** @var list<array{user_id: int, app: string, title: string, body: string, data: array, silent: bool}> */
+    /** @var list<array{user_id: int, title: string, body: string, data: array}> */
     public array $sent = [];
 
-    /** Tests flip this to simulate real FCM being configured. */
-    public bool $live = false;
-
-    public function canReach(User $user, string $app): bool
+    public function send(User $user, string $title, string $body, array $data = []): void
     {
-        if (! $this->live) {
-            return false;
-        }
-        $devices = $user->devices();
-        $app === DeliveryNotifier::APP_DRIVER
-            ? $devices->where('app', DeliveryNotifier::APP_DRIVER)
-            : $devices->where(fn ($q) => $q->whereNull('app')->orWhere('app', DeliveryNotifier::APP_CUSTOMER));
-
-        return $devices->exists();
-    }
-
-    public function send(User $user, string $app, string $title, string $body, array $data = [], bool $silent = false): void
-    {
-        $this->sent[] = ['user_id' => $user->id, 'app' => $app, 'title' => $title, 'body' => $body, 'data' => $data, 'silent' => $silent];
+        $user->appNotifications()->create(['title' => $title, 'body' => $body, 'data' => $data]);
+        $this->sent[] = ['user_id' => $user->id, 'title' => $title, 'body' => $body, 'data' => $data];
     }
 
     public function to(User $user): Collection

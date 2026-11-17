@@ -3,16 +3,11 @@
 namespace App\Providers;
 
 use App\Services\Catalog\CategoryCatalogService;
+use App\Services\Delivery\Bolt\BoltClient;
 use App\Services\Delivery\DeliveryNotifier;
 use App\Services\Delivery\FcmDeliveryNotifier;
 use App\Services\Delivery\FirebaseConnection;
-use App\Services\Delivery\FirebaseLiveTracking;
-use App\Services\Delivery\LiveTracking;
 use App\Services\Delivery\LogDeliveryNotifier;
-use App\Services\Delivery\NullLiveTracking;
-use App\Services\Delivery\OpenRouteServiceDistance;
-use App\Services\Delivery\RouteDistance;
-use App\Services\Delivery\StraightLineDistance;
 use App\Services\Moderation\BlockList;
 use App\Services\Nida\ManualReviewNidaVerifier;
 use App\Services\Nida\NidaVerifier;
@@ -87,25 +82,17 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SocialAuthVerifier::class, HttpSocialAuthVerifier::class);
         $this->app->bind(PushNotifier::class, LogPushNotifier::class);
 
-        // Delivery (docs/delivery/PLAN.md). Real Firebase only when the
-        // service-account file is actually present; otherwise log/poll
-        // fallbacks so local dev, CI and the current server keep working.
-        // PushNotifier above is deliberately untouched: Sokoni 1.0's order
-        // notifications stay exactly as they are.
+        // Delivery by Bolt (docs/delivery/BOLT.md). Real Firebase only when
+        // the service-account file is actually present; otherwise pushes are
+        // logged (the inbox entry is written either way). PushNotifier above
+        // is deliberately untouched: the existing order notifications stay
+        // exactly as they are.
         $this->app->singleton(FirebaseConnection::class);
-        $this->app->bind(RouteDistance::class, function ($app) {
-            $key = config('delivery.openrouteservice_key');
-
-            return filled($key)
-                ? new OpenRouteServiceDistance($key, $app->make(StraightLineDistance::class))
-                : $app->make(StraightLineDistance::class);
-        });
         $this->app->singleton(DeliveryNotifier::class, fn ($app) => $app->make(FirebaseConnection::class)->isConfigured()
             ? $app->make(FcmDeliveryNotifier::class)
             : $app->make(LogDeliveryNotifier::class));
-        $this->app->singleton(LiveTracking::class, fn ($app) => $app->make(FirebaseConnection::class)->hasDatabase()
-            ? $app->make(FirebaseLiveTracking::class)
-            : $app->make(NullLiveTracking::class));
+        // Built from config on every resolve, so credentials come from .env only.
+        $this->app->bind(BoltClient::class, fn () => BoltClient::fromConfig());
         // One block-list lookup per viewer per request, however many lists
         // the request filters (see BlockList).
         $this->app->scoped(BlockList::class);
@@ -208,16 +195,15 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinutes(15, 3)->by(strtolower((string) $request->input('login')).'|'.$request->ip());
         });
 
-        // Delivery (docs/delivery/PLAN.md). The driver app heartbeats every
-        // ~30 s (more often right after a status change), so 30/min leaves
-        // headroom without letting one phone hammer shared hosting.
-        RateLimiter::for('driver-location', function (Request $request) {
-            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
-        });
-        // Status changes, accepts, PIN/pickup-code entries, cancels. The PIN
-        // also locks itself after 5 wrong tries (config/delivery.php).
+        // Delivery by Bolt (docs/delivery/BOLT.md). Pay, cancel, retry,
+        // return requests and decisions.
         RateLimiter::for('delivery-actions', function (Request $request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        // Every checkout quote can cost a Bolt estimate call (cached 2 min
+        // per trip): moving the map pin around stays well inside this.
+        RateLimiter::for('delivery-quotes', function (Request $request) {
+            return Limit::perMinute(15)->by($request->user()?->id ?: $request->ip());
         });
 
         // Every web page's header needs the category nav — one composer

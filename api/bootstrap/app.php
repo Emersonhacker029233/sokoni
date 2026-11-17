@@ -22,9 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'web.onboarded' => \App\Http\Middleware\EnsureWebOnboarded::class,
-            // Delivery + Sokoni Driver (docs/delivery/PLAN.md).
+            // Delivery by Bolt and returns (docs/delivery/BOLT.md).
             'delivery.enabled' => \App\Http\Middleware\EnsureDeliveryEnabled::class,
-            'driver.approved' => \App\Http\Middleware\EnsureApprovedDriver::class,
+            'delivery.access' => \App\Http\Middleware\EnsureDeliveryAccess::class,
         ]);
         // Kibonet's delivery-report callback is posted by Kibonet itself,
         // not a browser with a Sokoni session — see

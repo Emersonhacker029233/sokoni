@@ -115,16 +115,16 @@ class Order extends Model
             return false;
         }
 
-        // Dispatch orders only (legacy orders never have a job, so this is
-        // a no-op for every Sokoni 1.0 order). While a driver job is still
-        // open, completion comes from the driver's PIN-confirmed delivery,
-        // not a seller tap, and nobody may cancel once the goods have left
-        // the shop (PLAN.md section 6: contact support instead).
+        // Bolt delivery orders only (other orders never have a job, so this
+        // is a no-op for every Sokoni 1.0 order). While the delivery is
+        // open, completion comes from Bolt's COMPLETED, not a seller tap,
+        // and nobody may cancel once the parcel has left the shop (contact
+        // support instead).
         if ($this->isDispatch() && ($job = $this->deliveryJob) !== null && ! $job->isTerminal()) {
             if ($status === 'completed' && $job->status !== 'failed') {
                 return false;
             }
-            if ($status === 'cancelled' && $job->isInTransit()) {
+            if ($status === 'cancelled' && ! $job->parcelAtShop()) {
                 return false;
             }
         }

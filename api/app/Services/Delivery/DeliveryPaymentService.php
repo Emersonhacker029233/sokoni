@@ -15,18 +15,18 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Collecting a dispatch order's delivery fee (Sokoni 1.1 "Pay now").
+ * Collecting a Bolt delivery's fee (Sokoni 1.1 "Pay now").
  *
  * What is charged is decided here and only here: the fee frozen on the job
- * when the seller accepted. Item money is not collected online while the
- * wallet is off (docs/delivery/DECISIONS.md 2026-10-29, WALLET_PLAN.md
- * section 4: WALLET_ENABLED stays false until phase W2).
+ * when the shop accepted (Bolt's estimate, upper bound). Item money is not
+ * collected online: the buyer pays the shop directly, as before.
  *
  * The app can start an attempt but can never finish one. A payment becomes
  * `succeeded` only when the gateway, asked by this server, says so; then
- * the job is marked paid through DeliveryJobService::markFeePaid and
- * dispatch starts. Status queries happen when the buyer's tracking screen
- * polls (throttled) and on every minute cron tick (always).
+ * the job is marked paid through DeliveryJobService::markFeePaid, and Bolt
+ * is booked once the shop has marked the order ready. Status queries happen
+ * when the buyer's order screen polls (throttled) and on every minute cron
+ * tick (always).
  */
 class DeliveryPaymentService
 {
