@@ -1,5 +1,7 @@
 # Sokoni Wallet & settlement: plan (draft for approval)
 
+> **Note (2026-11-17).** Delivery is now done only by Bolt drivers ([BOLT.md](BOLT.md)); the Sokoni Driver app was removed. Everything here about driver earnings, commission and payouts no longer applies. The buyer and shop sides of the wallet plan are unaffected.
+
 Status: **plan only, no code.** Branch `feature/delivery`. Nothing here is built or deployed.
 
 Sources: the client document *Sokoni Wallet & Settlement Procedure* (proposed payment procedure, November 2026), `docs/delivery/PLAN.md`, `docs/delivery/DECISIONS.md` and the current code.

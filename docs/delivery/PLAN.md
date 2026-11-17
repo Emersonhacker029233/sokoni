@@ -1,5 +1,7 @@
 # Sokoni Delivery + Sokoni Driver: Phase 1 plan (draft for approval)
 
+> **Superseded (2026-11-17).** Delivery is now done only by Bolt drivers: see [BOLT.md](BOLT.md) and [RETURNS.md](RETURNS.md). The Sokoni Driver app, own-driver dispatch and everything below about drivers were removed; the code is at git tag `pre-bolt-sokoni-drivers`. Kept as the record of the original plan.
+
 Status: **proposal, no code yet.** Branch `feature/delivery`. Nothing here is deployed.
 
 ## 0. Ground rules for the live 1.0 apps

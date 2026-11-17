@@ -110,3 +110,56 @@ Brought forward from phase 5 at the client's request. Payments, payouts and deli
 - **App, null-safe text, strict amounts:** text fields and flags in the order, order item, user, seller summary and notification models are read through `json_readers.dart`; a missing one becomes '' (a missing order status becomes `pending`) instead of failing the screen. Prices, fees and totals stay strict on purpose: a missing amount stays an error rather than showing a TSh 0 the server never recorded. The hand-written delivery models (job, driver, payment, rating, timeline) already read every field this way.
 - **The regression tests replay the API's real create response byte for byte,** captured before the fix. The earlier checkout test used a hand-written response with `status: 'pending'`, which is how this got through.
 - **Customer app build 1.1.0+10** carries the fix and installs over build 9.
+
+## Delivery by Bolt only, and returns, 2026-11-17
+
+Branch `feature/bolt-delivery` (from `feature/delivery`, with production's `fix/ugc-moderation` merged in so the release is a superset of what is live). Tag `pre-bolt-sokoni-drivers` marks the last commit with the driver app.
+
+**Removing Sokoni Drivers**
+
+- **Driver app, driver endpoints, dispatch waves and offers, heartbeat, the driver review queue, PINs and pickup codes are deleted.** The historical migrations stay unchanged (production has never run them, and `delivery_jobs` points at `driver_profiles` and `vehicles`), so the driver tables are created empty. Bolt jobs write 0 or `''` into the own-driver `NOT NULL` columns and never read them, rather than altering those columns.
+- **The customer app lost the delivery-PIN and driver-pickup-code screens and the rider rating.** Orders keep their order code, which is also what the note to Bolt's driver quotes.
+- **`firebase_auth` and `firebase_database` were removed from the customer app.** They existed only for the driver's live position; Bolt's tracking page replaces it.
+
+**Dark launch**
+
+- **`BOLT_ENABLED` replaces `DELIVERY_ENABLED`, which is no longer read.** A server that still has `DELIVERY_ENABLED=true` from staging can't switch Bolt on by accident.
+- **The allowlist applies to both sides of an order.** A tester could otherwise send a real Bolt driver to a real shop that has never heard of the feature. Quotes answer `not_available`; checkout silently places an ordinary order.
+- **The App Store review account is excluded in code** (`REVIEW_ACCOUNT_PHONE`), even when listed in `BOLT_TEST_PHONES` or at full launch, as a buyer and as a shop.
+- **Switched-off routes are indistinguishable from missing ones.** The switch runs before authentication and route-model binding (middleware priority), and throws the same `NotFoundHttpException` text Laravel uses for an unknown route. A first version answered 401 to guests and "No query results" for unknown ids, which a replay against production's code caught.
+- **`GET /api/features` is the app's only switch.** Public, per user, every failure means "off". 1.0 builds never call it, and 1.1 shows nothing until the server says so.
+- **Checked against production byte for byte.** 26 requests the live apps make were replayed against production's code and this branch (flags off), with random values masked. Identical apart from the new `/features` and the earlier `POST /orders` status fix (2026-11-04 above), which stays because 1.0 parses that answer the same way.
+- **The scheduler only gets the Bolt jobs when Bolt is on or has credentials.** A sub-minute task (`everyTenSeconds`) keeps `schedule:run` alive for the whole minute on shared hosting; production pays for that only once Bolt is used. Credentials alone keep it running so deliveries in progress finish after a switch-off.
+
+**Bolt**
+
+- **The shop is Bolt's rider; the customer is the destination.** Ride Booker books passengers, so the person at the pickup must be the "client". The shop's name and phone go in the rider fields, and the note to the driver carries the order code and the customer's name and phone, in English and Swahili. Whether Bolt allows parcel-only rides in Tanzania is an open question for Bolt (BOLT.md § 6).
+- **Cheapest category with a non-null ETA; the customer pays its upper bound, rounded up.** Bolt's price is a range and the final cost comes later; charging the top keeps Sokoni from paying the difference in the normal case. Every difference is stored against the receipt for admins.
+- **Priced when the shop accepts, booked when paid and Ready (whichever comes second).** Booking earlier would leave a driver waiting at a shop that hasn't packed. A cache lock stops a payment and a Ready tap from booking twice.
+- **A fresh `fare_id` for every booking, never cached.** Bolt's fare ids last 5 minutes and are single use. Checkout quotes are cached for 2 minutes without their `fare_id`. One re-estimate when Bolt rejects a fare.
+- **Booking failures:** transient errors (429, 5xx, timeouts) retry on the minute cron after 1, 2, 4, 8 minutes, up to 5 tries; Bolt refusing the request gives up at once. Either way the buyer is offered book again, pickup or cancel.
+- **The unpaid timeout counts from when the price was set,** not from when the shop accepted: Bolt may be unreachable for a while in `pending_quote`, and the buyer can't pay before there is a price.
+- **Cancelling reads Bolt's state first.** The local status can be up to 10 s old; a parcel that has just left the shop must not be cancelled as if it were still there. If Bolt refuses the cancel, Sokoni still cancels and records `provider_cancel_failed` for an admin.
+- **A buyer who cancels after Bolt assigned a driver pays `SOKONI_DELIVERY_BUYER_CANCEL_FEE`** (TSh 1,000) out of the refund, to cover Bolt's own cancellation charge. Shop and admin cancels refund in full.
+- **Refunds are recorded, not paid.** There is no payout API yet; admins pay and mark them.
+- **Webhooks only say "this ride changed".** Sokoni reads the ride back from Bolt and uses the body's state only if that read fails, so deliveries follow Bolt's own record and an old or replayed body can't move one backwards. Token compared in constant time, Bolt's three IPs only, unknown rides answer 200.
+- **Polling every 10 s stays on even with webhooks** (Bolt sends them for live accounts only), plus a lazy refresh when a buyer or shop is looking, within Bolt's 10-second fair-use rule.
+- **A live estimate in any currency but TZS is refused,** so a misconfigured account can't charge a buyer in another currency.
+- **Live base URL and cancel path are configurable.** Bolt's PDF leaves them to its Swagger file; the defaults are the sandbox paths without `-sandbox`.
+- **Production has no payment provider,** so admins (admin role only) can record a fee paid outside the app, with a reference, which books the ride exactly like an in-app payment.
+
+**Returns**
+
+- **Only Bolt-delivered orders can be returned,** because the window starts at Bolt's COMPLETED and the ride back starts at the delivery pin.
+- **The policy is copied onto the order at checkout.** A shop changing its policy later can't shorten a window the buyer already relied on.
+- **Who pays the ride back follows the reason:** the buyer for "changed my mind", the shop for everything the shop got wrong. Admins can override. The shop's share is recorded as owed by seller, because Sokoni can't charge a shop in the app yet.
+- **The buyer books the ride back when ready,** and is Bolt's rider for it. Booking at acceptance would send a driver to someone who may not be home.
+- **48 hours for the shop, then Sokoni support.** Checked by the minute cron.
+- **Blocks:** a buyer who blocked the shop can't open a return (same as chat and orders); a shop that blocked the buyer can't escape one: the request goes straight to support and the shop sees none of that buyer's content.
+- **Return photos and comments are user content:** reportable by the shop only, auto-hidden by the existing upheld-reports rule, stored on the private disk and served through 30-minute signed links.
+- **Terms 1.2 lives in its own columns** (`users.returns_terms_version`, `returns_terms_accepted_at`). iOS 1.0 (9) asks again whenever `users.terms_version` isn't its own `1.1`, and has no Return Policy text to show, so `terms_version` and `Legal::TERMS_VERSION` stay `1.1`. The Terms page shows clause 14 and version 1.2 only while returns are on.
+
+**App**
+
+- **Version stays `1.1.0+10` in this branch,** as asked. Recommended for release: **1.1.0+11** on both stores: a new build number above every build either store has seen, and a minor version because 1.1 adds features over the 1.0 in the stores.
+- **iOS social sign-in stays hidden;** nothing the 1.0 (9) review build uses was changed.
