@@ -6,13 +6,13 @@ use Illuminate\Support\Arr;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
-/** Every delivery string exists in both English and Swahili, with the same placeholders. */
+/** Every delivery and returns string exists in both English and Swahili, with the same placeholders. */
 class DeliveryLanguageFilesTest extends TestCase
 {
     /** @return array<string, array{string}> */
     public static function files(): array
     {
-        return ['delivery' => ['delivery']];
+        return ['delivery' => ['delivery'], 'returns' => ['returns']];
     }
 
     #[DataProvider('files')]

@@ -17,6 +17,7 @@ use App\Services\Delivery\DeliveryQuoter;
 use App\Services\Delivery\DeliveryUnavailableException;
 use App\Support\DeliveryAccess;
 use App\Support\DeliverySettings;
+use App\Support\ReturnPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -86,6 +87,10 @@ class CustomerDeliveryController extends Controller
             'category' => $estimate->category,
             'eta_seconds' => $estimate->etaSeconds,
             'estimate' => true,
+            // Shown at checkout before the buyer pays (docs/delivery/RETURNS.md).
+            'return_policy' => DeliveryAccess::returnsEligible($request->user(), $shop)
+                ? ReturnPolicy::toArray($shop->return_policy, $shop->return_notes)
+                : null,
         ]]);
     }
 

@@ -3,9 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Models\DeliveryJob;
+use App\Models\ReturnRequest;
 use App\Services\Delivery\Bolt\BoltApiException;
 use App\Services\Delivery\Bolt\BoltClient;
 use App\Services\Delivery\DeliveryJobService;
+use App\Services\Returns\ReturnService;
 use Illuminate\Console\Command;
 
 /**
@@ -26,7 +28,7 @@ class BoltSandbox extends Command
 
     protected $description = 'Create, drive or destroy a Bolt Ride Booker sandbox';
 
-    public function handle(BoltClient $bolt, DeliveryJobService $jobs): int
+    public function handle(BoltClient $bolt, DeliveryJobService $jobs, ReturnService $returns): int
     {
         if (! $bolt->isSandbox()) {
             $this->error('BOLT_ENV is "live". This command only works against the sandbox.');
@@ -37,7 +39,7 @@ class BoltSandbox extends Command
         try {
             return match ($this->argument('action')) {
                 'create' => $this->create($bolt),
-                'state' => $this->state($bolt, $jobs),
+                'state' => $this->state($bolt, $jobs, $returns),
                 'destroy' => $this->destroy($bolt),
                 default => $this->invalid(),
             };
@@ -60,7 +62,7 @@ class BoltSandbox extends Command
         return self::SUCCESS;
     }
 
-    private function state(BoltClient $bolt, DeliveryJobService $jobs): int
+    private function state(BoltClient $bolt, DeliveryJobService $jobs, ReturnService $returns): int
     {
         $ride = (string) $this->argument('ride');
         $state = strtoupper((string) $this->argument('state'));
@@ -70,9 +72,13 @@ class BoltSandbox extends Command
             return self::FAILURE;
         }
 
-        $job = DeliveryJob::query()->where('provider_ref', $ride)->first()
-            ?? DeliveryJob::query()->whereHas('order', fn ($q) => $q->where('code', strtoupper($ride)))->latest('id')->first();
-        $rideId = $job?->provider_ref ?? $ride;
+        // A return ride first when asked by ride id (its order code would find the delivery instead).
+        $return = ReturnRequest::query()->where('provider_ref', $ride)->first();
+        $job = $return === null
+            ? (DeliveryJob::query()->where('provider_ref', $ride)->first()
+                ?? DeliveryJob::query()->whereHas('order', fn ($q) => $q->where('code', strtoupper($ride)))->latest('id')->first())
+            : null;
+        $rideId = $return?->provider_ref ?? $job?->provider_ref ?? $ride;
 
         $bolt->sandboxSetState($rideId, $state);
         $this->info("Ride {$rideId} is now {$state} at Bolt.");
@@ -80,6 +86,10 @@ class BoltSandbox extends Command
         if ($job !== null) {
             $job = $jobs->sync($job->fresh(), force: true);
             $this->info("Sokoni delivery #{$job->id} (order {$job->order->code}) is now: {$job->status}");
+        }
+        if ($return !== null) {
+            $return = $returns->syncRide($return->fresh(), force: true);
+            $this->info("Sokoni return #{$return->id} (order {$return->order->code}) is now: {$return->status}, ride {$return->ride_status}");
         }
 
         return self::SUCCESS;

@@ -2,11 +2,16 @@
 
 namespace App\Http\Resources\Delivery;
 
+use App\Http\Resources\Returns\ReturnRequestResource;
 use App\Models\DeliveryJob;
 use App\Models\Payment;
+use App\Models\ReturnRequest;
 use App\Services\Delivery\Bolt\BoltStates;
 use App\Services\Delivery\DeliveryPaymentService;
+use App\Services\Returns\ReturnService;
+use App\Support\DeliveryAccess;
 use App\Support\DeliverySettings;
+use App\Support\ReturnPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -58,9 +63,38 @@ class DeliveryJobResource extends JsonResource
             'created_at' => $this->created_at,
         ];
 
-        return $this->viewer === self::SELLER
+        $view = $this->viewer === self::SELLER
             ? [...$base, ...$this->sellerView()]
             : [...$base, ...$this->buyerView()];
+
+        if (DeliveryAccess::returnsEnabledFor($request->user())) {
+            $view['return'] = $this->returnView($request);
+        }
+
+        return $view;
+    }
+
+    /**
+     * Returns (docs/delivery/RETURNS.md), on the order screen: the policy the
+     * buyer saw at checkout, until when a return can be requested, and the
+     * request itself once there is one.
+     */
+    private function returnView(Request $request): array
+    {
+        $order = $this->order;
+        $existing = ReturnRequest::query()->where('order_id', $order->id)->first();
+        $returns = app(ReturnService::class);
+
+        return [
+            'policy' => ReturnPolicy::toArray($order->return_policy, $order->seller?->return_notes),
+            'eligible_until' => ReturnPolicy::deadline($order->return_policy, $this->delivered_at),
+            'can_request' => $this->viewer === self::BUYER && $existing === null
+                && $returns->refusal($order, $request->user()) === null,
+            'request' => $existing === null ? null : ReturnRequestResource::for(
+                $existing,
+                $this->viewer === self::SELLER ? ReturnRequestResource::SELLER : ReturnRequestResource::BUYER,
+            )->resolve($request),
+        ];
     }
 
     private function buyerView(): array

@@ -218,6 +218,8 @@ Route::middleware('auth:sanctum')->group(function () {
 */
 Route::get('/features', [FeatureController::class, 'show']);
 Route::middleware(['delivery.enabled', 'auth:sanctum', 'delivery.access'])->group(base_path('routes/api_delivery.php'));
+// Returns (docs/delivery/RETURNS.md): also needs DELIVERY_RETURNS_ENABLED.
+Route::middleware(['delivery.enabled:returns', 'auth:sanctum', 'delivery.access:returns'])->group(base_path('routes/api_returns.php'));
 
 // Bolt ride state webhook (live accounts, once Bolt enables it). Its own
 // bearer token and Bolt's source IPs, no user session.

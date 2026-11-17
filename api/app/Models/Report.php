@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Observers\ReportObserver;
+use App\Support\PrivateFileUrl;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,6 +34,8 @@ class Report extends Model
         'update' => Update::class,
         'offer' => Offer::class,
         'user' => User::class,
+        // A return request's comment and photos (docs/delivery/RETURNS.md). Only its shop can report it.
+        'return_request' => ReturnRequest::class,
     ];
 
     /**
@@ -106,6 +109,7 @@ class Report extends Model
             Comment::class => Comment::query()->where('user_id', $user->id)->pluck('id'),
             Review::class => Review::query()->where('buyer_id', $user->id)->pluck('id'),
             Message::class => Message::query()->where('sender_id', $user->id)->pluck('id'),
+            ReturnRequest::class => ReturnRequest::query()->where('buyer_id', $user->id)->pluck('id'),
         ];
 
         return $query->where(function (Builder $q) use ($targets) {
@@ -180,6 +184,7 @@ class Report extends Model
             $item instanceof Review => $item->buyer,
             $item instanceof Showcase, $item instanceof Update, $item instanceof Offer => $item->seller?->user,
             $item instanceof User => $item,
+            $item instanceof ReturnRequest => $item->buyer,
             default => null,
         };
     }
@@ -240,6 +245,11 @@ class Report extends Model
                 $item->discount_type === 'percent'
                     ? rtrim(rtrim((string) $item->discount_value, '0'), '.').'% off'
                     : 'Sale price TSh '.number_format((float) $item->discount_value),
+            ),
+            $item instanceof ReturnRequest => $preview(
+                'Return request for order '.($item->order?->code ?? '#'.$item->order_id).' ('.str_replace('_', ' ', $item->reason).')',
+                $item->comment,
+                $item->photos->map(fn ($p) => PrivateFileUrl::for($p->path))->all(),
             ),
             $item instanceof User => $preview(
                 'User profile: '.$item->name.($item->username ? ' (@'.$item->username.')' : ''),

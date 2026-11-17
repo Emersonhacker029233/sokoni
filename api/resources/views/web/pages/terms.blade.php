@@ -3,10 +3,12 @@
 @section('content')
 <x-breadcrumb :items="[['label' => 'Sokoni', 'url' => route('web.home')], ['label' => __('site.footer_terms_link'), 'url' => null]]" />
 
-{{-- Same text as the app's TermsScreen (app/lib/features/legal/presentation/terms_screen.dart). Version 1.1 adds clause 2 (Apple Guideline 1.2). --}}
+{{-- Same text as the app's TermsScreen (app/lib/features/legal/presentation/terms_screen.dart). Version 1.1 adds clause 2 (Apple Guideline 1.2).
+     Version 1.2 adds clause 14 (Return Policy) and is shown only while DELIVERY_RETURNS_ENABLED is on; until then this page is exactly 1.1.
+     Acceptance of 1.2 is stored in users.returns_terms_version, never users.terms_version (docs/delivery/RETURNS.md, "Terms"). --}}
 <article class="mx-auto max-w-3xl px-16 pb-64 lg:px-24">
 @if (app()->getLocale() === 'sw')
-    <h1 class="text-2xl font-bold">Masharti ya Matumizi (EULA) — toleo {{ \App\Support\Legal::TERMS_VERSION }}</h1>
+    <h1 class="text-2xl font-bold">Masharti ya Matumizi (EULA) — toleo {{ \App\Support\Legal::displayedTermsVersion() }}</h1>
     <p class="mt-4 text-sm text-sokoni-black/50">Yalisasishwa mwisho: Novemba 2026</p>
     <div class="prose prose-sm mt-24 max-w-none space-y-16 text-sokoni-black/80">
         <section><h2 class="font-semibold text-sokoni-black">1. Sisi ni akina nani</h2><p>Sokoni ("sisi") inaendesha programu na tovuti ya soko la Sokoni, inayounganisha wanunuzi na wauzaji nchini Tanzania. Masharti haya ni makubaliano ya leseni kati yako na Sokoni (EULA) na yanasimamia matumizi yako ya Sokoni.</p></section>
@@ -22,9 +24,12 @@
         <section><h2 class="font-semibold text-sokoni-black">11. Mabadiliko ya Masharti haya</h2><p>Tunaweza kusasisha Masharti haya mara kwa mara. Mabadiliko makubwa yatahitaji ukubali toleo jipya kabla ya kuendelea kutumia Sokoni.</p></section>
         <section><h2 class="font-semibold text-sokoni-black">12. Sheria inayotawala</h2><p>Masharti haya yanatawaliwa na sheria za Jamhuri ya Muungano wa Tanzania.</p></section>
         <section><h2 class="font-semibold text-sokoni-black">13. Mawasiliano</h2><p>Maswali kuhusu Masharti haya yanaweza kutumwa kwa {{ config('sokoni.support_email') }}.</p></section>
+        @if (config('delivery.returns_enabled'))
+        <section id="return-policy"><h2 class="font-semibold text-sokoni-black">14. Sera ya Kurudisha bidhaa</h2><p>Oda zilizofikishwa na Bolt kupitia Sokoni zinaweza kurudishwa ndani ya muda ambao duka linaonyesha kwenye ukurasa wa duka, ukurasa wa bidhaa na wakati wa kuagiza kabla hujalipa: "Hakuna kurudisha", saa 24, siku 3 au siku 7 tangu kufikishwa.</p><p>Kurudisha, fungua oda kwenye programu, chagua sababu (nimebadili mawazo, bidhaa isiyo sahihi, imeharibika au ina kasoro, si kama ilivyoelezwa) na uweke picha 1 hadi 3. Duka hukubali au kukataa, likitoa sababu, ndani ya saa 48. Lisipojibu, au ukipinga ukataaji, huduma kwa wateja ya Sokoni huamua.</p><p>Dereva wa Bolt huchukua bidhaa kutoka kwako na kuirudisha dukani. Unalipia safari hiyo kama umebadili mawazo; duka hulipia kama bidhaa ilikuwa si sahihi, imeharibika au si kama ilivyoelezwa. Duka hukurudishia pesa bidhaa ikishafika na kuthibitisha kwenye programu.</p><p>Picha na maoni ya kurudisha ni maudhui ya watumiaji chini ya kifungu cha 2: yanaweza kuripotiwa, na sheria za kuzuia zinatumika.</p></section>
+        @endif
     </div>
 @else
-    <h1 class="text-2xl font-bold">Terms of Use (EULA) — version {{ \App\Support\Legal::TERMS_VERSION }}</h1>
+    <h1 class="text-2xl font-bold">Terms of Use (EULA) — version {{ \App\Support\Legal::displayedTermsVersion() }}</h1>
     <p class="mt-4 text-sm text-sokoni-black/50">Last updated: November 2026</p>
     <div class="prose prose-sm mt-24 max-w-none space-y-16 text-sokoni-black/80">
         <section><h2 class="font-semibold text-sokoni-black">1. Who we are</h2><p>Sokoni ("we", "us") operates the Sokoni marketplace app and website, connecting buyers and sellers in Tanzania. These Terms are the licence agreement between you and Sokoni (EULA) and govern your use of Sokoni.</p></section>
@@ -40,6 +45,9 @@
         <section><h2 class="font-semibold text-sokoni-black">11. Changes to these Terms</h2><p>We may update these Terms from time to time. Material changes will require you to accept the new version before continuing to use Sokoni.</p></section>
         <section><h2 class="font-semibold text-sokoni-black">12. Governing law</h2><p>These Terms are governed by the laws of the United Republic of Tanzania.</p></section>
         <section><h2 class="font-semibold text-sokoni-black">13. Contact</h2><p>Questions about these Terms can be sent to {{ config('sokoni.support_email') }}.</p></section>
+        @if (config('delivery.returns_enabled'))
+        <section id="return-policy"><h2 class="font-semibold text-sokoni-black">14. Return Policy</h2><p>Orders delivered by Bolt through Sokoni can be returned within the window the shop shows on its shop page, on the product page and at checkout before you pay: "No returns", 24 hours, 3 days or 7 days from delivery.</p><p>To return an item, open the order in the app, choose a reason (changed my mind, wrong item, damaged or defective, not as described) and add 1 to 3 photos. The shop accepts or rejects, with a reason, within 48 hours. If it does not answer, or you dispute a rejection, Sokoni support decides.</p><p>A Bolt driver collects the item from you and takes it back to the shop. You pay that ride if you changed your mind; the shop pays if the item was wrong, damaged or not as described. The shop refunds you once the item is back and confirms it in the app.</p><p>Return photos and comments are user content under clause 2: they can be reported, and blocking rules apply.</p></section>
+        @endif
     </div>
 @endif
 </article>

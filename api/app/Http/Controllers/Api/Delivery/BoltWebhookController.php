@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api\Delivery;
 
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryJob;
+use App\Models\ReturnRequest;
 use App\Services\Delivery\Bolt\BoltApiException;
 use App\Services\Delivery\Bolt\BoltRideBooker;
 use App\Services\Delivery\Bolt\BoltRideDetails;
 use App\Services\Delivery\DeliveryJobService;
 use App\Services\Delivery\DeliveryStateMachine;
+use App\Services\Returns\ReturnService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +28,7 @@ use Illuminate\Support\Facades\Log;
  */
 class BoltWebhookController extends Controller
 {
-    public function __invoke(Request $request, DeliveryJobService $jobs, BoltRideBooker $bolt, DeliveryStateMachine $stateMachine): JsonResponse
+    public function __invoke(Request $request, DeliveryJobService $jobs, ReturnService $returns, BoltRideBooker $bolt, DeliveryStateMachine $stateMachine): JsonResponse
     {
         $expected = (string) config('delivery.bolt.webhook_token');
         abort_if($expected === '', 404);
@@ -62,6 +64,14 @@ class BoltWebhookController extends Controller
         if ($job !== null) {
             $stateMachine->record($job, null, 'provider', 'provider_webhook', meta: ['state' => strtoupper($data['state'])]);
             $jobs->apply($job, $details);
+
+            return response()->json(['received' => true, 'handled' => true]);
+        }
+
+        // A return ride (customer -> shop) of a return request.
+        $return = ReturnRequest::query()->where('provider', 'bolt')->where('provider_ref', $rideId)->first();
+        if ($return !== null) {
+            $returns->applyRide($return, $details);
 
             return response()->json(['received' => true, 'handled' => true]);
         }

@@ -22,6 +22,11 @@ class DeliveryMigrationsTest extends TestCase
 
     private const FILES = [
         '2026_11_17_100000_add_bolt_columns_to_delivery_jobs_table',
+        '2026_11_17_100100_add_return_policy_to_seller_profiles_table',
+        '2026_11_17_100200_add_return_policy_to_orders_table',
+        '2026_11_17_100300_create_return_requests_table',
+        '2026_11_17_100400_add_return_request_id_to_payments_table',
+        '2026_11_17_100500_add_returns_terms_to_users_table',
     ];
 
     /** @var array<string, Migration> */
@@ -63,6 +68,13 @@ class DeliveryMigrationsTest extends TestCase
             }
         }
 
+        $this->assertTrue(Schema::hasTable('return_requests') && Schema::hasTable('return_request_photos'));
+        $this->assertTrue(Schema::hasColumns('seller_profiles', ['return_policy', 'return_notes']));
+        $this->assertTrue(Schema::hasColumn('orders', 'return_policy'));
+        $this->assertTrue(Schema::hasColumn('payments', 'return_request_id'));
+        $this->assertTrue(Schema::hasColumns('users', ['returns_terms_version', 'returns_terms_accepted_at']));
+        $this->assertSame('none', DB::table('seller_profiles')->value('return_policy'), 'existing shops: no returns');
+        $this->assertNull(DB::table('orders')->value('return_policy'));
         $this->assertTrue(Schema::hasColumns('delivery_jobs', ['provider', 'provider_ref', 'provider_driver', 'estimate_max', 'final_cost', 'cost_difference', 'booking_attempts', 'pending_payment_at']));
         $after = (array) DB::table('delivery_jobs')->where('id', $id)->first();
         foreach ($before as $column => $value) {

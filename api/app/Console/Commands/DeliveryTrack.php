@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\Delivery\Bolt\BoltClient;
 use App\Services\Delivery\DeliveryJobService;
+use App\Services\Returns\ReturnService;
 use Illuminate\Console\Command;
 
 /**
@@ -20,13 +21,13 @@ class DeliveryTrack extends Command
 
     protected $description = 'Poll Bolt for every running ride and apply its state';
 
-    public function handle(DeliveryJobService $jobs, BoltClient $bolt): int
+    public function handle(DeliveryJobService $jobs, ReturnService $returns, BoltClient $bolt): int
     {
         if (! $bolt->isConfigured()) {
             return self::SUCCESS;
         }
 
-        $synced = $jobs->syncActive();
+        $synced = $jobs->syncActive() + $returns->syncActiveRides();
         if ($synced > 0 && $this->output->isVerbose()) {
             $this->info("Synced {$synced} ride(s).");
         }

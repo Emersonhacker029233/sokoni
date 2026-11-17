@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'buyer_id', 'seller_id', 'subtotal', 'delivery_fee', 'total',
     'delivery_method', 'address', 'delivery_phone', 'delivery_lat', 'delivery_lng', 'notes',
-    'payment_method', 'fulfilment',
+    'payment_method', 'fulfilment', 'return_policy',
 ])]
 #[ObservedBy(OrderDeliveryObserver::class)]
 class Order extends Model

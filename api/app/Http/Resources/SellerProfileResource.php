@@ -2,7 +2,10 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Moderation\BlockList;
+use App\Support\DeliveryAccess;
 use App\Support\OpeningHours;
+use App\Support\ReturnPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -59,6 +62,13 @@ class SellerProfileResource extends JsonResource
             'is_following' => $this->when(
                 $request->user() !== null,
                 fn () => $request->user()->following()->where('seller_profiles.id', $this->id)->exists()
+            ),
+            // Returns (docs/delivery/RETURNS.md): the shop's policy on the
+            // shop page. Only for viewers inside the returns launch; no one
+            // else gets the key at all.
+            'return_policy' => $this->when(
+                DeliveryAccess::returnsEnabledFor(BlockList::viewer($request)),
+                fn () => ReturnPolicy::toArray($this->return_policy, $this->return_notes)
             ),
             'created_at' => $this->created_at,
         ];

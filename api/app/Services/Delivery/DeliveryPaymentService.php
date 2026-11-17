@@ -4,10 +4,13 @@ namespace App\Services\Delivery;
 
 use App\Models\DeliveryJob;
 use App\Models\Payment;
+use App\Models\ReturnRequest;
 use App\Models\User;
 use App\Services\Payment\CollectionRequest;
 use App\Services\Payment\GatewayCapabilities;
 use App\Services\Payment\PaymentGateway;
+use App\Services\Returns\ReturnMessages;
+use App\Services\Returns\ReturnService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -55,45 +58,90 @@ class DeliveryPaymentService
      */
     public function start(DeliveryJob $job, User $buyer, string $channel, string $msisdn, string $idempotencyKey): Payment
     {
+        $job->loadMissing('order');
+
+        return $this->open(
+            $buyer, $channel, $msisdn, $idempotencyKey,
+            owns: fn (Payment $p) => $p->delivery_job_id === $job->id,
+            create: function () use ($job, $buyer, $channel, $msisdn, $idempotencyKey) {
+                /** @var DeliveryJob $locked */
+                $locked = DeliveryJob::query()->lockForUpdate()->findOrFail($job->id);
+                if ($locked->status !== 'pending_payment' || $locked->payment_status !== 'unpaid') {
+                    throw DeliveryActionException::make('not_payable', 409);
+                }
+                $this->expireOpenAttempt($locked->payments()->where('status', 'pending')->latest('id')->first());
+
+                return $this->newAttempt($buyer, $channel, $msisdn, $idempotencyKey, [
+                    'order_id' => $locked->order_id,
+                    'delivery_job_id' => $locked->id,
+                    'purpose' => 'delivery_fee',
+                    'amount' => $locked->fee,
+                ]);
+            },
+            description: "Sokoni delivery {$job->order->code}",
+        );
+    }
+
+    /**
+     * "Changed my mind" returns: the buyer pays the Bolt ride back the same
+     * way (docs/delivery/RETURNS.md). The amount is the one frozen on the
+     * return when the shop accepted.
+     */
+    public function startForReturn(ReturnRequest $return, User $buyer, string $channel, string $msisdn, string $idempotencyKey): Payment
+    {
+        $return->loadMissing('order');
+
+        return $this->open(
+            $buyer, $channel, $msisdn, $idempotencyKey,
+            owns: fn (Payment $p) => $p->return_request_id === $return->id,
+            create: function () use ($return, $buyer, $channel, $msisdn, $idempotencyKey) {
+                /** @var ReturnRequest $locked */
+                $locked = ReturnRequest::query()->lockForUpdate()->findOrFail($return->id);
+                if ($locked->status !== 'accepted' || $locked->fee_status !== 'unpaid' || (int) $locked->fee <= 0) {
+                    throw DeliveryActionException::make('not_payable', 409);
+                }
+                $this->expireOpenAttempt($locked->payments()->where('status', 'pending')->latest('id')->first());
+
+                return $this->newAttempt($buyer, $channel, $msisdn, $idempotencyKey, [
+                    'order_id' => $locked->order_id,
+                    'return_request_id' => $locked->id,
+                    'purpose' => 'return_fee',
+                    'amount' => $locked->fee,
+                ]);
+            },
+            description: "Sokoni return {$return->order->code}",
+        );
+    }
+
+    public function refreshForReturn(ReturnRequest $return): void
+    {
+        $pending = $return->payments()->where('status', 'pending')->latest('id')->first();
+        if ($pending !== null && Cache::add("payments:query:{$pending->id}", true, max(1, (int) config('payments.status_query_interval_seconds')))) {
+            $this->refresh($pending);
+        }
+    }
+
+    /**
+     * One payment attempt: the same idempotency key returns the same
+     * attempt, a second prompt waits until the first expired, and the
+     * prompt is sent to the phone after the row is safely stored.
+     *
+     * @param  callable(Payment): bool  $owns  whether an attempt found by key belongs to this job/return
+     * @param  callable(): Payment  $create  runs in a transaction; locks the payable and creates the row
+     */
+    private function open(User $buyer, string $channel, string $msisdn, string $idempotencyKey, callable $owns, callable $create, string $description): Payment
+    {
         if (! $this->onlinePaymentAvailable()) {
             throw DeliveryActionException::make('payments_unavailable', 503);
         }
 
         $existing = Payment::query()->where('idempotency_key', $idempotencyKey)->first();
         if ($existing !== null) {
-            return $this->sameAttempt($existing, $job, $buyer);
+            return $this->sameAttempt($existing, $owns, $buyer);
         }
 
         try {
-            $payment = DB::transaction(function () use ($job, $buyer, $channel, $msisdn, $idempotencyKey) {
-                /** @var DeliveryJob $locked */
-                $locked = DeliveryJob::query()->lockForUpdate()->findOrFail($job->id);
-                if ($locked->status !== 'pending_payment' || $locked->payment_status !== 'unpaid') {
-                    throw DeliveryActionException::make('not_payable', 409);
-                }
-
-                $pending = $locked->payments()->where('status', 'pending')->latest('id')->first();
-                if ($pending !== null) {
-                    if (! $this->timedOut($pending)) {
-                        throw DeliveryActionException::make('payment_in_progress', 409);
-                    }
-                    $this->fail($pending, self::TIMEOUT, notify: false);
-                }
-
-                return Payment::query()->create([
-                    'order_id' => $locked->order_id,
-                    'delivery_job_id' => $locked->id,
-                    'payer_user_id' => $buyer->id,
-                    'purpose' => 'delivery_fee',
-                    'provider' => $this->gateway->name(),
-                    'channel' => $channel,
-                    'msisdn' => $msisdn,
-                    'amount' => $locked->fee,
-                    'currency' => 'TZS',
-                    'status' => 'pending',
-                    'idempotency_key' => $idempotencyKey,
-                ]);
-            });
+            $payment = DB::transaction($create);
         } catch (QueryException $e) {
             // Two identical requests raced past the lookup; the unique key let one through.
             $existing = Payment::query()->where('idempotency_key', $idempotencyKey)->first();
@@ -101,10 +149,9 @@ class DeliveryPaymentService
                 throw $e;
             }
 
-            return $this->sameAttempt($existing, $job, $buyer);
+            return $this->sameAttempt($existing, $owns, $buyer);
         }
 
-        $job->loadMissing('order');
         try {
             $result = $this->gateway->initiateCollection(new CollectionRequest(
                 reference: $idempotencyKey,
@@ -112,7 +159,7 @@ class DeliveryPaymentService
                 currency: 'TZS',
                 msisdn: $msisdn,
                 channel: $channel,
-                description: "Sokoni delivery {$job->order->code}",
+                description: $description,
             ));
         } catch (Throwable $e) {
             Log::error("[payments] initiate failed for payment #{$payment->id}: ".$e->getMessage());
@@ -130,6 +177,31 @@ class DeliveryPaymentService
         $payment->forceFill(['provider_reference' => $result->providerReference])->save();
 
         return $payment->fresh();
+    }
+
+    private function expireOpenAttempt(?Payment $pending): void
+    {
+        if ($pending === null) {
+            return;
+        }
+        if (! $this->timedOut($pending)) {
+            throw DeliveryActionException::make('payment_in_progress', 409);
+        }
+        $this->fail($pending, self::TIMEOUT, notify: false);
+    }
+
+    private function newAttempt(User $buyer, string $channel, string $msisdn, string $idempotencyKey, array $attributes): Payment
+    {
+        return Payment::query()->create([
+            ...$attributes,
+            'payer_user_id' => $buyer->id,
+            'provider' => $this->gateway->name(),
+            'channel' => $channel,
+            'msisdn' => $msisdn,
+            'currency' => 'TZS',
+            'status' => 'pending',
+            'idempotency_key' => $idempotencyKey,
+        ]);
     }
 
     /**
@@ -158,17 +230,22 @@ class DeliveryPaymentService
     public function refreshAllPending(): int
     {
         $changed = 0;
-        Payment::query()->where('status', 'pending')->whereNotNull('delivery_job_id')->orderBy('id')
+        Payment::query()->where('status', 'pending')
+            ->where(fn ($q) => $q->whereNotNull('delivery_job_id')->orWhereNotNull('return_request_id'))
+            ->orderBy('id')
             ->each(function (Payment $payment) use (&$changed) {
                 if ($this->refresh($payment)->status !== 'pending') {
                     $changed++;
                 }
             });
 
-        // A crash between "payment succeeded" and "job marked paid" must not strand a paid job.
+        // A crash between "payment succeeded" and "marked paid" must not strand a paid delivery or return.
         Payment::query()->where('status', 'succeeded')->where('purpose', 'delivery_fee')
             ->whereHas('deliveryJob', fn ($q) => $q->where('payment_status', 'unpaid'))
             ->each(fn (Payment $payment) => $this->jobs->markFeePaid($payment->deliveryJob, $payment->provider_reference));
+        Payment::query()->where('status', 'succeeded')->where('purpose', 'return_fee')
+            ->whereHas('returnRequest', fn ($q) => $q->where('fee_status', 'unpaid'))
+            ->each(fn (Payment $payment) => app(ReturnService::class)->markFeePaid($payment->returnRequest, $payment->provider_reference));
 
         return $changed;
     }
@@ -215,7 +292,10 @@ class DeliveryPaymentService
             }
         });
 
-        if ($succeeded) {
+        if ($succeeded && $payment->return_request_id !== null) {
+            // ReturnService depends on Bolt, not on payments; resolved here to keep the constructor graph acyclic.
+            app(ReturnService::class)->markFeePaid($payment->returnRequest()->firstOrFail(), $payment->provider_reference);
+        } elseif ($succeeded) {
             $this->jobs->markFeePaid($payment->deliveryJob()->firstOrFail(), $payment->provider_reference);
         } elseif ($failedReason !== null) {
             $this->fail($payment, $failedReason);
@@ -224,9 +304,10 @@ class DeliveryPaymentService
         return $payment->fresh();
     }
 
-    private function sameAttempt(Payment $existing, DeliveryJob $job, User $buyer): Payment
+    /** @param callable(Payment): bool $owns */
+    private function sameAttempt(Payment $existing, callable $owns, User $buyer): Payment
     {
-        if ($existing->delivery_job_id !== $job->id || $existing->payer_user_id !== $buyer->id) {
+        if (! $owns($existing) || $existing->payer_user_id !== $buyer->id) {
             throw DeliveryActionException::make('idempotency_key_reused', 409);
         }
 
@@ -247,9 +328,16 @@ class DeliveryPaymentService
             return;
         }
 
+        if (! $notify) {
+            return;
+        }
         $job = $payment->deliveryJob()->first();
-        if ($notify && $job !== null && $job->status === 'pending_payment') {
+        if ($job !== null && $job->status === 'pending_payment') {
             $this->messages->paymentFailed($job);
+        }
+        $return = $payment->returnRequest()->first();
+        if ($return !== null && $return->fee_status === 'unpaid') {
+            app(ReturnMessages::class)->toBuyer($return, 'payment_failed');
         }
     }
 }

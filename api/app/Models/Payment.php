@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** A delivery-fee collection attempt. Status changes only via a verified webhook (phase 5). */
+/** A delivery-fee or return-ride-fee collection attempt. Only the server, asking the gateway, marks it paid. */
 class Payment extends Model
 {
     protected $guarded = ['id'];
@@ -30,5 +30,11 @@ class Payment extends Model
     public function deliveryJob(): BelongsTo
     {
         return $this->belongsTo(DeliveryJob::class);
+    }
+
+    /** A buyer-paid Bolt ride back for a "changed my mind" return (purpose return_fee). */
+    public function returnRequest(): BelongsTo
+    {
+        return $this->belongsTo(ReturnRequest::class);
     }
 }

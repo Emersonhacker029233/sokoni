@@ -14,6 +14,7 @@ use App\Notifications\OrderPlacedNotification;
 use App\Notifications\OrderStatusUpdatedNotification;
 use App\Services\Moderation\BlockList;
 use App\Services\Push\PushNotifier;
+use App\Support\DeliveryAccess;
 use App\Support\SafeMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -97,10 +98,14 @@ class OrderController extends Controller
                 $subtotal += $product->price * $line['qty'];
             }
 
-            // Dispatch orders (Sokoni 1.1+, DELIVERY_ENABLED only): the
-            // delivery fee is quoted when the seller accepts and is paid to
-            // Sokoni separately, never added to the seller's order total.
+            // Bolt delivery orders (docs/delivery/BOLT.md): the delivery fee is
+            // Bolt's estimate, set when the seller accepts and paid to Sokoni
+            // separately, never added to the seller's order total. The shop's
+            // return policy is copied as the buyer saw it at checkout.
             $dispatch = $request->wantsDispatch();
+            $returnPolicy = $dispatch && DeliveryAccess::returnsEligible($request->user(), $request->shop())
+                ? ($request->shop()->return_policy ?? 'none')
+                : null;
             $deliveryFee = $request->input('delivery_method') === 'delivery' && ! $dispatch ? self::DELIVERY_FEE : 0;
 
             $order = $request->user()->orders()->create([
@@ -116,6 +121,7 @@ class OrderController extends Controller
                 'notes' => $request->string('notes') ?: null,
                 'payment_method' => $request->string('payment_method'),
                 'fulfilment' => $dispatch ? 'dispatch' : null,
+                'return_policy' => $returnPolicy,
             ]);
 
             foreach ($request->input('items') as $line) {

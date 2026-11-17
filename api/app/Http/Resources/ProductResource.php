@@ -2,6 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Moderation\BlockList;
+use App\Support\DeliveryAccess;
+use App\Support\ReturnPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -59,6 +62,13 @@ class ProductResource extends JsonResource
             'is_favorited' => $this->when(
                 $request->user() !== null,
                 fn () => $request->user()->favorites()->where('product_id', $this->id)->exists()
+            ),
+            // Returns (docs/delivery/RETURNS.md): the shop's policy on the
+            // product page. Only for viewers inside the returns launch; no
+            // one else gets the key at all.
+            'return_policy' => $this->when(
+                $this->relationLoaded('seller') && $this->seller !== null && DeliveryAccess::returnsEnabledFor(BlockList::viewer($request)),
+                fn () => ReturnPolicy::toArray($this->seller->return_policy, $this->seller->return_notes)
             ),
             'created_at' => $this->created_at,
         ];
