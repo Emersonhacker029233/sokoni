@@ -52,7 +52,9 @@ class DarkLaunchTest extends TestCase
         $this->actingAs($buyer)->getJson('/api/features')->assertJsonPath('data.delivery_enabled', false);
 
         foreach (['/api/delivery/config', '/api/delivery/quote?seller_id=1&lat=1&lng=1', '/api/delivery/orders/1'] as $uri) {
-            $this->actingAs($buyer)->getJson($uri)->assertNotFound();
+            // Indistinguishable from a route that does not exist.
+            $path = ltrim(parse_url($uri, PHP_URL_PATH), '/');
+            $this->actingAs($buyer)->getJson($uri)->assertNotFound()->assertJsonPath('message', "The route {$path} could not be found.");
         }
         $this->postJson('/api/delivery/orders/1/pay')->assertNotFound(); // 404 even before sign-in
         $this->postJson('/api/webhooks/bolt', ['ride_id' => 1, 'state' => 'COMPLETED'])->assertNotFound();

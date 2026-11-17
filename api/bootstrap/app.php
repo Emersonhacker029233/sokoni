@@ -26,6 +26,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'delivery.enabled' => \App\Http\Middleware\EnsureDeliveryEnabled::class,
             'delivery.access' => \App\Http\Middleware\EnsureDeliveryAccess::class,
         ]);
+        // The delivery switch runs before authentication and route-model
+        // binding, so with BOLT_ENABLED off a delivery route answers exactly
+        // like a route that doesn't exist (404), never "Unauthenticated" or
+        // "No query results for model".
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            prepend: \App\Http\Middleware\EnsureDeliveryEnabled::class,
+        );
         // Kibonet's delivery-report callback is posted by Kibonet itself,
         // not a browser with a Sokoni session — see
         // SmsDeliveryCallbackController's own docblock.

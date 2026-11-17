@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Delivery;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureDeliveryEnabled;
 use App\Models\DeliveryJob;
 use App\Models\ReturnRequest;
 use App\Services\Delivery\Bolt\BoltApiException;
@@ -31,7 +32,9 @@ class BoltWebhookController extends Controller
     public function __invoke(Request $request, DeliveryJobService $jobs, ReturnService $returns, BoltRideBooker $bolt, DeliveryStateMachine $stateMachine): JsonResponse
     {
         $expected = (string) config('delivery.bolt.webhook_token');
-        abort_if($expected === '', 404);
+        if ($expected === '') {
+            throw EnsureDeliveryEnabled::routeNotFound($request);
+        }
 
         if (! hash_equals($expected, (string) $request->bearerToken())) {
             Log::warning('[bolt] webhook with a wrong or missing token', ['ip' => $request->ip()]);

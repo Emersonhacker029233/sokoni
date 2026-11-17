@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * After auth: the signed-in user must be inside the dark launch
  * (BOLT_TEST_PHONES, never the App Store review account). Everyone else
- * gets the same 404 as when the feature is switched off.
+ * gets the same 404 as a route that doesn't exist.
  * `delivery.access:returns` checks returns instead of delivery.
  */
 class EnsureDeliveryAccess
@@ -21,7 +21,9 @@ class EnsureDeliveryAccess
             ? DeliveryAccess::returnsEnabledFor($request->user())
             : DeliveryAccess::deliveryEnabledFor($request->user());
 
-        abort_unless($allowed, 404);
+        if (! $allowed) {
+            throw EnsureDeliveryEnabled::routeNotFound($request);
+        }
 
         return $next($request);
     }
