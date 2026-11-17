@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/motion/spring_on_true.dart';
 import '../../auth/presentation/sign_in_prompt_sheet.dart';
+import '../../delivery/presentation/widgets/return_policy_card.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/colors.dart';
@@ -155,6 +156,8 @@ class _ProductDetailBody extends ConsumerWidget {
                 style: textTheme.bodySmall,
               ),
               Text(l10n.productStock(product.stock), style: textTheme.bodySmall),
+              // Returns (docs/delivery/RETURNS.md): only sent to users inside the returns launch.
+              if (product.returnPolicy != null) ReturnPolicyCard(policyJson: product.returnPolicy, compact: true),
               const SizedBox(height: SokoniDimens.space16),
               if (product.seller != null) _SellerCard(product: product),
               const SizedBox(height: SokoniDimens.space16),

@@ -43,7 +43,7 @@ class OrderRepository {
     double? deliveryLng,
     String? notes,
     required String paymentMethod,
-    // Sokoni 1.1 delivery flow only: 'dispatch' plus the rider's phone.
+    // Sokoni 1.1 delivery flow only: 'dispatch' plus the Bolt driver's phone.
     String? fulfilment,
     String? deliveryPhone,
   }) async {

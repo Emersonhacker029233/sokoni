@@ -38,6 +38,9 @@ abstract class SellerProfile with _$SellerProfile {
     // mirrors `App\Support\OpeningHours::parse()` exactly, which always
     // returns the full seven-day shape.
     @JsonKey(name: 'opening_hours') Map<String, dynamic>? openingHours,
+    // Returns (docs/delivery/RETURNS.md): {code, hours, label, notes}. Only
+    // sent to users inside the returns launch; null for everyone else.
+    @JsonKey(name: 'return_policy') Map<String, dynamic>? returnPolicy,
   }) = _SellerProfile;
 
   factory SellerProfile.fromJson(Map<String, dynamic> json) => _$SellerProfileFromJson(json);

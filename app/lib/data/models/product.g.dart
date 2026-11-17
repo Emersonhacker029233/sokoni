@@ -39,6 +39,7 @@ _Product _$ProductFromJson(Map<String, dynamic> json) => _Product(
   attributes: (json['attributes'] as Map<String, dynamic>?)?.map(
     (k, e) => MapEntry(k, e as String),
   ),
+  returnPolicy: json['return_policy'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$ProductToJson(_Product instance) => <String, dynamic>{
@@ -62,4 +63,5 @@ Map<String, dynamic> _$ProductToJson(_Product instance) => <String, dynamic>{
   'is_favorited': instance.isFavorited,
   'created_at': instance.createdAt?.toIso8601String(),
   'attributes': instance.attributes,
+  'return_policy': instance.returnPolicy,
 };

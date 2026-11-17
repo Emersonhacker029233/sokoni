@@ -4,17 +4,29 @@ import '../../core/network/dio_client.dart';
 import '../api/delivery_api.dart';
 import '../models/delivery.dart';
 
-/// Sokoni 1.1 delivery flow. Errors come back as either a
+/// Bolt delivery and returns. Errors come back as either a
 /// [DeliveryActionError] (the server refused with a stable `code`, e.g.
-/// `payment_in_progress`, `too_far`) or the usual [ApiException] from
-/// [mapDioError] (offline, timeout, validation, ...).
+/// `payment_in_progress`, `area_not_serviced`, `return_window_closed`) or
+/// the usual [ApiException] from [mapDioError] (offline, timeout,
+/// validation, ...).
 class DeliveryRepository {
   DeliveryRepository({required DeliveryApi api}) : _api = api;
 
   final DeliveryApi _api;
 
-  /// Null when the server has delivery switched off (the route 404s), so
-  /// the app keeps the Sokoni 1.0 checkout. Other failures throw.
+  /// What this user may see. Any failure means "off": a server that
+  /// predates the dark launch has no such route, and the app must then
+  /// look exactly like the build before it.
+  Future<SokoniFeatures> features() async {
+    try {
+      return SokoniFeatures.fromJson(_data(await _api.features()));
+    } catch (_) {
+      return SokoniFeatures.off;
+    }
+  }
+
+  /// Null when delivery is not available to this user (the route 404s).
+  /// Other failures throw.
   Future<DeliveryConfig?> config() async {
     try {
       final config = DeliveryConfig.fromJson(_data(await _api.config()));
@@ -55,27 +67,35 @@ class DeliveryRepository {
 
   Future<DeliveryTracking> switchToPickup(int orderId) => _view(() => _api.switchToPickup(orderId));
 
-  Future<void> rate(int orderId, {required int rating, String? comment}) async {
+  // Returns.
+
+  /// [photos] are local file paths (1-3), already compressed by the picker.
+  Future<ReturnRequestInfo> requestReturn(int orderId, {required String reason, String? comment, required List<String> photos}) async {
     try {
-      await _api.rate(orderId, rating: rating, comment: comment);
+      final files = [for (final path in photos) await MultipartFile.fromFile(path)];
+      return ReturnRequestInfo.fromJson(_data(await _api.requestReturn(orderId, reason: reason, comment: comment, photos: files)));
     } catch (e) {
       throw _error(e);
     }
   }
 
-  /// Firebase credentials for the live map, or null when the server says
-  /// to poll instead (503 `fallback: poll`, or no active job).
-  Future<RealtimeCredentials?> realtimeToken() async {
+  Future<ReturnRequestInfo> returnRequest(int returnId) => _return(() => _api.returnRequest(returnId));
+
+  /// accept | reject | dispute | withdraw | book | refunded | pay
+  Future<ReturnRequestInfo> returnAction(int returnId, String action, [Map<String, dynamic>? body]) =>
+      _return(() => _api.returnAction(returnId, action, body));
+
+  Future<void> acceptReturnsTerms(String version) async {
     try {
-      final data = _data(await _api.realtimeToken());
-      final token = data['token'];
-      final url = data['database_url'];
-      if (token is! String || url is! String || url.isEmpty) return null;
-      return RealtimeCredentials(token: token, databaseUrl: url);
-    } on DioException catch (e) {
-      final status = e.response?.statusCode;
-      if (status == 503 || status == 403) return null;
+      await _api.acceptReturnsTerms(version);
+    } catch (e) {
       throw _error(e);
+    }
+  }
+
+  Future<ReturnPolicyInfo> updateReturnPolicy({required String policy, String? notes}) async {
+    try {
+      return ReturnPolicyInfo.fromJson(_data(await _api.updateReturnPolicy(policy: policy, notes: notes)))!;
     } catch (e) {
       throw _error(e);
     }
@@ -84,6 +104,14 @@ class DeliveryRepository {
   Future<DeliveryTracking> _view(Future<dynamic> Function() call) async {
     try {
       return DeliveryTracking.fromJson(_data(await call()));
+    } catch (e) {
+      throw _error(e);
+    }
+  }
+
+  Future<ReturnRequestInfo> _return(Future<dynamic> Function() call) async {
+    try {
+      return ReturnRequestInfo.fromJson(_data(await call()));
     } catch (e) {
       throw _error(e);
     }

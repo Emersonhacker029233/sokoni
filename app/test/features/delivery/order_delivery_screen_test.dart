@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:sokoni/core/l10n/gen/app_localizations.dart';
+import 'package:sokoni/core/router/routes.dart';
+
+import 'package:sokoni/data/models/delivery.dart';
 import 'package:sokoni/data/models/order.dart';
 import 'package:sokoni/data/models/user.dart';
 import 'package:sokoni/features/orders/presentation/order_detail_screen.dart';
@@ -10,7 +15,7 @@ import 'package:sokoni/features/orders/providers/order_providers.dart';
 import '../../fixtures/delivery_fixtures.dart';
 import 'delivery_test_support.dart';
 
-Order _dispatchOrder({String status = 'accepted'}) => Order.fromJson({
+Order _boltOrder({String status = 'accepted'}) => Order.fromJson({
   'id': 345,
   'code': 'SKAB12CD34',
   'status': status,
@@ -26,7 +31,7 @@ Order _dispatchOrder({String status = 'accepted'}) => Order.fromJson({
     {'id': 1, 'product_id': 9, 'title': 'Kitenge', 'price': 20000, 'qty': 1, 'line_total': 20000},
   ],
   'timeline': [
-    {'status': 'pending', 'at': '2026-11-04T07:59:00Z'},
+    {'status': 'pending', 'at': '2026-11-17T07:59:00Z'},
   ],
 });
 
@@ -37,8 +42,10 @@ Future<FakeDeliveryRepository> _pump(
   SokoniUser user = testBuyer,
   String orderStatus = 'accepted',
   Locale locale = const Locale('en'),
+  void Function(FakeDeliveryRepository repo)? setUp,
 }) async {
   final repo = FakeDeliveryRepository(view: view, afterPay: afterPay);
+  setUp?.call(repo);
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 2.5;
   addTearDown(tester.view.reset);
@@ -46,9 +53,17 @@ Future<FakeDeliveryRepository> _pump(
     ProviderScope(
       overrides: [
         ...deliveryOverrides(repo: repo, user: user),
-        orderDetailProvider.overrideWith((ref, id) async => _dispatchOrder(status: orderStatus)),
+        orderDetailProvider.overrideWith((ref, id) async => _boltOrder(status: orderStatus)),
       ],
-      child: localizedApp(const OrderDetailScreen(orderId: 345), locale: locale),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: GoRouter(routes: [
+          GoRoute(path: '/', builder: (context, state) => const OrderDetailScreen(orderId: 345)),
+          GoRoute(path: SokoniRoutes.requestReturnPattern, builder: (context, state) => Text('request return ${state.pathParameters['id']}')),
+        ]),
+      ),
     ),
   );
   await tester.pump();
@@ -62,15 +77,14 @@ void main() {
     final repo = await _pump(
       tester,
       view: buyerView(status: 'pending_payment'),
-      afterPay: buyerView(status: 'pending_payment', attempt: {'id': 1, 'status': 'pending', 'amount': 4500, 'channel': 'mpesa', 'msisdn': '+25571••••111'}),
+      afterPay: buyerView(status: 'pending_payment', attempt: {'id': 1, 'status': 'pending', 'amount': 6400, 'channel': 'mpesa', 'msisdn': '+25571••••111'}),
     );
 
     expect(find.text('Pay for delivery'), findsOneWidget);
-    expect(find.text('TSh 24,500'), findsWidgets); // total, from the server
-    expect(find.text('Pay now · TSh 4,500'), findsOneWidget);
+    expect(find.text('TSh 26,400'), findsWidgets); // total, from the server
+    expect(find.text('Pay now · TSh 6,400'), findsOneWidget);
     expect(find.textContaining('Pay within'), findsOneWidget);
-    expect(find.textContaining('Test mode'), findsOneWidget);
-    expect(find.byKey(const Key('delivery-pin')), findsNothing);
+    expect(find.byKey(const Key('bolt-tracking')), findsNothing);
 
     await tester.ensureVisible(find.byKey(const Key('pay-now')));
     await tester.tap(find.byKey(const Key('pay-now')));
@@ -82,37 +96,48 @@ void main() {
     expect(pay['msisdn'], '+255711000111'); // the account phone, prefilled
     expect((pay['key']! as String).length, 24);
     // Still unpaid: the screen waits for the server, it never decides "paid".
-    expect(find.textContaining('Check your phone and approve TSh 4,500'), findsOneWidget);
+    expect(find.textContaining('Check your phone and approve TSh 6,400'), findsOneWidget);
     expect(find.byKey(const Key('pay-now')), findsNothing);
 
     await disposeTree(tester);
   });
 
-  testWidgets('finding a driver: the PIN and the warning, in English and Swahili', (tester) async {
-    await _pump(tester, view: buyerView(status: 'pending_driver'));
-    expect(find.text('4821'), findsOneWidget);
-    expect(find.text('Give this to the rider only when you receive your order.'), findsOneWidget);
-    expect(find.text('Finding a driver'), findsOneWidget);
-    expect(find.text('Delivery fee paid: TSh 4,500'), findsOneWidget);
+  testWidgets('paid: waiting for the shop, then the Bolt driver card with the tracking link', (tester) async {
+    await _pump(tester, view: buyerView(status: 'awaiting_ready'));
+    expect(find.text('Paid. A Bolt driver is booked as soon as the shop has packed your order.'), findsOneWidget);
+    expect(find.text('Delivery fee paid: TSh 6,400'), findsOneWidget);
     await disposeTree(tester);
 
-    await _pump(tester, view: buyerView(status: 'pending_driver'), locale: const Locale('sw'));
-    expect(find.text('Mpe dereva PIN hii pale tu utakapopokea oda yako.'), findsOneWidget);
-    expect(find.text('Tunatafuta dereva'), findsOneWidget);
+    await _pump(tester, view: buyerView(status: 'driver_assigned'));
+    expect(find.text('Your Bolt driver'), findsOneWidget);
+    expect(find.text('Seyf Driver'), findsOneWidget);
+    expect(find.byKey(const Key('bolt-plate')), findsOneWidget);
+    expect(find.text('Toyota IST · T123ABC'), findsOneWidget);
+    expect(find.byKey(const Key('call-driver')), findsOneWidget);
+    expect(find.byKey(const Key('bolt-tracking')), findsOneWidget);
+    expect(find.text('Driver on the way to the shop'), findsWidgets);
+    await disposeTree(tester);
+
+    await _pump(tester, view: buyerView(status: 'driver_assigned'), locale: const Locale('sw'));
+    expect(find.text('Dereva wako wa Bolt'), findsOneWidget);
+    expect(find.text('Fuatilia kwenye Bolt'), findsOneWidget);
     await disposeTree(tester);
   });
 
-  testWidgets('no driver found: retry, switch to pickup and cancel are offered', (tester) async {
-    final repo = await _pump(tester, view: buyerView(status: 'no_driver_found'));
-
-    expect(find.text('No driver available'), findsWidgets);
+  testWidgets('no Bolt driver: retry, switch to pickup and cancel; area not serviced: no retry', (tester) async {
+    final repo = await _pump(tester, view: buyerView(status: 'no_driver_found', failureReason: 'no_driver_found'));
+    expect(find.text('No Bolt driver available'), findsWidgets);
     expect(find.text('Try again'), findsOneWidget);
     expect(find.text('Switch to pickup'), findsOneWidget);
     expect(find.text('Cancel delivery'), findsOneWidget);
-
     await tester.tap(find.text('Try again'));
     await tester.pump();
     expect(repo.calls.where((c) => c['call'] == 'retry'), hasLength(1));
+    await disposeTree(tester);
+
+    await _pump(tester, view: buyerView(status: 'no_driver_found', failureReason: 'area_not_serviced'));
+    expect(find.text('Bolt does not deliver on this route yet. Switch to pickup or cancel.'), findsOneWidget);
+    expect(find.text('Try again'), findsNothing);
     await disposeTree(tester);
   });
 
@@ -129,43 +154,37 @@ void main() {
   testWidgets('a paid delivery cancelled later shows the recorded refund as pending', (tester) async {
     await _pump(
       tester,
-      view: buyerView(status: 'cancelled')..addAll({'cancelled_by': 'buyer', 'refund': {'amount': 4500, 'status': 'pending'}}),
+      view: buyerView(status: 'cancelled')..addAll({'cancelled_by': 'buyer', 'refund': {'amount': 6400, 'status': 'pending'}}),
       orderStatus: 'cancelled',
     );
-    expect(find.textContaining('Refund of TSh 4,500 pending'), findsOneWidget);
+    expect(find.textContaining('Refund of TSh 6,400 pending'), findsOneWidget);
     expect(find.text('You cancelled this delivery.'), findsOneWidget);
     await disposeTree(tester);
   });
 
-  testWidgets('a rider who cancelled is explained, and delivered offers the rating', (tester) async {
+  testWidgets('Bolt dropping the driver is explained', (tester) async {
     await _pump(
       tester,
       view: buyerView(status: 'pending_driver', timeline: [
-        {'status': 'pending_driver', 'at': '2026-11-04T08:01:00Z', 'by': 'system'},
-        {'status': 'driver_assigned', 'at': '2026-11-04T08:02:00Z', 'by': 'driver'},
-        {'status': 'pending_driver', 'at': '2026-11-04T08:05:00Z', 'by': 'driver'},
+        {'status': 'pending_driver', 'at': '2026-11-17T08:01:00Z', 'by': 'system'},
+        {'status': 'driver_assigned', 'at': '2026-11-17T08:02:00Z', 'by': 'provider'},
+        {'status': 'pending_driver', 'at': '2026-11-17T08:05:00Z', 'by': 'provider'},
       ]),
     );
-    expect(find.text("Your rider had to cancel. We're finding you another one."), findsOneWidget);
-    await disposeTree(tester);
-
-    await _pump(tester, view: buyerView(status: 'delivered'), orderStatus: 'completed');
-    expect(find.byKey(const Key('rate-driver')), findsOneWidget);
-    expect(find.byKey(const Key('delivery-pin')), findsNothing);
-    expect(find.text('Asha'), findsOneWidget);
+    expect(find.text('Your Bolt driver dropped the trip. Bolt is finding another one.'), findsOneWidget);
     await disposeTree(tester);
   });
 
-  testWidgets('seller mode: courier status, pickup code and rider, never the customer phone or PIN', (tester) async {
-    await _pump(tester, view: sellerView(status: 'arrived_at_shop'), user: testSeller);
+  testWidgets('seller mode: paid means mark ready; then the Bolt driver, never the customer phone', (tester) async {
+    await _pump(tester, view: sellerView(status: 'awaiting_ready'), user: testSeller);
+    expect(find.text('Bolt delivery'), findsOneWidget);
+    expect(find.textContaining('tap "Mark as Ready"'), findsOneWidget);
+    await disposeTree(tester);
 
-    expect(find.text('Sokoni delivery'), findsOneWidget);
-    expect(find.text('The rider is at your shop.'), findsOneWidget);
-    expect(find.byKey(const Key('pickup-code')), findsOneWidget);
-    expect(find.text('CD34'), findsOneWidget);
-    expect(find.text('Asha'), findsOneWidget);
+    await _pump(tester, view: sellerView(status: 'arrived_at_shop'), user: testSeller);
+    expect(find.text('The Bolt driver is at your shop. Hand over the order.'), findsOneWidget);
+    expect(find.text('Seyf Driver'), findsOneWidget);
     expect(find.byKey(const Key('call-driver')), findsOneWidget); // before pickup only, per the server
-    expect(find.text('4821'), findsNothing);
     expect(find.textContaining('0765'), findsNothing);
     expect(find.textContaining('Pay now'), findsNothing);
     await disposeTree(tester);
@@ -174,12 +193,107 @@ void main() {
   testWidgets('seller mode before acceptance: Accept order, and no manual "completed" later', (tester) async {
     await _pump(tester, view: null, user: testSeller, orderStatus: 'pending');
     expect(find.text('Accept order'), findsOneWidget);
-    expect(find.textContaining('a Sokoni rider collects it'), findsOneWidget);
+    expect(find.textContaining('a Bolt driver, booked by Sokoni, collects it'), findsOneWidget);
     await disposeTree(tester);
 
     await _pump(tester, view: sellerView(status: 'on_the_way'), user: testSeller, orderStatus: 'ready');
     expect(find.byKey(const Key('order-advance')), findsNothing);
-    expect(find.text('The rider is delivering the order.'), findsOneWidget);
+    expect(find.text('The Bolt driver is delivering the order.'), findsOneWidget);
     await disposeTree(tester);
+  });
+
+  group('returns', () {
+    testWidgets('delivered: the policy and Request a return, agreeing to the Return Policy first', (tester) async {
+      final repo = await _pump(
+        tester,
+        view: buyerView(status: 'delivered', returnBlock: returnBlockJson()),
+        orderStatus: 'completed',
+        setUp: (repo) => repo.features0 = const SokoniFeatures(deliveryEnabled: true, returnsEnabled: true, returnsTermsVersion: '1.2'),
+      );
+
+      expect(find.byKey(const Key('order-return-policy')), findsOneWidget);
+      expect(find.text('Returns within 3 days'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('request-return')));
+      await tester.tap(find.byKey(const Key('request-return')));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 2));
+
+      expect(find.text('Return Policy (Terms 1.2)'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('agree-returns-terms')));
+      await tester.pump();
+      expect(repo.calls.where((c) => c['call'] == 'acceptReturnsTerms' && c['version'] == '1.2'), hasLength(1));
+      await tester.pumpAndSettle();
+      expect(find.text('request return 345'), findsOneWidget);
+      await disposeTree(tester);
+    });
+
+    testWidgets('no return block outside the returns launch: no return UI at all', (tester) async {
+      await _pump(tester, view: buyerView(status: 'delivered'), orderStatus: 'completed');
+      expect(find.byKey(const Key('request-return')), findsNothing);
+      expect(find.text('Return'), findsNothing);
+      await disposeTree(tester);
+    });
+
+    testWidgets('the shop sees the request and rejects it with a reason; it can report it', (tester) async {
+      final repo = await _pump(
+        tester,
+        user: testSeller,
+        orderStatus: 'completed',
+        view: sellerView(status: 'delivered', returnBlock: returnBlockJson(request: returnRequestJson(actions: {'can_accept': true, 'can_reject': true, 'can_report': true}))),
+      );
+
+      expect(find.text('Wrong item'), findsOneWidget);
+      expect(find.text('It is the blue one, I ordered black.'), findsOneWidget);
+      expect(find.byKey(const Key('accept-return')), findsOneWidget);
+      expect(find.byKey(const Key('report-return')), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('reject-return')));
+      await tester.tap(find.byKey(const Key('reject-return')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'The photo shows it as described');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Reject return'));
+      await tester.pumpAndSettle();
+
+      final reject = repo.calls.singleWhere((c) => c['call'] == 'return:reject');
+      expect(reject['body'], {'reason': 'The photo shows it as described'});
+      await disposeTree(tester);
+    });
+
+    testWidgets('the buyer books the Bolt pickup once the shop accepted (the shop pays)', (tester) async {
+      final repo = await _pump(
+        tester,
+        orderStatus: 'completed',
+        view: buyerView(status: 'delivered', returnBlock: returnBlockJson(canRequest: false, request: returnRequestJson(status: 'accepted', actions: {'can_book_ride': true, 'can_withdraw': true}))),
+      );
+
+      expect(find.text('Bolt pickup TSh 6,400, paid by the shop.'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('book-return-ride')));
+      await tester.tap(find.byKey(const Key('book-return-ride')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Yes, continue'));
+      await tester.pumpAndSettle();
+
+      expect(repo.calls.where((c) => c['call'] == 'return:book'), hasLength(1));
+      await disposeTree(tester);
+    });
+
+    testWidgets('back at the shop: the shop confirms "item received, refund done"', (tester) async {
+      final repo = await _pump(
+        tester,
+        user: testSeller,
+        orderStatus: 'completed',
+        view: sellerView(status: 'delivered', returnBlock: returnBlockJson(canRequest: false, request: returnRequestJson(status: 'received', actions: {'can_confirm_refund': true}))),
+      );
+
+      expect(find.text('Back at the shop'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('confirm-refund')));
+      await tester.tap(find.byKey(const Key('confirm-refund')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Item received, refund done').last);
+      await tester.pumpAndSettle();
+
+      expect(repo.calls.where((c) => c['call'] == 'return:refunded'), hasLength(1));
+      await disposeTree(tester);
+    });
   });
 }

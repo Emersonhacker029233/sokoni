@@ -34,6 +34,9 @@ abstract class Product with _$Product {
     // flat key=>value map — present on the single-product response,
     // absent (null) on list responses, which never eager-load it.
     Map<String, String>? attributes,
+    // Returns (docs/delivery/RETURNS.md): the shop's policy, only for users
+    // inside the returns launch.
+    @JsonKey(name: 'return_policy') Map<String, dynamic>? returnPolicy,
   }) = _Product;
 
   factory Product.fromJson(Map<String, dynamic> json) => _$ProductFromJson(json);

@@ -78,11 +78,6 @@ dependencies:
   file_picker: ^11.0.3
   firebase_core: ^4.13.0
   firebase_messaging: ^16.5.0
-  # Sokoni 1.1 live delivery map: the rider's position streams from Firebase
-  # Realtime Database when the server has Firebase configured (same versions
-  # as driver_app). Without it the app polls the server instead.
-  firebase_auth: ^6.7.1
-  firebase_database: ^12.6.1
   google_sign_in: ^7.2.0
   sign_in_with_apple: ^8.1.0
   path_provider: ^2.1.6

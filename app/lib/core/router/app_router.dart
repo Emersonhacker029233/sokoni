@@ -9,7 +9,7 @@ import '../../features/chat/presentation/conversation_thread_screen.dart';
 import '../../features/debug/motion_gallery_screen.dart';
 import '../../features/debug/theme_audit_screen.dart';
 import '../../features/delivery/presentation/delivery_location_picker_screen.dart';
-import '../../features/delivery/presentation/rate_driver_screen.dart';
+import '../../features/delivery/presentation/request_return_screen.dart';
 import '../../features/discovery/presentation/home_screen.dart';
 import '../../features/legal/presentation/privacy_screen.dart';
 import '../../features/moderation/presentation/blocked_accounts_screen.dart';
@@ -164,11 +164,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: SokoniRoutes.rateDriverPattern,
+        path: SokoniRoutes.requestReturnPattern,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => sharedAxisZPage(
           key: state.pageKey,
-          child: RateDriverScreen(orderId: int.parse(state.pathParameters['id']!)),
+          child: RequestReturnScreen(orderId: int.parse(state.pathParameters['id']!)),
         ),
       ),
       GoRoute(

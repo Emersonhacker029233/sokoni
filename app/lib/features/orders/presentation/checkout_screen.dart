@@ -17,6 +17,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../data/models/delivery.dart';
 import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../delivery/presentation/delivery_labels.dart';
 import '../../delivery/presentation/delivery_location_picker_screen.dart';
 import '../../delivery/providers/delivery_providers.dart';
 import '../providers/order_providers.dart';
@@ -25,8 +26,8 @@ import '../providers/order_providers.dart';
 ///
 ///  - Sokoni 1.0 (unchanged): pickup or seller-arranged delivery with a
 ///    free-text address and the flat TSh 3,000 fee.
-///  - Sokoni 1.1 delivery: when this build is 1.1+ and the server has
-///    DELIVERY_ENABLED on, "Delivery" means a Sokoni rider. The buyer must
+///  - Bolt delivery: when this build is 1.1+ and the server says delivery
+///    is on for this user (GET /features), "Delivery" means a Bolt driver. The buyer must
 ///    drop a map pin (OpenStreetMap), confirm a readable address and give a
 ///    phone number, and the fee shown is the server's quote for the
 ///    distance from the shop. Payment happens after the shop accepts.
@@ -47,6 +48,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   double? _lng;
   PickedDeliveryLocation? _dropoff;
   bool _phonePrefilled = false;
+
+  /// This shop isn't offering Bolt delivery (the quote said `not_available`):
+  /// delivery goes back to the ordinary seller-arranged kind.
+  bool _boltNotOffered = false;
   bool _submitting = false;
   String? _error;
 
@@ -176,7 +181,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final subtotal = cart.fold(0, (sum, line) => sum + line.lineTotal);
     final availability = ref.watch(deliveryAvailabilityProvider);
     final dispatch = availability.value;
-    final dispatchMode = _deliveryMethod == 'delivery' && dispatch != null;
+    // Bolt delivery, unless this shop isn't offering it (outside the test while BOLT_TEST_PHONES is set).
+    final dispatchMode = _deliveryMethod == 'delivery' && dispatch != null && !_boltNotOffered;
     final checkingDelivery = _deliveryMethod == 'delivery' && availability.isLoading && !availability.hasValue;
     final deliveryCheckFailed = _deliveryMethod == 'delivery' && availability.hasError && !availability.hasValue;
 
@@ -275,7 +281,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ],
             const SizedBox(height: SokoniDimens.space20),
             if (dispatchMode)
-              _DispatchSummary(subtotal: subtotal, quote: quote, quoteError: quote?.error == null ? null : _quoteError(l10n, quote!.error!), onUsePickup: () => setState(() => _deliveryMethod = 'pickup'))
+              _DispatchSummary(
+                subtotal: subtotal,
+                quote: quote,
+                quoteError: quote?.error == null ? null : _quoteError(l10n, quote!.error!),
+                onUsePickup: () => setState(() => _deliveryMethod = 'pickup'),
+                onUseSellerDelivery: quote?.error is DeliveryActionError && (quote!.error! as DeliveryActionError).code == 'not_available'
+                    ? () => setState(() {
+                        _boltNotOffered = true;
+                        _error = null;
+                      })
+                    : null,
+              )
             else ...[
               _SummaryRow(label: l10n.cartSubtotal, value: SokoniFormat.tzs(subtotal)),
               _SummaryRow(label: l10n.checkoutDeliveryFee, value: SokoniFormat.tzs(_deliveryMethod == 'delivery' ? 3000 : 0)),
@@ -335,9 +352,9 @@ class _DispatchFields extends StatelessWidget {
         const SizedBox(height: SokoniDimens.space12),
         Row(
           children: [
-            const Icon(Icons.two_wheeler_rounded, size: 18),
+            const Icon(Icons.local_shipping_outlined, size: 18),
             const SizedBox(width: SokoniDimens.space8),
-            Text(l10n.checkoutDeliveryBySokoni, style: theme.textTheme.bodySmall),
+            Expanded(child: Text(l10n.checkoutDeliveryByBolt, style: theme.textTheme.bodySmall)),
           ],
         ),
         const SizedBox(height: SokoniDimens.space16),
@@ -383,7 +400,7 @@ class _DispatchFields extends StatelessWidget {
         const SizedBox(height: SokoniDimens.space20),
         Text(l10n.checkoutHowYouPay, style: theme.textTheme.titleSmall),
         const SizedBox(height: SokoniDimens.space8),
-        _InfoBox(icon: Icons.payments_outlined, text: config.feeInCash ? l10n.checkoutFeePaidCash : l10n.checkoutFeePaidInApp),
+        _InfoBox(icon: Icons.payments_outlined, text: l10n.checkoutBoltFeePaidInApp),
         const SizedBox(height: SokoniDimens.space8),
         _InfoBox(icon: Icons.storefront_outlined, text: l10n.checkoutGoodsPaidToShop),
       ],
@@ -395,16 +412,26 @@ class _DispatchFields extends StatelessWidget {
 /// either a product price or the server's quote; the binding fee is fixed
 /// when the shop accepts.
 class _DispatchSummary extends StatelessWidget {
-  const _DispatchSummary({required this.subtotal, required this.quote, required this.quoteError, required this.onUsePickup});
+  const _DispatchSummary({
+    required this.subtotal,
+    required this.quote,
+    required this.quoteError,
+    required this.onUsePickup,
+    this.onUseSellerDelivery,
+  });
 
   final int subtotal;
   final AsyncValue<DeliveryQuote>? quote;
   final String? quoteError;
   final VoidCallback onUsePickup;
 
+  /// Set when this shop isn't offering Bolt delivery: switch to the ordinary kind.
+  final VoidCallback? onUseSellerDelivery;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final value = quote?.value;
     final feeLabel = value == null ? l10n.checkoutDeliveryFee : l10n.checkoutDeliveryFeeKm(value.distanceKm.toStringAsFixed(1));
     final feeText = switch (quote) {
@@ -413,12 +440,20 @@ class _DispatchSummary extends StatelessWidget {
       AsyncValue(hasError: true) => '—',
       _ => '…',
     };
+    final returns = value?.returnPolicy;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SummaryRow(label: l10n.checkoutGoods, value: SokoniFormat.tzs(subtotal)),
         _SummaryRow(label: feeLabel, value: feeText),
+        if (value?.min != null && value?.max != null)
+          Text(
+            l10n.checkoutBoltRange(SokoniFormat.tzs(value!.min!.round()), SokoniFormat.tzs(value.max!.ceil())),
+            key: const Key('checkout-bolt-range'),
+            style: theme.textTheme.bodySmall,
+          ),
+        if (value?.etaSeconds != null) Text(l10n.checkoutBoltEta((value!.etaSeconds! / 60).ceil()), style: theme.textTheme.bodySmall),
         if (quote != null && quote!.isLoading && !quote!.hasValue) const LinearProgressIndicator(minHeight: 2),
         const Divider(),
         _SummaryRow(
@@ -427,13 +462,23 @@ class _DispatchSummary extends StatelessWidget {
           emphasize: true,
         ),
         const SizedBox(height: SokoniDimens.space4),
-        Text(l10n.checkoutFeeConfirmedOnAccept, style: Theme.of(context).textTheme.bodySmall),
+        Text(l10n.checkoutFeeConfirmedOnAccept, style: theme.textTheme.bodySmall),
+        // Returns (docs/delivery/RETURNS.md): shown before the buyer commits.
+        if (returns != null) ...[
+          const SizedBox(height: SokoniDimens.space12),
+          _InfoBox(
+            icon: returns.acceptsReturns ? Icons.assignment_return_outlined : Icons.block_outlined,
+            text: [l10n.checkoutReturnsLine(returnPolicyLabel(l10n, returns.code)), ?returns.notes].join('\n'),
+          ),
+        ],
         if (quoteError != null) ...[
           const SizedBox(height: SokoniDimens.space12),
           _InfoBox(
             icon: Icons.info_outline_rounded,
             text: quoteError!,
-            action: TextButton(onPressed: onUsePickup, child: Text(l10n.checkoutUsePickup)),
+            action: onUseSellerDelivery != null
+                ? TextButton(onPressed: onUseSellerDelivery, child: Text(l10n.checkoutUseSellerDelivery))
+                : TextButton(onPressed: onUsePickup, child: Text(l10n.checkoutUsePickup)),
           ),
         ],
       ],

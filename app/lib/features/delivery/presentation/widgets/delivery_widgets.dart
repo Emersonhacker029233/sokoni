@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/l10n/gen/app_localizations.dart';
@@ -10,7 +7,6 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/dimens.dart';
 import '../../../../data/models/delivery.dart';
 import '../../../../shared/widgets/sokoni_avatar.dart';
-import '../../providers/delivery_providers.dart';
 import '../delivery_labels.dart';
 
 /// A bordered card, the shape every delivery block on the order screen uses.
@@ -48,8 +44,41 @@ class DeliveryCard extends StatelessWidget {
   }
 }
 
-/// The seven customer-facing steps, from "finding a driver" to "delivered",
-/// with the time each was reached (from the server's shared timeline).
+/// A one-line notice with an icon, the shape every delivery and return message uses.
+class DeliveryNotice extends StatelessWidget {
+  const DeliveryNotice({required this.icon, required this.text, this.title, this.danger = false, super.key});
+
+  final IconData icon;
+  final String text;
+  final String? title;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DeliveryCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: danger ? SokoniColors.danger : null),
+          const SizedBox(width: SokoniDimens.space12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (title != null) Text(title!, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                Text(text),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The delivery steps from "shop packing" to "delivered", with the time
+/// each was reached (from the server's shared timeline).
 class DeliveryProgress extends StatelessWidget {
   const DeliveryProgress({required this.tracking, super.key});
 
@@ -76,9 +105,6 @@ class DeliveryProgress extends StatelessWidget {
                 : _StageState.upcoming,
             isLast: i == deliveryStages.length - 1,
             formatter: time,
-            detail: i == 0 && tracking.status == 'pending_driver' && (tracking.dispatchWave ?? 0) > 0
-                ? l10n.deliverySearchRound(tracking.dispatchWave!)
-                : null,
             theme: theme,
           ),
       ],
@@ -96,7 +122,6 @@ class _StageRow extends StatelessWidget {
     required this.isLast,
     required this.formatter,
     required this.theme,
-    this.detail,
   });
 
   final String label;
@@ -105,7 +130,6 @@ class _StageRow extends StatelessWidget {
   final bool isLast;
   final DateFormat formatter;
   final ThemeData theme;
-  final String? detail;
 
   @override
   Widget build(BuildContext context) {
@@ -143,18 +167,12 @@ class _StageRow extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: SokoniDimens.space12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: state == _StageState.current ? FontWeight.w700 : FontWeight.w500,
-                      color: state == _StageState.upcoming ? muted : null,
-                    ),
-                  ),
-                  if (detail != null) Text(detail!, style: theme.textTheme.bodySmall),
-                ],
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: state == _StageState.current ? FontWeight.w700 : FontWeight.w500,
+                  color: state == _StageState.upcoming ? muted : null,
+                ),
               ),
             ),
           ),
@@ -165,154 +183,73 @@ class _StageRow extends StatelessWidget {
   }
 }
 
-/// Rider name, photo, rating, vehicle and plate, with a call button when
-/// the server includes the phone (only during an active job).
-class DriverCard extends StatelessWidget {
-  const DriverCard({required this.driver, this.title, super.key});
+/// The Bolt driver: photo, name, car and plate, a call button while the
+/// server includes the phone, and Bolt's live tracking page while the ride
+/// is running.
+class BoltDriverCard extends StatelessWidget {
+  const BoltDriverCard({required this.driver, this.trackingUrl, this.title, super.key});
 
-  final DeliveryDriver driver;
+  final BoltDriver driver;
+  final String? trackingUrl;
   final String? title;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final vehicle = driver.vehicle;
+    final vehicle = boltVehicleSummary(driver);
+    final eta = driver.etaSeconds;
     return DeliveryCard(
-      title: title ?? l10n.deliveryDriverTitle,
-      child: Row(
-        children: [
-          SokoniAvatar(imageUrl: driver.photoUrl, radius: 28, fallbackIcon: Icons.person_rounded),
-          const SizedBox(width: SokoniDimens.space12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(driver.name, style: theme.textTheme.titleSmall),
-                if (driver.ratingAvg != null && driver.ratingCount > 0)
-                  Row(
-                    children: [
-                      const Icon(Icons.star_rounded, size: 16, color: SokoniColors.sokoniYellow),
-                      const SizedBox(width: 2),
-                      Text('${driver.ratingAvg!.toStringAsFixed(1)} (${driver.ratingCount})', style: theme.textTheme.bodySmall),
-                    ],
-                  ),
-                if (vehicle != null) Text(vehicleSummary(l10n, vehicle), style: theme.textTheme.bodySmall),
-                if (vehicle?.plateNumber != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: SokoniDimens.space4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: SokoniColors.sokoniYellow,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      vehicle!.plateNumber!,
-                      style: const TextStyle(color: SokoniColors.onYellow, fontWeight: FontWeight.w800, letterSpacing: 1),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (driver.phone != null)
-            FilledButton.tonalIcon(
-              key: const Key('call-driver'),
-              onPressed: () => launchUrl(Uri(scheme: 'tel', path: driver.phone)),
-              icon: const Icon(Icons.call_rounded),
-              label: Text(l10n.deliveryDriverCall),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The rider on a map with the shop and the drop-off. The position comes
-/// from the Firebase live stream when the server has it configured, else
-/// from the server's heartbeat in the polled delivery view.
-class LiveDriverMap extends ConsumerWidget {
-  const LiveDriverMap({required this.tracking, super.key});
-
-  final DeliveryTracking tracking;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final live = tracking.isActive ? ref.watch(liveDriverPositionProvider(tracking.id)).value : null;
-    final rider = live ?? tracking.driverLocation;
-    final shop = tracking.pickup;
-    final dropoff = tracking.dropoff;
-
-    final points = [
-      if (shop != null) LatLng(shop.lat, shop.lng),
-      if (dropoff != null) LatLng(dropoff.lat, dropoff.lng),
-      if (rider != null) LatLng(rider.lat, rider.lng),
-    ];
-    if (points.isEmpty) return const SizedBox.shrink();
-    final center = rider != null ? LatLng(rider.lat, rider.lng) : points.first;
-
-    return DeliveryCard(
-      title: l10n.deliveryMapTitle,
+      title: title ?? l10n.deliveryBoltDriverTitle,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              height: 220,
-              child: FlutterMap(
-                // A new key when the rider moves far re-centres the map.
-                key: ValueKey('${center.latitude.toStringAsFixed(3)},${center.longitude.toStringAsFixed(3)}'),
-                options: MapOptions(
-                  initialCenter: center,
-                  initialZoom: 14,
-                  interactionOptions: const InteractionOptions(flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag),
+          Row(
+            children: [
+              SokoniAvatar(imageUrl: driver.photoUrl, radius: 28, fallbackIcon: Icons.person_rounded),
+              const SizedBox(width: SokoniDimens.space12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(driver.name ?? l10n.deliveryBoltDriverTitle, style: theme.textTheme.titleSmall),
+                    if (vehicle.isNotEmpty) Text(vehicle, style: theme.textTheme.bodySmall),
+                    if (driver.plate != null)
+                      Container(
+                        margin: const EdgeInsets.only(top: SokoniDimens.space4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(color: SokoniColors.sokoniYellow, borderRadius: BorderRadius.circular(6)),
+                        child: Text(
+                          driver.plate!,
+                          key: const Key('bolt-plate'),
+                          style: const TextStyle(color: SokoniColors.onYellow, fontWeight: FontWeight.w800, letterSpacing: 1),
+                        ),
+                      ),
+                    if (eta != null && eta > 0)
+                      Text(l10n.deliveryBoltEta((eta / 60).ceil()), style: theme.textTheme.bodySmall),
+                  ],
                 ),
-                children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'tz.co.sokoni.sokoni',
-                    maxNativeZoom: 19,
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      if (shop != null) _marker(LatLng(shop.lat, shop.lng), Icons.storefront_rounded, l10n.deliveryMapShop, SokoniColors.sokoniBlack),
-                      if (dropoff != null) _marker(LatLng(dropoff.lat, dropoff.lng), Icons.home_rounded, l10n.deliveryMapYou, SokoniColors.success),
-                      if (rider != null) _marker(LatLng(rider.lat, rider.lng), Icons.two_wheeler_rounded, l10n.deliveryMapRider, SokoniColors.sokoniYellow),
-                    ],
-                  ),
-                  const SimpleAttributionWidget(source: Text('OpenStreetMap')),
-                ],
               ),
+              if (driver.phone != null)
+                FilledButton.tonalIcon(
+                  key: const Key('call-driver'),
+                  onPressed: () => launchUrl(Uri(scheme: 'tel', path: driver.phone)),
+                  icon: const Icon(Icons.call_rounded),
+                  label: Text(l10n.deliveryDriverCall),
+                ),
+            ],
+          ),
+          if (trackingUrl != null) ...[
+            const SizedBox(height: SokoniDimens.space12),
+            OutlinedButton.icon(
+              key: const Key('bolt-tracking'),
+              onPressed: () => launchUrl(Uri.parse(trackingUrl!), mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.map_outlined),
+              label: Text(l10n.deliveryBoltTrack),
             ),
-          ),
-          const SizedBox(height: SokoniDimens.space8),
-          Text(
-            rider == null
-                ? l10n.deliveryMapWaiting
-                : l10n.deliveryMapUpdated(rider.at == null ? '—' : DateFormat('HH:mm:ss').format(rider.at!)),
-            style: theme.textTheme.bodySmall,
-          ),
+          ],
         ],
       ),
     );
   }
-
-  Marker _marker(LatLng point, IconData icon, String label, Color color) => Marker(
-    point: point,
-    width: 40,
-    height: 40,
-    child: Semantics(
-      label: label,
-      child: Container(
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-        ),
-        child: Icon(icon, size: 20, color: color == SokoniColors.sokoniYellow ? SokoniColors.onYellow : Colors.white),
-      ),
-    ),
-  );
 }

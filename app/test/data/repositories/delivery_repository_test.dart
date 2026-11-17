@@ -13,8 +13,8 @@ import 'package:sokoni/data/repositories/order_repository.dart';
 
 import '../../fixtures/delivery_fixtures.dart';
 
-/// API contract, client side: the requests Sokoni 1.1 sends and how it
-/// reads every answer the server documents (docs/delivery/API.md).
+/// API contract, client side: the requests the app sends and how it reads
+/// every answer the server documents (docs/delivery/BOLT.md, RETURNS.md).
 class _Scripted implements HttpClientAdapter {
   _Scripted(this.routes);
 
@@ -43,17 +43,34 @@ class _Scripted implements HttpClientAdapter {
 }
 
 void main() {
-  group('config', () {
-    test('delivery on: the 1.1 flow settings', () async {
-      final (repo, _) = _repo({'GET /delivery/config': (200, {'data': deliveryConfigJson(mode: 'cash')})});
-      final config = await repo.config();
-      expect(config, isNotNull);
-      expect(config!.feeInCash, isTrue);
-      expect(config.unpaidTimeoutMinutes, 20);
-      expect(config.channels, contains('mpesa'));
+  group('features (the dark launch gate)', () {
+    test('reads what this user may see', () async {
+      final (repo, _) = _repo({'GET /features': (200, {'data': {'delivery_enabled': true, 'returns_enabled': true, 'returns_terms_version': '1.2', 'returns_terms_accepted': true}})});
+      final f = await repo.features();
+      expect(f.deliveryEnabled, isTrue);
+      expect(f.returnsEnabled, isTrue);
     });
 
-    test('DELIVERY_ENABLED off (404): null, so checkout stays the 1.0 one', () async {
+    test('an older server (404) or no connection means everything off', () async {
+      final (old, _) = _repo({'GET /features': (404, {'message': 'Not Found'})});
+      expect((await old.features()).deliveryEnabled, isFalse);
+      final (offline, _) = _repo({});
+      expect((await offline.features()).returnsEnabled, isFalse);
+    });
+  });
+
+  group('config', () {
+    test('delivery on: Bolt, paid in the app', () async {
+      final (repo, _) = _repo({'GET /delivery/config': (200, {'data': deliveryConfigJson()})});
+      final config = await repo.config();
+      expect(config, isNotNull);
+      expect(config!.unpaidTimeoutMinutes, 20);
+      expect(config.pollSeconds, 10);
+      expect(config.channels, contains('mpesa'));
+      expect(config.returnsEnabled, isTrue);
+    });
+
+    test('delivery off for this user (404): null, so checkout stays the ordinary one', () async {
       final (repo, _) = _repo({'GET /delivery/config': (404, {'message': 'Not Found'})});
       expect(await repo.config(), isNull);
     });
@@ -64,13 +81,13 @@ void main() {
     });
   });
 
-  test('quote sends the shop and the pin, and reads too_far as a coded refusal', () async {
+  test('quote sends the shop and the pin, and reads Bolt refusals as codes', () async {
     final (repo, adapter) = _repo({
-      'GET /delivery/quote': (422, {'code': 'too_far', 'message': 'Delivery is available up to 10 km from the shop. Choose pickup instead.'}),
+      'GET /delivery/quote': (422, {'code': 'area_not_serviced', 'message': 'Bolt does not deliver in this area yet. Choose pickup instead.'}),
     });
 
     final error = await repo.quote(sellerId: 5, lat: -6.79, lng: 39.28).then<Object?>((_) => null, onError: (Object e) => e);
-    expect(error, isA<DeliveryActionError>().having((e) => e.code, 'code', 'too_far'));
+    expect(error, isA<DeliveryActionError>().having((e) => e.code, 'code', 'area_not_serviced'));
     expect(adapter.requests.single.queryParameters, {'seller_id': 5, 'lat': -6.79, 'lng': 39.28});
   });
 
@@ -82,7 +99,7 @@ void main() {
   test('pay sends channel, number and key, never an amount', () async {
     final (repo, adapter) = _repo({
       'POST /delivery/orders/345/pay': (202, {
-        'data': buyerView(status: 'pending_payment', attempt: {'id': 1, 'status': 'pending', 'amount': 4500}),
+        'data': buyerView(status: 'pending_payment', attempt: {'id': 1, 'status': 'pending', 'amount': 6400}),
       }),
     });
 
@@ -92,7 +109,6 @@ void main() {
     expect(body, {'channel': 'airtel', 'msisdn': '+255754123456', 'idempotency_key': 'abc123def456ghi789jkl012'});
     expect(body.containsKey('amount'), isFalse);
     expect(tracking.payment!.attempt!.isPending, isTrue);
-    // Starting a payment never marks it paid: the server's answer says unpaid.
     expect(tracking.paymentStatus, 'unpaid');
   });
 
@@ -104,45 +120,61 @@ void main() {
     expect(error, isA<DeliveryActionError>().having((e) => e.code, 'code', 'payment_in_progress').having((e) => e.statusCode, 'status', 409));
   });
 
-  test('buyer actions hit their documented routes', () async {
+  test('buyer delivery actions hit their documented routes', () async {
     final view = {'data': buyerView(status: 'no_driver_found')};
     final (repo, adapter) = _repo({
       'POST /delivery/orders/345/retry': (200, view),
       'POST /delivery/orders/345/switch-to-pickup': (200, view),
       'POST /delivery/orders/345/cancel': (200, view),
-      'POST /delivery/orders/345/rating': (201, {'message': 'Thanks for rating.'}),
     });
 
     await repo.retry(345);
     await repo.switchToPickup(345);
     await repo.cancel(345, reason: 'Changed my mind');
-    await repo.rate(345, rating: 5, comment: 'Fast');
 
-    expect(adapter.requests.map((r) => r.path), [
-      '/delivery/orders/345/retry',
-      '/delivery/orders/345/switch-to-pickup',
-      '/delivery/orders/345/cancel',
-      '/delivery/orders/345/rating',
-    ]);
+    expect(adapter.requests.map((r) => r.path), ['/delivery/orders/345/retry', '/delivery/orders/345/switch-to-pickup', '/delivery/orders/345/cancel']);
     expect(adapter.requests[2].data, {'reason': 'Changed my mind'});
-    expect(adapter.requests[3].data, {'rating': 5, 'comment': 'Fast'});
   });
 
-  test('no Firebase on the server (503 fallback: poll) means poll, not an error', () async {
-    final (repo, _) = _repo({'POST /delivery/realtime-token': (503, {'code': 'tracking_unavailable', 'fallback': 'poll'})});
-    expect(await repo.realtimeToken(), isNull);
-  });
+  group('returns', () {
+    test('actions post to /returns/{id}/{action} and read the request back', () async {
+      final (repo, adapter) = _repo({
+        'POST /returns/7/reject': (200, {'data': returnRequestJson(status: 'rejected')}),
+        'POST /returns/7/book': (200, {'data': returnRequestJson(status: 'return_in_transit')}),
+      });
 
-  test('realtime credentials are read when Firebase is configured', () async {
-    final (repo, _) = _repo({
-      'POST /delivery/realtime-token': (200, {'data': {'token': 'jwt', 'uid': 'u1', 'database_url': 'https://x.firebaseio.com', 'expires_in': 3600}}),
+      final rejected = await repo.returnAction(7, 'reject', {'reason': 'As described'});
+      final booked = await repo.returnAction(7, 'book');
+
+      expect(rejected.status, 'rejected');
+      expect(booked.status, 'return_in_transit');
+      expect(adapter.requests.first.data, {'reason': 'As described'});
     });
-    final credentials = await repo.realtimeToken();
-    expect(credentials!.token, 'jwt');
-    expect(credentials.databaseUrl, 'https://x.firebaseio.com');
+
+    test('a closed window is a coded refusal the screen can show', () async {
+      final (repo, _) = _repo({
+        'POST /orders/345/returns': (409, {'code': 'return_window_closed', 'message': 'The return window for this order has closed.'}),
+      });
+      final error = await repo.requestReturn(345, reason: 'damaged', photos: const []).then<Object?>((_) => null, onError: (Object e) => e);
+      expect(error, isA<DeliveryActionError>().having((e) => e.code, 'code', 'return_window_closed'));
+    });
+
+    test('the shop return policy and the returns Terms', () async {
+      final (repo, adapter) = _repo({
+        'PUT /shop/return-policy': (200, {'data': {'code': '3d', 'hours': 72, 'label': 'Returns within 3 days', 'notes': 'Unopened'}}),
+        'POST /returns/terms/accept': (200, {'data': {'returns_terms_version': '1.2', 'returns_terms_accepted': true}}),
+      });
+
+      final policy = await repo.updateReturnPolicy(policy: '3d', notes: 'Unopened');
+      await repo.acceptReturnsTerms('1.2');
+
+      expect(policy.code, '3d');
+      expect(adapter.requests[0].data, {'return_policy': '3d', 'return_notes': 'Unopened'});
+      expect(adapter.requests[1].data, {'version': '1.2'});
+    });
   });
 
-  test('dispatch checkout opts in with fulfilment and the rider phone', () async {
+  test('Bolt checkout opts in with fulfilment and the driver phone', () async {
     final adapter = _Scripted({
       'POST /orders': (201, {
         'data': {
@@ -173,7 +205,7 @@ void main() {
     expect(order.deliveryPhone, '+255765000123');
   });
 
-  test('a 1.0-style checkout sends neither new field', () async {
+  test('an ordinary checkout sends neither new field, and an order without fulfilment parses', () async {
     final adapter = _Scripted({
       'POST /orders': (201, {
         'data': {
@@ -184,7 +216,7 @@ void main() {
     });
     final dio = Dio(BaseOptions(baseUrl: 'https://x/api'))..httpClientAdapter = adapter;
 
-    await OrderRepository(api: OrderApi(dio)).checkout(
+    final order = await OrderRepository(api: OrderApi(dio)).checkout(
       items: [(productId: 9, qty: 1)],
       deliveryMethod: 'delivery',
       address: 'Somewhere',
@@ -194,5 +226,6 @@ void main() {
     final body = adapter.requests.single.data as Map<String, dynamic>;
     expect(body.containsKey('fulfilment'), isFalse);
     expect(body.containsKey('delivery_phone'), isFalse);
+    expect(order.fulfilment, isNull);
   });
 }

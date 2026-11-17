@@ -14,7 +14,7 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
 
 /// A delivery drop-off: exact coordinates plus the readable address the
-/// rider sees.
+/// Bolt driver sees.
 class PickedDeliveryLocation {
   const PickedDeliveryLocation({required this.lat, required this.lng, required this.address});
 
@@ -27,7 +27,7 @@ class PickedDeliveryLocation {
 /// through flutter_map (no Google Maps key, like the shop-location step of
 /// seller onboarding). The pin stays in the centre; the buyer moves the map
 /// under it, or jumps to their GPS position. The address is reverse-
-/// geocoded when the map settles and stays editable, because the rider
+/// geocoded when the map settles and stays editable, because the driver
 /// needs the house, gate or landmark that no geocoder knows.
 class DeliveryLocationPickerScreen extends ConsumerStatefulWidget {
   const DeliveryLocationPickerScreen({this.initial, super.key});

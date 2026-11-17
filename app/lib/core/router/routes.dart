@@ -38,8 +38,8 @@ abstract final class SokoniRoutes {
 
   // Sokoni 1.1 delivery flow.
   static const deliveryLocation = '/checkout/location';
-  static String rateDriver(int orderId) => '/orders/$orderId/rate-driver';
-  static const rateDriverPattern = '/orders/:id/rate-driver';
+  static String requestReturn(int orderId) => '/orders/$orderId/return';
+  static const requestReturnPattern = '/orders/:id/return';
 
   static const newProduct = '/sell/products/new';
   static String editProduct(int id) => '/sell/products/$id/edit';

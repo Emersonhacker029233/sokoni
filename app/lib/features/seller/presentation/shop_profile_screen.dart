@@ -20,6 +20,7 @@ import '../../../shared/widgets/shop_location_map.dart';
 import '../../../shared/widgets/sokoni_avatar.dart';
 import '../../auth/presentation/sign_in_prompt_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../delivery/presentation/widgets/return_policy_card.dart';
 import '../../discovery/presentation/widgets/sticky_category_header.dart';
 import '../../moderation/presentation/blocked_state.dart';
 import '../../moderation/presentation/moderation_menu.dart';
@@ -330,6 +331,11 @@ class _ProfileHeader extends ConsumerWidget {
           if (seller.openingHours != null) ...[
             const SizedBox(height: SokoniDimens.space16),
             _OpeningHoursCard(openingHours: seller.openingHours!),
+          ],
+          // Returns (docs/delivery/RETURNS.md): only sent to users inside the returns launch.
+          if (seller.returnPolicy != null) ...[
+            const SizedBox(height: SokoniDimens.space16),
+            ReturnPolicyCard(policyJson: seller.returnPolicy, ownerHandle: seller.isOwner ? seller.handle : null),
           ],
           if (seller.hasLocation ||
               (seller.address != null && seller.address!.isNotEmpty)) ...[

@@ -38,6 +38,7 @@ _SellerProfile _$SellerProfileFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['created_at'] as String),
       openingHours: json['opening_hours'] as Map<String, dynamic>?,
+      returnPolicy: json['return_policy'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$SellerProfileToJson(_SellerProfile instance) =>
@@ -66,4 +67,5 @@ Map<String, dynamic> _$SellerProfileToJson(_SellerProfile instance) =>
       'is_following': instance.isFollowing,
       'created_at': instance.createdAt?.toIso8601String(),
       'opening_hours': instance.openingHours,
+      'return_policy': instance.returnPolicy,
     };

@@ -1,10 +1,6 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 import 'dart:math';
 
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -12,6 +8,7 @@ import '../../../core/providers.dart';
 import '../../../data/api/delivery_api.dart';
 import '../../../data/models/delivery.dart';
 import '../../../data/repositories/delivery_repository.dart';
+import '../../auth/providers/auth_providers.dart';
 import '../../orders/providers/order_providers.dart';
 
 final deliveryApiProvider = Provider<DeliveryApi>((ref) => DeliveryApi(ref.watch(dioProvider)));
@@ -23,8 +20,7 @@ final deliveryRepositoryProvider = Provider<DeliveryRepository>((ref) {
 /// The installed app's version name, e.g. `1.1.0`.
 final appVersionProvider = FutureProvider<String>((ref) async => (await PackageInfo.fromPlatform()).version);
 
-/// The first version with the Sokoni delivery flow. Sokoni 1.0 builds never
-/// reach this code, but the check keeps the rule explicit and testable.
+/// The first version with the Bolt delivery flow.
 const deliveryFlowMinVersion = '1.1.0';
 
 /// `true` when [version] is at least [minimum] (dotted numbers, e.g. 1.10.0 > 1.9.3).
@@ -40,13 +36,31 @@ bool isVersionAtLeast(String version, String minimum) {
   return true;
 }
 
-/// The Sokoni delivery flow's settings, or null when checkout must stay the
-/// Sokoni 1.0 one: this build is older than 1.1, or the server has
-/// DELIVERY_ENABLED off. A network failure is an error, not "off", so
-/// checkout can offer a retry instead of silently switching flows.
+/// What the server lets this user see (`GET /features`). Delivery and
+/// return screens appear only when this says so; a guest, anyone outside
+/// the dark launch, the App Store review account, or an older server all
+/// get [SokoniFeatures.off], and the app then looks exactly like the build
+/// before delivery existed. Re-read on sign-in, sign-out and account switch.
+final featuresProvider = FutureProvider.autoDispose<SokoniFeatures>((ref) async {
+  if (!ref.watch(authStateProvider).isAuthenticated) return SokoniFeatures.off;
+  try {
+    await ref.watch(currentUserProvider.future); // re-run when the active account changes
+  } catch (_) {
+    return SokoniFeatures.off;
+  }
+  return ref.watch(deliveryRepositoryProvider).features();
+});
+
+/// The Bolt delivery flow's settings, or null when checkout must stay the
+/// ordinary one: this build is older than 1.1, the server says delivery is
+/// off for this user, or the delivery config 404s. A network failure on the
+/// config is an error, not "off", so checkout can offer a retry instead of
+/// silently switching flows.
 final deliveryAvailabilityProvider = FutureProvider.autoDispose<DeliveryConfig?>((ref) async {
   final version = await ref.watch(appVersionProvider.future);
   if (!isVersionAtLeast(version, deliveryFlowMinVersion)) return null;
+  final features = await ref.watch(featuresProvider.future);
+  if (!features.deliveryEnabled) return null;
   final config = await ref.watch(deliveryRepositoryProvider).config();
   if (config == null || !isVersionAtLeast(version, config.minAppVersion)) return null;
   return config;
@@ -54,15 +68,15 @@ final deliveryAvailabilityProvider = FutureProvider.autoDispose<DeliveryConfig?>
 
 typedef QuoteRequest = ({int sellerId, double lat, double lng});
 
-/// The server's delivery-fee estimate for checkout.
+/// Bolt's delivery estimate for checkout.
 final deliveryQuoteProvider = FutureProvider.autoDispose.family<DeliveryQuote, QuoteRequest>((ref, request) {
   return ref.watch(deliveryRepositoryProvider).quote(sellerId: request.sellerId, lat: request.lat, lng: request.lng);
 });
 
-/// A dispatch order's delivery, re-read from the server on a timer while a
-/// screen shows it. There is no WebSocket server, so this polling (plus an
-/// instant refresh on a matching push) is how status, payment and the
-/// rider's position stay current. State is null until the shop accepts.
+/// A Bolt delivery, re-read from the server on a timer while a screen shows
+/// it. There is no WebSocket server, so this polling (plus an instant
+/// refresh on a matching push) is how status, payment, the Bolt driver and
+/// the order's return stay current. State is null until the shop accepts.
 class DeliveryTrackingController extends AsyncNotifier<DeliveryTracking?> {
   DeliveryTrackingController(this.orderId);
 
@@ -86,12 +100,19 @@ class DeliveryTrackingController extends AsyncNotifier<DeliveryTracking?> {
   }
 
   /// How long to wait before the next read, given what is happening now.
+  /// Bolt allows one ride-details read per 10 seconds, which the server
+  /// enforces; polling faster than that would only re-read the database.
   static Duration? pollInterval(DeliveryTracking? tracking) {
     if (tracking == null) return const Duration(seconds: 8); // waiting for the shop to accept
-    if (tracking.isTerminal) return null;
+    final returnRequest = tracking.returnInfo?.request;
+    if (tracking.isTerminal) {
+      // A delivered order stays live while its return is moving.
+      final returnMoving = returnRequest != null && !{'refunded', 'closed'}.contains(returnRequest.status);
+      return returnMoving ? const Duration(seconds: 10) : null;
+    }
     if (tracking.payment?.attempt?.isPending ?? false) return const Duration(seconds: 3);
-    if (tracking.isActive) return const Duration(seconds: 4); // the rider's position moves
-    return const Duration(seconds: 6);
+    if (tracking.isActive || tracking.status == 'pending_driver') return const Duration(seconds: 10);
+    return const Duration(seconds: 8);
   }
 
   void _schedule(DeliveryTracking? tracking) {
@@ -109,10 +130,11 @@ class DeliveryTrackingController extends AsyncNotifier<DeliveryTracking?> {
       final next = await ref.read(deliveryRepositoryProvider).tracking(orderId);
       if (_disposed) return;
       final wasNull = state.value == null;
+      final wasTerminal = state.value?.isTerminal ?? false;
       state = AsyncData(next);
       _schedule(next);
-      // The shop just accepted, or the order itself changed: refresh the order too.
-      if ((wasNull && next != null) || (next?.isTerminal ?? false)) ref.invalidate(orderDetailProvider(orderId));
+      // The shop just accepted, or the delivery just ended: refresh the order too.
+      if ((wasNull && next != null) || (!wasTerminal && (next?.isTerminal ?? false))) ref.invalidate(orderDetailProvider(orderId));
     } catch (_) {
       if (!_disposed) _schedule(state.value);
     }
@@ -137,8 +159,10 @@ class DeliveryTrackingController extends AsyncNotifier<DeliveryTracking?> {
 
   Future<void> switchToPickup() => _apply(() => ref.read(deliveryRepositoryProvider).switchToPickup(orderId));
 
-  Future<void> rateDriver({required int rating, String? comment}) async {
-    await ref.read(deliveryRepositoryProvider).rate(orderId, rating: rating, comment: comment);
+  /// A return action (accept, reject, dispute, withdraw, book, refunded,
+  /// pay), then a fresh read so the order screen shows the new state.
+  Future<void> returnAction(int returnId, String action, [Map<String, dynamic>? body]) async {
+    await ref.read(deliveryRepositoryProvider).returnAction(returnId, action, body);
     await refresh();
   }
 }
@@ -146,28 +170,6 @@ class DeliveryTrackingController extends AsyncNotifier<DeliveryTracking?> {
 final deliveryTrackingProvider = AsyncNotifierProvider.autoDispose.family<DeliveryTrackingController, DeliveryTracking?, int>(
   DeliveryTrackingController.new,
 );
-
-/// The rider's position from Firebase Realtime Database
-/// (`/tracking/{jobId}/loc`), when the server has Firebase configured.
-/// Emits null (and the map falls back to the polled `driver_location`)
-/// when it isn't, which is the case on staging today.
-final liveDriverPositionProvider = StreamProvider.autoDispose.family<DriverPosition?, int>((ref, jobId) async* {
-  final credentials = await ref.watch(deliveryRepositoryProvider).realtimeToken().catchError((Object _) => null);
-  if (credentials == null) {
-    yield null;
-    return;
-  }
-  try {
-    if (Firebase.apps.isEmpty) await Firebase.initializeApp().timeout(const Duration(seconds: 8));
-    await FirebaseAuth.instance.signInWithCustomToken(credentials.token).timeout(const Duration(seconds: 8));
-    ref.onDispose(() => FirebaseAuth.instance.signOut().catchError((Object _) {}));
-    final database = FirebaseDatabase.instanceFor(app: Firebase.app(), databaseURL: credentials.databaseUrl);
-    yield* database.ref('tracking/$jobId/loc').onValue.map((event) => DriverPosition.fromJson(event.snapshot.value));
-  } catch (e) {
-    developer.log('Live tracking unavailable; using the polled position.', name: 'Delivery', error: e);
-    yield null;
-  }
-});
 
 /// A fresh key per payment attempt; a retry of the same request reuses it.
 String newIdempotencyKey() {

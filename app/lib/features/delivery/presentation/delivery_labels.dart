@@ -2,17 +2,16 @@ import '../../../core/l10n/gen/app_localizations.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/delivery.dart';
 
-/// The customer-facing progress steps of a Sokoni delivery, in order.
-/// `pending_payment` and the problem states are shown separately.
-const deliveryStages = ['pending_driver', 'driver_assigned', 'arrived_at_shop', 'picked_up', 'on_the_way', 'arrived', 'delivered'];
+/// The customer-facing steps of a Bolt delivery, in order. Pricing,
+/// payment and the problem states are shown separately.
+const deliveryStages = ['awaiting_ready', 'pending_driver', 'driver_assigned', 'arrived_at_shop', 'on_the_way', 'delivered'];
 
 String deliveryStageLabel(AppLocalizations l10n, String status) => switch (status) {
+  'awaiting_ready' => l10n.deliveryStageShopPacking,
   'pending_driver' => l10n.deliveryStageFinding,
   'driver_assigned' => l10n.deliveryStageAssigned,
   'arrived_at_shop' => l10n.deliveryStageAtShop,
-  'picked_up' => l10n.deliveryStagePickedUp,
   'on_the_way' => l10n.deliveryStageOnTheWay,
-  'arrived' => l10n.deliveryStageArrived,
   'delivered' => l10n.deliveryStageDelivered,
   'no_driver_found' => l10n.deliveryNoDriverTitle,
   'failed' => l10n.deliveryFailedTitle,
@@ -20,7 +19,7 @@ String deliveryStageLabel(AppLocalizations l10n, String status) => switch (statu
   _ => l10n.deliveryPayTitle,
 };
 
-/// Index into [deliveryStages] the job has reached, or -1 before dispatch.
+/// Index into [deliveryStages] the delivery has reached, or -1 before payment.
 int deliveryStageIndex(DeliveryTracking tracking) {
   final direct = deliveryStages.indexOf(tracking.status);
   if (direct >= 0) return direct;
@@ -31,19 +30,9 @@ int deliveryStageIndex(DeliveryTracking tracking) {
   return -1;
 }
 
-String vehicleTypeLabel(AppLocalizations l10n, String type) => switch (type) {
-  'bajaj' => l10n.deliveryVehicleBajaj,
-  'car' => l10n.deliveryVehicleCar,
-  'bicycle' => l10n.deliveryVehicleBicycle,
-  _ => l10n.deliveryVehicleBodaBoda,
-};
-
-/// "Boda boda · Red TVS · MC123ABC", skipping what the rider didn't fill in.
-String vehicleSummary(AppLocalizations l10n, DeliveryVehicle vehicle) => [
-  vehicleTypeLabel(l10n, vehicle.type),
-  [vehicle.colour, vehicle.make].whereType<String>().where((s) => s.isNotEmpty).join(' '),
-  vehicle.plateNumber ?? '',
-].where((s) => s.isNotEmpty).join(' · ');
+/// "Toyota IST · T123ABC", skipping what Bolt didn't send.
+String boltVehicleSummary(BoltDriver driver) =>
+    [driver.model ?? '', driver.plate ?? ''].where((s) => s.isNotEmpty).join(' · ');
 
 String paymentChannelLabel(AppLocalizations l10n, String channel) => switch (channel) {
   'airtel' => l10n.deliveryChannelAirtel,
@@ -58,18 +47,19 @@ String paymentFailureLabel(AppLocalizations l10n, String? reason) => switch (rea
   _ => l10n.deliveryPayFailed,
 };
 
-String failureReasonLabel(AppLocalizations l10n, String? reason) => switch (reason) {
-  'vehicle_breakdown' => l10n.deliveryFailureVehicleBreakdown,
-  'accident' => l10n.deliveryFailureAccident,
-  'item_damaged' => l10n.deliveryFailureItemDamaged,
-  'wrong_address' => l10n.deliveryFailureWrongAddress,
-  _ => l10n.deliveryFailureOther,
+/// Why Bolt couldn't take or finish the delivery, for the buyer.
+String deliveryProblemBody(AppLocalizations l10n, String? reason) => switch (reason) {
+  'area_not_serviced' => l10n.deliveryBoltNotServiced,
+  'no_driver_found' || 'no_driver_available' => l10n.deliveryNoDriverBody,
+  'shop_no_show' => l10n.deliveryBoltShopNoShow,
+  'provider_cancelled_in_transit' || 'client_cancelled_in_transit' => l10n.deliveryBoltCancelledInTransit,
+  'booking_failed' || 'quote_failed' || 'payment_booking_failed' => l10n.deliveryBoltBookingFailed,
+  _ => l10n.deliveryBoltCancelledByBolt,
 };
 
 /// Why a delivery ended without arriving, for the buyer.
 String cancelledMessage(AppLocalizations l10n, DeliveryTracking tracking, {required int unpaidTimeoutMinutes}) {
   if (tracking.cancelReason == 'payment_timeout') return l10n.deliveryCancelledTimeout(unpaidTimeoutMinutes);
-  if (tracking.failureReason == 'customer_unreachable') return l10n.deliveryUnreachableBody;
   return switch (tracking.cancelledBy) {
     'buyer' => l10n.deliveryCancelledByBuyer,
     'seller' => l10n.deliveryCancelledBySeller,
@@ -84,9 +74,10 @@ String? refundMessage(AppLocalizations l10n, DeliveryRefund? refund) {
   return refund.status == 'refunded' ? l10n.deliveryRefunded(amount) : l10n.deliveryRefundPending(amount);
 }
 
-/// One line telling the seller what is happening with the rider.
-String sellerDeliveryStatusLabel(AppLocalizations l10n, String status) => switch (status) {
-  'pending_payment' => l10n.sellerDeliveryPendingPayment,
+/// One line telling the seller what is happening with the delivery.
+String sellerDeliveryStatusLabel(AppLocalizations l10n, DeliveryTracking tracking) => switch (tracking.status) {
+  'pending_quote' || 'pending_payment' => l10n.sellerDeliveryPendingPayment,
+  'awaiting_ready' => l10n.sellerDeliveryMarkReady,
   'pending_driver' => l10n.sellerDeliveryFindingRider,
   'no_driver_found' => l10n.sellerDeliveryNoRider,
   'driver_assigned' => l10n.sellerDeliveryRiderComing,
@@ -95,6 +86,32 @@ String sellerDeliveryStatusLabel(AppLocalizations l10n, String status) => switch
   'delivered' => l10n.sellerDeliveryDelivered,
   'failed' => l10n.sellerDeliveryFailed,
   _ => l10n.sellerDeliveryCancelled,
+};
+
+/// "Returns within 3 days" for a policy, or "No returns".
+String returnPolicyLabel(AppLocalizations l10n, String code) => switch (code) {
+  '24h' => l10n.returnPolicy24h,
+  '3d' => l10n.returnPolicy3d,
+  '7d' => l10n.returnPolicy7d,
+  _ => l10n.returnPolicyNone,
+};
+
+String returnReasonLabel(AppLocalizations l10n, String reason) => switch (reason) {
+  'changed_mind' => l10n.returnReasonChangedMind,
+  'wrong_item' => l10n.returnReasonWrongItem,
+  'damaged' => l10n.returnReasonDamaged,
+  _ => l10n.returnReasonNotAsDescribed,
+};
+
+String returnStatusLabel(AppLocalizations l10n, String status) => switch (status) {
+  'requested' => l10n.returnStatusRequested,
+  'accepted' => l10n.returnStatusAccepted,
+  'rejected' => l10n.returnStatusRejected,
+  'disputed' => l10n.returnStatusDisputed,
+  'return_in_transit' => l10n.returnStatusInTransit,
+  'received' => l10n.returnStatusReceived,
+  'refunded' => l10n.returnStatusRefunded,
+  _ => l10n.returnStatusClosed,
 };
 
 /// The server's own (already localised) message for a refused action,

@@ -19,6 +19,7 @@ import 'package:sokoni/features/delivery/providers/delivery_providers.dart';
 import 'package:sokoni/features/orders/presentation/checkout_screen.dart';
 import 'package:sokoni/features/orders/providers/order_providers.dart';
 
+import '../../fixtures/delivery_fixtures.dart';
 import '../../fixtures/order_fixtures.dart';
 import 'delivery_test_support.dart';
 
@@ -129,7 +130,7 @@ Future<_CapturingOrders> _pump(WidgetTester tester, {required bool deliveryOn, O
         orderRepositoryProvider.overrideWithValue(realOrders ?? orders),
         deliveryQuoteProvider.overrideWith((ref, request) async {
           if (quoteError != null) throw quoteError;
-          return const DeliveryQuote(distanceKm: 4.23, fee: 4500, distanceSource: 'straight_line');
+          return DeliveryQuote.fromJson(quoteJson(returnPolicy: {'code': '3d', 'hours': 72, 'label': 'Returns within 3 days', 'notes': 'Unused, in the original box.'}));
         }),
       ],
       child: MaterialApp.router(
@@ -145,7 +146,7 @@ Future<_CapturingOrders> _pump(WidgetTester tester, {required bool deliveryOn, O
 }
 
 void main() {
-  testWidgets('Sokoni 1.0 path is unchanged when delivery is off: free-text address and flat TSh 3,000', (tester) async {
+  testWidgets('the ordinary path is unchanged when delivery is off: free-text address and flat TSh 3,000', (tester) async {
     final orders = await _pump(tester, deliveryOn: false);
     await tester.tap(find.text('Delivery'));
     await tester.pumpAndSettle();
@@ -165,16 +166,16 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 3));
   });
 
-  testWidgets('1.1 delivery needs a map location before an order can be placed', (tester) async {
+  testWidgets('Bolt delivery needs a map location before an order can be placed', (tester) async {
     final orders = await _pump(tester, deliveryOn: true);
     await tester.tap(find.text('Delivery'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Delivered by a Sokoni rider'), findsOneWidget);
+    expect(find.text('Delivered by a Bolt driver, booked by Sokoni.'), findsOneWidget);
     expect(find.byKey(const Key('checkout-choose-location')), findsOneWidget);
     expect(find.text('TSh 3,000'), findsNothing);
     expect(find.text('Cash on delivery'), findsNothing);
-    expect(find.text('Delivery fee: pay in the app after the shop accepts your order.'), findsOneWidget);
+    expect(find.text('You pay the Bolt delivery fee in the app after the shop accepts.'), findsOneWidget);
     // The rider phone is prefilled from the account, shown in local format.
     expect(find.widgetWithText(TextField, '0711 000 111'), findsOneWidget);
 
@@ -184,7 +185,7 @@ void main() {
     expect(orders.sent, isNull);
   });
 
-  testWidgets('1.1 delivery shows the server quote and places a dispatch order with pin, address and phone', (tester) async {
+  testWidgets('Bolt delivery shows the estimate, the return policy and places a dispatch order with pin, address and phone', (tester) async {
     final orders = await _pump(tester, deliveryOn: true);
     await tester.tap(find.text('Delivery'));
     await tester.pumpAndSettle();
@@ -194,9 +195,13 @@ void main() {
 
     expect(find.text('Mtaa wa Uhuru 12, Kariakoo'), findsOneWidget);
     expect(find.text('Delivery fee (4.2 km)'), findsOneWidget);
-    expect(find.text('TSh 4,500'), findsOneWidget);
-    expect(find.text('TSh 24,500'), findsOneWidget);
+    expect(find.text('TSh 6,400'), findsOneWidget);
+    expect(find.text('TSh 26,400'), findsOneWidget);
+    expect(find.text('Bolt estimate TSh 5,200 to TSh 6,400. You pay the upper amount.'), findsOneWidget);
+    expect(find.text('Nearest Bolt driver about 4 min away'), findsOneWidget);
     expect(find.text('The delivery fee is confirmed when the shop accepts your order.'), findsOneWidget);
+    // Returns, shown before the order is placed.
+    expect(find.text('Returns: Returns within 3 days\nUnused, in the original box.'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('checkout-rider-phone')), '0765 000 123');
     await tester.tap(find.text('Place order'));
@@ -278,5 +283,27 @@ void main() {
     await tester.tap(find.text('Choose pickup'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('checkout-choose-location')), findsNothing);
+  });
+  testWidgets('a shop outside the Bolt test: ordinary shop delivery instead, not just pickup', (tester) async {
+    final orders = await _pump(
+      tester,
+      deliveryOn: true,
+      quoteError: const DeliveryActionError(code: 'not_available', message: 'Delivery is not available from this shop yet. Choose pickup instead.', statusCode: 422),
+    );
+    await tester.tap(find.text('Delivery'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('checkout-choose-location')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Use shop delivery'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, 'Delivery address'), findsOneWidget);
+    expect(find.text('TSh 3,000'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Delivery address'), 'Mtaa wa Uhuru 12');
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    expect(orders.sent!['fulfilment'], isNull);
+    await tester.pumpAndSettle(const Duration(seconds: 3));
   });
 }

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-/// Sokoni 1.1 customer-app delivery endpoints (docs/delivery/API.md).
+/// Bolt delivery and returns endpoints (docs/delivery/BOLT.md, RETURNS.md).
 ///
 /// A thin, hand-written Dio wrapper rather than a retrofit interface: every
 /// call here returns the raw decoded body for [DeliveryRepository] to parse,
@@ -9,6 +9,8 @@ class DeliveryApi {
   DeliveryApi(this._dio);
 
   final Dio _dio;
+
+  Future<dynamic> features() async => (await _dio.get<dynamic>('/features')).data;
 
   Future<dynamic> config() async => (await _dio.get<dynamic>('/delivery/config')).data;
 
@@ -31,8 +33,22 @@ class DeliveryApi {
   Future<dynamic> switchToPickup(int orderId) async =>
       (await _dio.post<dynamic>('/delivery/orders/$orderId/switch-to-pickup')).data;
 
-  Future<dynamic> rate(int orderId, {required int rating, String? comment}) async =>
-      (await _dio.post<dynamic>('/delivery/orders/$orderId/rating', data: {'rating': rating, 'comment': ?comment})).data;
+  // Returns.
 
-  Future<dynamic> realtimeToken() async => (await _dio.post<dynamic>('/delivery/realtime-token')).data;
+  Future<dynamic> requestReturn(int orderId, {required String reason, String? comment, required List<MultipartFile> photos}) async =>
+      (await _dio.post<dynamic>(
+        '/orders/$orderId/returns',
+        data: FormData.fromMap({'reason': reason, 'comment': ?comment, 'photos[]': photos}),
+      )).data;
+
+  Future<dynamic> returnRequest(int returnId) async => (await _dio.get<dynamic>('/returns/$returnId')).data;
+
+  Future<dynamic> returnAction(int returnId, String action, [Map<String, dynamic>? body]) async =>
+      (await _dio.post<dynamic>('/returns/$returnId/$action', data: body)).data;
+
+  Future<dynamic> acceptReturnsTerms(String version) async =>
+      (await _dio.post<dynamic>('/returns/terms/accept', data: {'version': version})).data;
+
+  Future<dynamic> updateReturnPolicy({required String policy, String? notes}) async =>
+      (await _dio.put<dynamic>('/shop/return-policy', data: {'return_policy': policy, 'return_notes': ?notes})).data;
 }

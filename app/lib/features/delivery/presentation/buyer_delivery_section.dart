@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
-import '../../../core/router/routes.dart';
-import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/delivery.dart';
 import '../../../data/models/order.dart';
 import '../providers/delivery_providers.dart';
 import 'delivery_labels.dart';
+import 'return_section.dart';
 import 'widgets/delivery_widgets.dart';
 import 'widgets/pay_now_card.dart';
 
-/// The buyer's view of a Sokoni delivery on the order screen: waiting for
-/// the shop, Pay now, finding a driver, the rider card, the live map, the
-/// delivery PIN, problems with their choices, and rating the rider.
-/// Everything shown comes from `GET /delivery/orders/{order}`, polled.
+/// The buyer's view of a Bolt delivery on the order screen: waiting for the
+/// shop, Pay now, the shop packing, Bolt finding a driver, the driver card
+/// with Bolt's tracking link, problems with their choices, and the return
+/// once delivered. Everything shown comes from `GET /delivery/orders/{order}`,
+/// polled.
 class BuyerDeliverySection extends ConsumerWidget {
   const BuyerDeliverySection({required this.order, super.key});
 
@@ -43,16 +42,7 @@ class BuyerDeliverySection extends ConsumerWidget {
       data: (tracking) {
         if (tracking == null) {
           if (order.status == 'cancelled') return const SizedBox.shrink();
-          return DeliveryCard(
-            title: l10n.deliveryTimelineTitle,
-            child: Row(
-              children: [
-                const Icon(Icons.hourglass_top_rounded),
-                const SizedBox(width: SokoniDimens.space12),
-                Expanded(child: Text(l10n.deliveryWaitingForShop)),
-              ],
-            ),
-          );
+          return DeliveryNotice(icon: Icons.hourglass_top_rounded, title: l10n.deliveryTimelineTitle, text: l10n.deliveryWaitingForShop);
         }
         return _Body(tracking: tracking, unpaidTimeoutMinutes: timeout);
       },
@@ -109,25 +99,18 @@ class _BodyState extends ConsumerState<_Body> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (t.awaitingPayment && !(payment?.inCash ?? false)) PayNowCard(tracking: t),
+        if (t.status == 'pending_quote') DeliveryNotice(icon: Icons.hourglass_top_rounded, text: l10n.deliveryBoltPricing),
 
-        if (t.driverJustCancelled) _Notice(icon: Icons.sync_rounded, text: l10n.deliveryDriverCancelled),
+        if (t.awaitingPayment) PayNowCard(tracking: t),
 
-        if (t.status == 'no_driver_found')
+        if (t.status == 'awaiting_ready') DeliveryNotice(icon: Icons.inventory_2_outlined, text: l10n.deliveryBoltWaitingForShop),
+
+        if (t.driverChanged) DeliveryNotice(icon: Icons.sync_rounded, text: l10n.deliveryDriverChanged),
+
+        if (t.status == 'no_driver_found' || t.status == 'failed')
           _Problem(
-            title: l10n.deliveryNoDriverTitle,
-            body: l10n.deliveryNoDriverBody,
-            actions: t.actions,
-            busy: _busy,
-            onRetry: () => _run((c) => c.retry()),
-            onSwitch: () => _run((c) => c.switchToPickup(), confirm: l10n.deliverySwitchConfirm),
-            onCancel: () => _run((c) => c.cancel(), confirm: l10n.deliveryCancelConfirm),
-          ),
-
-        if (t.status == 'failed')
-          _Problem(
-            title: l10n.deliveryFailedTitle,
-            body: t.failureReason == 'customer_unreachable' ? l10n.deliveryUnreachableBody : l10n.deliveryFailedBody(failureReasonLabel(l10n, t.failureReason)),
+            title: t.status == 'failed' ? l10n.deliveryFailedTitle : l10n.deliveryNoDriverTitle,
+            body: deliveryProblemBody(l10n, t.failureReason),
             actions: t.actions,
             busy: _busy,
             onRetry: () => _run((c) => c.retry()),
@@ -136,42 +119,24 @@ class _BodyState extends ConsumerState<_Body> {
           ),
 
         if (t.status == 'cancelled')
-          _Notice(
+          DeliveryNotice(
             icon: Icons.cancel_outlined,
             title: l10n.deliveryCancelledTitle,
             text: cancelledMessage(l10n, t, unpaidTimeoutMinutes: widget.unpaidTimeoutMinutes),
             danger: true,
           ),
 
-        if (refund != null) _Notice(icon: Icons.replay_rounded, text: refund),
-
-        if (t.deliveryPin != null && !t.isTerminal) _PinCard(pin: t.deliveryPin!, locked: t.pinLocked),
-
-        if (t.payCashToDriver && t.fee != null && !t.isTerminal) _Notice(icon: Icons.payments_outlined, text: l10n.deliveryPayCash(SokoniFormat.tzs(t.fee!))),
+        if (refund != null) DeliveryNotice(icon: Icons.replay_rounded, text: refund),
 
         if (payment?.receipt != null)
-          _Notice(icon: Icons.receipt_long_rounded, text: l10n.deliveryPaidReceipt(SokoniFormat.tzs(payment!.receipt!.amount))),
+          DeliveryNotice(icon: Icons.receipt_long_rounded, text: l10n.deliveryPaidReceipt(SokoniFormat.tzs(payment!.receipt!.amount))),
 
-        if (t.driver != null) DriverCard(driver: t.driver!),
+        if (t.driver != null) BoltDriverCard(driver: t.driver!, trackingUrl: t.trackingUrl),
 
-        if (t.isActive) LiveDriverMap(tracking: t),
-
-        if (t.status != 'pending_payment' && t.status != 'cancelled')
+        if (!{'pending_quote', 'pending_payment', 'cancelled'}.contains(t.status))
           DeliveryCard(title: l10n.deliveryTimelineTitle, child: DeliveryProgress(tracking: t)),
 
-        if (t.actions.canRate)
-          Padding(
-            padding: const EdgeInsets.only(bottom: SokoniDimens.space12),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                key: const Key('rate-driver'),
-                onPressed: () => context.push(SokoniRoutes.rateDriver(t.orderId)),
-                icon: const Icon(Icons.star_outline_rounded),
-                label: Text(l10n.deliveryRateDriver),
-              ),
-            ),
-          ),
+        if (t.returnInfo != null) ReturnSection(tracking: t, isSeller: false),
 
         if (t.actions.canCancel && t.status != 'no_driver_found' && t.status != 'failed')
           SizedBox(
@@ -182,7 +147,7 @@ class _BodyState extends ConsumerState<_Body> {
               child: Text(l10n.deliveryCancel),
             ),
           ),
-        if (t.actions.canSwitchToPickup && t.status == 'pending_payment')
+        if (t.actions.canSwitchToPickup && (t.status == 'pending_payment' || t.status == 'awaiting_ready'))
           Center(
             child: TextButton(
               onPressed: _busy ? null : () => _run((c) => c.switchToPickup(), confirm: l10n.deliverySwitchConfirm),
@@ -190,42 +155,6 @@ class _BodyState extends ConsumerState<_Body> {
             ),
           ),
       ],
-    );
-  }
-}
-
-/// The 4-digit code the rider asks for at the door. Big and plain, with
-/// the warning not to give it out before the goods are in hand.
-class _PinCard extends StatelessWidget {
-  const _PinCard({required this.pin, required this.locked});
-
-  final String pin;
-  final bool locked;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    return DeliveryCard(
-      highlight: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.deliveryPinTitle, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(height: SokoniDimens.space8),
-          Semantics(
-            label: '${l10n.deliveryPinTitle}: ${pin.split('').join(' ')}',
-            excludeSemantics: true,
-            child: Text(
-              pin,
-              key: const Key('delivery-pin'),
-              style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 12),
-            ),
-          ),
-          const SizedBox(height: SokoniDimens.space8),
-          Text(locked ? l10n.deliveryPinLocked : l10n.deliveryPinBody, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-        ],
-      ),
     );
   }
 }
@@ -262,38 +191,6 @@ class _Problem extends StatelessWidget {
           if (actions.canRetry) FilledButton(onPressed: busy ? null : onRetry, child: Text(l10n.deliveryRetry)),
           if (actions.canSwitchToPickup) OutlinedButton(onPressed: busy ? null : onSwitch, child: Text(l10n.deliverySwitchToPickup)),
           if (actions.canCancel) TextButton(onPressed: busy ? null : onCancel, child: Text(l10n.deliveryCancel)),
-        ],
-      ),
-    );
-  }
-}
-
-class _Notice extends StatelessWidget {
-  const _Notice({required this.icon, required this.text, this.title, this.danger = false});
-
-  final IconData icon;
-  final String text;
-  final String? title;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DeliveryCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: danger ? SokoniColors.danger : null),
-          const SizedBox(width: SokoniDimens.space12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (title != null) Text(title!, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                Text(text),
-              ],
-            ),
-          ),
         ],
       ),
     );

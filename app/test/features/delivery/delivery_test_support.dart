@@ -50,18 +50,33 @@ class FakeDeliveryRepository extends DeliveryRepository {
   }
 
   @override
-  Future<void> rate(int orderId, {required int rating, String? comment}) async {
-    calls.add({'call': 'rate', 'order': orderId, 'rating': rating, 'comment': comment});
+  Future<SokoniFeatures> features() async => features0;
+
+  /// What `GET /features` answers in this test.
+  SokoniFeatures features0 = const SokoniFeatures(deliveryEnabled: true, returnsEnabled: true, returnsTermsVersion: '1.2', returnsTermsAccepted: true);
+
+  /// The next view `tracking` returns after a return action (the server's answer).
+  Map<String, dynamic>? afterReturnAction;
+
+  @override
+  Future<ReturnRequestInfo> returnAction(int returnId, String action, [Map<String, dynamic>? body]) async {
+    calls.add({'call': 'return:$action', 'return': returnId, 'body': body});
+    view = afterReturnAction ?? view;
+    return ReturnRequestInfo.fromJson(returnRequestJson());
   }
 
   @override
-  Future<RealtimeCredentials?> realtimeToken() async => null;
+  Future<void> acceptReturnsTerms(String version) async {
+    calls.add({'call': 'acceptReturnsTerms', 'version': version});
+    features0 = SokoniFeatures(deliveryEnabled: features0.deliveryEnabled, returnsEnabled: true, returnsTermsVersion: version, returnsTermsAccepted: true);
+  }
 }
 
 /// Overrides shared by the delivery widget tests: no platform channels,
 /// no network.
 List<Override> deliveryOverrides({required FakeDeliveryRepository repo, SokoniUser user = testBuyer, bool deliveryOn = true}) => [
   deliveryRepositoryProvider.overrideWithValue(repo),
+  featuresProvider.overrideWith((ref) => repo.features()),
   deliveryAvailabilityProvider.overrideWith((ref) async => deliveryOn ? DeliveryConfig.fromJson(deliveryConfigJson()) : null),
   currentUserProvider.overrideWith((ref) async => user),
   pushServiceProvider.overrideWithValue(PushService(api: DeviceApi(Dio()))),
