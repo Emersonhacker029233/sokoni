@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Returns\ReturnService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -91,6 +92,18 @@ class ReturnFlowTest extends TestCase
         $this->assertSame('received', $return->status);
         $this->assertSame(5500.0, $return->final_cost);
         $this->assertTrue($this->pushes->to($seller)->contains(fn ($p) => $p['title'] === __('returns.push.seller_received.title', [], $seller->preferredLocale())));
+
+        // Flat fee: the ride back costs its fixed fee; Bolt's estimate and
+        // receipt stay with the admins, for both sides.
+        foreach ([$buyer, $seller] as $viewer) {
+            $view = $this->actingAs($viewer)->getJson("/api/returns/{$return->id}")->assertOk();
+            $view->assertJsonPath('data.fee', self::FEE)
+                ->assertJsonMissingPath('data.ride.estimate')
+                ->assertJsonMissingPath('data.final_cost')
+                ->assertJsonMissingPath('data.cost_difference');
+            $values = array_map(fn ($v) => is_numeric($v) ? (int) $v : $v, Arr::dot($view->json('data')));
+            $this->assertNotContains(5500, $values, "Bolt's receipt amount reached the app");
+        }
 
         // "Item received, refund done".
         $this->actingAs($seller)->postJson("/api/returns/{$return->id}/refunded", ['note' => 'Refunded TSh 20,000 by M-Pesa'])

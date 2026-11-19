@@ -23,7 +23,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *  - the Bolt driver's phone only while a driver is on the job (buyer),
  *    and only until pickup (seller),
  *  - the tracking link only while the ride is running,
- *  - the seller never sees the fee, the drop-off or the buyer's phone.
+ *  - the seller never sees the fee, the drop-off or the buyer's phone,
+ *  - the buyer pays one fixed fee and sees only that: Bolt's own prices
+ *    (estimate range, receipt, final cost, cost difference) are admin-only.
  *
  * @mixin DeliveryJob
  */
@@ -104,11 +106,6 @@ class DeliveryJobResource extends JsonResource
 
         return [
             'fee' => (int) $this->fee,
-            'estimate' => $this->estimate_max === null ? null : [
-                'min' => $this->estimate_min,
-                'max' => $this->estimate_max,
-                'category' => $this->provider_category,
-            ],
             'payment_status' => $this->payment_status,
             'amount_due' => $this->amountDue(),
             'pickup' => [

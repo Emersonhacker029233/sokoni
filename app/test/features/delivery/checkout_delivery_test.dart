@@ -175,7 +175,7 @@ void main() {
     expect(find.byKey(const Key('checkout-choose-location')), findsOneWidget);
     expect(find.text('TSh 3,000'), findsNothing);
     expect(find.text('Cash on delivery'), findsNothing);
-    expect(find.text('You pay the Bolt delivery fee in the app after the shop accepts.'), findsOneWidget);
+    expect(find.text('You pay the fixed delivery fee in the app after the shop accepts.'), findsOneWidget);
     // The rider phone is prefilled from the account, shown in local format.
     expect(find.widgetWithText(TextField, '0711 000 111'), findsOneWidget);
 
@@ -185,7 +185,7 @@ void main() {
     expect(orders.sent, isNull);
   });
 
-  testWidgets('Bolt delivery shows the estimate, the return policy and places a dispatch order with pin, address and phone', (tester) async {
+  testWidgets('Bolt delivery shows the fixed fee, the return policy and places a dispatch order with pin, address and phone', (tester) async {
     final orders = await _pump(tester, deliveryOn: true);
     await tester.tap(find.text('Delivery'));
     await tester.pumpAndSettle();
@@ -194,12 +194,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mtaa wa Uhuru 12, Kariakoo'), findsOneWidget);
-    expect(find.text('Delivery fee (4.2 km)'), findsOneWidget);
+    // Flat delivery fee: one fixed price, said plainly; Bolt's own prices never show.
+    expect(find.text('Fixed delivery fee (4.2 km)'), findsOneWidget);
     expect(find.text('TSh 6,400'), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
     expect(find.text('TSh 26,400'), findsOneWidget);
-    expect(find.text('Bolt estimate TSh 5,200 to TSh 6,400. You pay the upper amount.'), findsOneWidget);
     expect(find.text('Nearest Bolt driver about 4 min away'), findsOneWidget);
-    expect(find.text('The delivery fee is confirmed when the shop accepts your order.'), findsOneWidget);
+    expect(
+      find.text('The delivery fee is a fixed price, not an estimate. It is confirmed when the shop accepts, '
+          'you see it before you pay, and it never changes after that.'),
+      findsOneWidget,
+    );
+    expect(find.text('You pay the fixed delivery fee in the app after the shop accepts.'), findsOneWidget);
+    expect(find.textContaining('estimate TSh'), findsNothing);
+    expect(find.textContaining('upper amount'), findsNothing);
+    expect(find.textContaining('can be lower'), findsNothing);
+    expect(find.textContaining('Estimated'), findsNothing);
     // Returns, shown before the order is placed.
     expect(find.text('Returns: Returns within 3 days\nUnused, in the original box.'), findsOneWidget);
 

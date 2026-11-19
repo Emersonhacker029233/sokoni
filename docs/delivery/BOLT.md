@@ -7,10 +7,10 @@ Everything here is **dark**: off by default, and invisible to everyone outside t
 ## 1. How a delivery goes
 
 ```
-buyer checks out with "Delivery" (Bolt)         Bolt estimate shown: range, the upper amount, ETA,
+buyer checks out with "Delivery" (Bolt)         the fixed delivery fee, the ETA
                                                 and the shop's return policy
 shop accepts (existing button)                  job priced: Bolt's cheapest category with an ETA,
-                                                fee = the estimate's upper bound          pending_quote -> pending_payment
+                                                fixed fee = the estimate's upper bound    pending_quote -> pending_payment
 buyer pays the delivery fee in the app          Pay now (mobile money)                    -> awaiting_ready
 shop marks the order ready (existing button)    Bolt ride booked at once, fresh fare_id   -> pending_driver (SEARCHING)
 Bolt                                            DRIVER_ON_ROUTE_TO_CLIENT                 -> driver_assigned
@@ -27,8 +27,9 @@ Bolt                                            DRIVER_ON_ROUTE_TO_CLIENT       
 
 ### Money
 
-- The buyer pays the **upper bound** of Bolt's estimate when the shop accepted, rounded up to a whole shilling.
-- After COMPLETED, Bolt's receipt is fetched (retried for 3 days; Bolt says usually minutes, sometimes 24 h+). `final_cost` and `cost_difference = fee − final_cost` are stored. A negative difference means Sokoni paid more than it collected. Admin → **Commerce → Bolt deliveries** has a "Bolt charged more than the customer paid" filter.
+- **The buyer pays a fixed delivery fee.** It is the **upper bound** of Bolt's estimate when the shop accepted, rounded up to a whole shilling. Checkout shows the fee as it stands and says it is fixed; the shop's acceptance confirms it, the buyer sees it before paying, and it never changes after that, whatever Bolt's trip finally costs. Sokoni keeps any difference and covers any shortfall.
+- **Bolt's own prices are admin-only.** The estimate range, Bolt's receipt, `final_cost` and `cost_difference` are never in a buyer's or a shop's API response, and the app never shows them. (`payment.receipt` in the buyer view is the buyer's own payment of the fixed fee.)
+- After COMPLETED, Bolt's receipt is fetched (retried for 3 days; Bolt says usually minutes, sometimes 24 h+). `final_cost` and `cost_difference = fee − final_cost` are stored for admins. A negative difference means Sokoni paid more than it collected. Admin → **Commerce → Bolt deliveries** has a "Bolt charged more than the customer paid" filter.
 - **Refunds are recorded, not paid automatically.** A paid fee is marked `refund_status = pending` when the buyer switches to pickup, when the delivery is cancelled before the parcel leaves the shop (including after Bolt couldn't deliver), or when a payment arrives after the delivery was already cancelled. An admin pays it and taps **Mark refund paid**.
 - **Buyer cancels after Bolt assigned a driver:** Sokoni keeps `SOKONI_DELIVERY_BUYER_CANCEL_FEE` (default TSh 1,000) to cover Bolt's own cancellation charge, and refunds the rest. A shop or admin cancel refunds in full.
 - **Unpaid fee:** a delivery still unpaid 20 minutes after the price was set (`SOKONI_DELIVERY_UNPAID_TIMEOUT_MINUTES`) is cancelled with its order. Nothing is ever booked on Bolt before payment, so there is nothing to cancel there.
@@ -113,7 +114,7 @@ All need `Authorization: Bearer <token>` and the user inside the launch.
 |---|---|
 | `GET /api/features` | Public. `{ delivery_enabled, returns_enabled }` |
 | `GET /api/delivery/config` | Payment channels, sandbox, poll seconds, `returns_enabled` |
-| `GET /api/delivery/quote?seller_id&lat&lng` | `{ fee, min, max, currency, category, eta_seconds, distance_km, return_policy }`. `422 { code }`: `not_available` (shop outside the test), `too_far`, `shop_has_no_location`, `area_not_serviced`, `no_driver_available`; `503 quote_unavailable` |
+| `GET /api/delivery/quote?seller_id&lat&lng` | `{ fee, currency, category, eta_seconds, distance_km, return_policy }`: `fee` is the fixed delivery fee, never Bolt's range. `422 { code }`: `not_available` (shop outside the test), `too_far`, `shop_has_no_location`, `area_not_serviced`, `no_driver_available`; `503 quote_unavailable` |
 | `POST /api/orders` | Existing; add `fulfilment: "dispatch"`, `delivery_lat/lng`, optional `delivery_phone` |
 | `GET /api/delivery/orders/{order}` | Buyer or shop view (statuses above, `driver`, `tracking_url`, `payment`, `actions`, `timeline`, `return`) |
 | `POST /api/delivery/orders/{order}/pay` | `{ channel, msisdn, idempotency_key }` |
@@ -125,7 +126,7 @@ On staging (or locally):
 
 1. `.env`: `BOLT_ENABLED=true`, `BOLT_ENV=sandbox`, `BOLT_CLIENT_ID`/`BOLT_CLIENT_SECRET`, `PAYMENT_PROVIDER=fake`, `BOLT_TEST_PHONES=<buyer phone>,<shop owner phone>`.
 2. `php artisan bolt:sandbox create`. Put the printed `BOLT_SANDBOX_UUID=…` in `.env` and clear the config cache.
-3. In the app (1.1, signed in as the test buyer): checkout → Delivery → pin → the Bolt estimate shows (sandbox prices are Bolt's mock values) → Place order.
+3. In the app (1.1, signed in as the test buyer): checkout → Delivery → pin → the fixed delivery fee shows (from Bolt's sandbox mock prices) → Place order.
 4. As the test shop: Accept. As the buyer: Pay now (the fake gateway approves after 8 s). As the shop: **Mark as Ready**. The ride is booked: the order shows "Finding a Bolt driver".
 5. Move the ride as a Bolt driver would, by order code or ride id. Each command also syncs the delivery straight away:
    ```

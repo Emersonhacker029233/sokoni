@@ -433,7 +433,8 @@ class _DispatchSummary extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final value = quote?.value;
-    final feeLabel = value == null ? l10n.checkoutDeliveryFee : l10n.checkoutDeliveryFeeKm(value.distanceKm.toStringAsFixed(1));
+    // Flat delivery fee: one fixed price, never Bolt's own range or receipt.
+    final feeLabel = value == null ? l10n.deliveryFeeLine : l10n.checkoutDeliveryFeeKm(value.distanceKm.toStringAsFixed(1));
     final feeText = switch (quote) {
       null => l10n.checkoutDeliveryFeeChooseLocation,
       AsyncValue(hasValue: true) => SokoniFormat.tzs(value!.fee),
@@ -447,22 +448,16 @@ class _DispatchSummary extends StatelessWidget {
       children: [
         _SummaryRow(label: l10n.checkoutGoods, value: SokoniFormat.tzs(subtotal)),
         _SummaryRow(label: feeLabel, value: feeText),
-        if (value?.min != null && value?.max != null)
-          Text(
-            l10n.checkoutBoltRange(SokoniFormat.tzs(value!.min!.round()), SokoniFormat.tzs(value.max!.ceil())),
-            key: const Key('checkout-bolt-range'),
-            style: theme.textTheme.bodySmall,
-          ),
         if (value?.etaSeconds != null) Text(l10n.checkoutBoltEta((value!.etaSeconds! / 60).ceil()), style: theme.textTheme.bodySmall),
         if (quote != null && quote!.isLoading && !quote!.hasValue) const LinearProgressIndicator(minHeight: 2),
         const Divider(),
         _SummaryRow(
-          label: l10n.checkoutEstimatedTotal,
+          label: l10n.checkoutTotal,
           value: value == null ? SokoniFormat.tzs(subtotal) : SokoniFormat.tzs(subtotal + value.fee),
           emphasize: true,
         ),
         const SizedBox(height: SokoniDimens.space4),
-        Text(l10n.checkoutFeeConfirmedOnAccept, style: theme.textTheme.bodySmall),
+        Text(l10n.checkoutFixedFeeNote, key: const Key('checkout-fixed-fee'), style: theme.textTheme.bodySmall),
         // Returns (docs/delivery/RETURNS.md): shown before the buyer commits.
         if (returns != null) ...[
           const SizedBox(height: SokoniDimens.space12),

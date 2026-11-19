@@ -4,6 +4,7 @@ namespace Tests\Feature\Delivery\Bolt;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -79,6 +80,37 @@ class BoltTrackingTest extends TestCase
 
         $timeline = collect($this->actingAs($buyer)->getJson("/api/delivery/orders/{$job->order_id}")->json('data.timeline'))->pluck('status')->all();
         $this->assertSame(['pending_quote', 'pending_payment', 'awaiting_ready', 'pending_driver', 'driver_assigned', 'arrived_at_shop', 'on_the_way', 'delivered'], $timeline);
+    }
+
+    /**
+     * Flat delivery fee: the buyer paid one fixed fee. Bolt's receipt, the
+     * final cost and the difference are for admins only, never in what the
+     * buyer's or the shop's app receives.
+     */
+    public function test_the_buyer_and_the_shop_never_see_bolts_receipt_or_final_cost(): void
+    {
+        $job = $this->bookedJob();
+        $this->boltReceipt = ['amount' => 5873, 'currency_code' => 'TZS', 'invoice_url' => 'https://invoice/abc', 'fare_breakdown' => [['type' => 'ride_fee', 'amount' => 5873]]];
+        foreach (['DRIVER_ON_ROUTE_TO_CLIENT', 'DRIVING_WITH_CLIENT', 'COMPLETED'] as $state) {
+            $job = $this->boltMoves($job, $state);
+        }
+        $this->assertSame(5873.0, $job->final_cost, 'the admin record has the receipt');
+        $this->assertSame(527.0, $job->cost_difference);
+
+        foreach ([$job->order->buyer, $job->order->seller->user] as $viewer) {
+            $response = $this->actingAs($viewer)->getJson("/api/delivery/orders/{$job->order_id}")->assertOk();
+            foreach (['final_cost', 'cost_difference', 'estimate', 'min', 'max', 'receipt_amount'] as $key) {
+                $this->assertArrayNotHasKey($key, $response->json('data'), "{$key} reached the app");
+            }
+            $values = Arr::dot($response->json('data'));
+            $this->assertNotContains(5873, array_map(fn ($v) => is_numeric($v) ? (int) $v : $v, $values), "Bolt's receipt amount reached the app");
+            $this->assertNotContains(527, array_map(fn ($v) => is_numeric($v) ? (int) $v : $v, $values), 'the cost difference reached the app');
+            $this->assertStringNotContainsString('invoice', $response->getContent());
+        }
+
+        // The buyer's own payment receipt is the fixed fee they paid.
+        $this->actingAs($job->order->buyer)->getJson("/api/delivery/orders/{$job->order_id}")
+            ->assertJsonPath('data.fee', 6400);
     }
 
     public function test_bolt_skipping_states_between_polls_still_lands_correctly(): void

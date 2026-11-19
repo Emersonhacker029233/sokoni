@@ -75,7 +75,7 @@ class ReturnRequestResource extends JsonResource
             'ride' => $this->ride_status === null ? null : [
                 'status' => $this->ride_status,
                 'failure_reason' => $this->ride_failure_reason,
-                'estimate' => $this->estimate_max === null ? null : ['min' => $this->estimate_min, 'max' => $this->estimate_max],
+                // The ride back costs its fixed `fee`; Bolt's own prices are admin-only.
                 'driver' => ($driver['name'] ?? null) === null ? null : [
                     'name' => $driver['name'],
                     'phone' => $rideActive ? ($driver['phone'] ?? null) : null,

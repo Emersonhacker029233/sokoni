@@ -84,6 +84,11 @@ void main() {
     expect(find.text('Pay for delivery'), findsOneWidget);
     expect(find.text('TSh 26,400'), findsWidgets); // total, from the server
     expect(find.text('Pay now · TSh 6,400'), findsOneWidget);
+    // Flat delivery fee: the amount is fixed, and nothing says it could be lower.
+    expect(find.text('Fixed delivery fee'), findsWidgets);
+    expect(find.text("Pay now covers the fixed delivery fee. It won't change after you pay."), findsOneWidget);
+    expect(find.textContaining('can be lower'), findsNothing);
+    expect(find.textContaining('estimate'), findsNothing);
     expect(find.textContaining('Pay within'), findsOneWidget);
     expect(find.byKey(const Key('bolt-tracking')), findsNothing);
 

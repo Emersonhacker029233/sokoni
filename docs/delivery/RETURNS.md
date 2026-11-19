@@ -38,7 +38,7 @@ any open state ── closed (withdrawn by the buyer, or closed by Sokoni)
    | Not as described (`not_as_described`) | Shop |
 2. **Shop decides within 48 hours**: **Accept**, or **Reject** with a reason (required). No answer in 48 hours: the request is **escalated** to Sokoni support (`delivery:tick` checks every minute) and both sides are told.
 3. **Buyer may dispute** a rejection, with a comment. Sokoni support then decides.
-4. **Accepted:** Sokoni prices a Bolt ride from where the order was delivered to the shop. The payer owes the **upper bound** of the estimate, as for deliveries.
+4. **Accepted:** Sokoni prices a Bolt ride from where the order was delivered to the shop. The payer owes a **fixed fee**, set as for deliveries (the upper bound of the estimate, rounded up). It never changes after that, and neither side sees Bolt's estimate range or receipt.
    - **Buyer pays:** Pay now in the app (same payment flow as the delivery fee), then **Book the ride back**.
    - **Shop pays:** the fee is recorded as **owed by seller** (`fee_status = owed_by_seller`) and the buyer can book at once. Sokoni pays Bolt and collects it from the shop outside the app. Admin → Trust & Safety → Returns shows every amount owed.
 5. **The ride back:** the buyer is Bolt's rider (the driver collects from them), the shop is the destination. Note to the driver: `Sokoni RETURN of order SK…. Collect parcel from customer, deliver to shop: <shop> <phone>. Rudisha mzigo dukani.` Tracking and the driver card work as for a delivery. If the ride fails before pickup the return goes back to `accepted` and the buyer can book again. If Bolt doesn't serve the buyer's location, the buyer is told to arrange the return with the shop in chat, and the shop can still confirm the refund.
@@ -66,7 +66,7 @@ The list shows status, order, buyer, shop, who pays the ride back, fee and fee s
 | **Who pays the ride back** | Before the ride is paid, to correct the reason-based default. |
 | **Hide / Show comment and photos** | Moderation. |
 
-The ride's Bolt receipt, `final_cost` and `cost_difference` are shown as for deliveries.
+The ride's Bolt receipt, `final_cost` and `cost_difference` are shown as for deliveries, in the admin only: the buyer's and the shop's apps get the fixed `fee` and nothing of Bolt's own prices.
 
 ## 5. Terms
 

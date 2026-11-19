@@ -163,3 +163,10 @@ Branch `feature/bolt-delivery` (from `feature/delivery`, with production's `fix/
 
 - **Version stays `1.1.0+10` in this branch,** as asked. Recommended for release: **1.1.0+11** on both stores: a new build number above every build either store has seen, and a minor version because 1.1 adds features over the 1.0 in the stores.
 - **iOS social sign-in stays hidden;** nothing the 1.0 (9) review build uses was changed.
+
+## Flat delivery fee, Android 1.1.0+11 (`release/android-1.1`), 2026-11-19
+
+- **The buyer pays one fixed delivery fee: the quoted amount.** It is still set when the shop accepts (the upper bound of Bolt's estimate then, rounded up), shown before the buyer pays, and never changes after that, whatever Bolt's trip finally costs. Sokoni keeps any difference and covers any shortfall.
+- **The checkout fee is not locked at checkout.** The shop's acceptance re-prices it, as before, and the checkout note says so. Locking the checkout figure would need the quote stored on the order (a new column and a migration) and would make Sokoni absorb any Bolt price change between checkout and acceptance. Left as a business decision.
+- **Bolt's own prices never leave the admin.** The quote no longer sends `min`, `max` or `estimate: true`; the buyer's delivery view no longer sends `estimate`; a return's `ride` no longer sends `estimate`. `final_cost` and `cost_difference` were already admin-only, and tests now lock that in for both sides, including after Bolt's receipt arrives. `payment.receipt` stays: it is the buyer's own payment of the fixed fee.
+- **Wording, English and Swahili, same keys:** "Fixed delivery fee" on checkout, Pay now and the order screen; checkout's "Bolt estimate X to Y. You pay the upper amount." and "Estimated total" are gone; the checkout note and Pay now both say the fee is fixed and won't change after paying.

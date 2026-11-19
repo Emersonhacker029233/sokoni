@@ -124,14 +124,13 @@ class ReturnPolicyInfo {
   bool get acceptsReturns => hours > 0;
 }
 
-/// `GET /delivery/quote`: Bolt's estimate for checkout. The buyer pays the
-/// upper bound; the binding fee is set when the shop accepts.
+/// `GET /delivery/quote`: the fixed delivery fee for checkout. It is
+/// confirmed when the shop accepts and never changes after that. Bolt's own
+/// prices never reach the app.
 class DeliveryQuote {
   const DeliveryQuote({
     required this.fee,
     required this.distanceKm,
-    this.min,
-    this.max,
     this.category,
     this.etaSeconds,
     this.returnPolicy,
@@ -140,8 +139,6 @@ class DeliveryQuote {
   factory DeliveryQuote.fromJson(Map<String, dynamic> json) => DeliveryQuote(
     fee: _int(json['fee']),
     distanceKm: _double(json['distance_km']) ?? 0,
-    min: _double(json['min']),
-    max: _double(json['max']),
     category: _string(json['category']),
     etaSeconds: _intOrNull(json['eta_seconds']),
     returnPolicy: ReturnPolicyInfo.fromJson(json['return_policy']),
@@ -149,8 +146,6 @@ class DeliveryQuote {
 
   final int fee;
   final double distanceKm;
-  final double? min;
-  final double? max;
   final String? category;
 
   /// How far away the nearest Bolt driver is, in seconds.
@@ -550,8 +545,6 @@ class DeliveryTracking {
     required this.timeline,
     this.distanceKm,
     this.fee,
-    this.estimateMin,
-    this.estimateMax,
     this.paymentStatus,
     this.amountDue = 0,
     this.feePaid = false,
@@ -570,7 +563,6 @@ class DeliveryTracking {
 
   factory DeliveryTracking.fromJson(Map<String, dynamic> json) {
     final payment = _map(json['payment']);
-    final estimate = _map(json['estimate']);
     final refund = _map(json['refund']);
     final timeline = json['timeline'];
     return DeliveryTracking(
@@ -581,8 +573,6 @@ class DeliveryTracking {
       isActive: _bool(json['is_active']),
       distanceKm: _double(json['distance_km']),
       fee: _intOrNull(json['fee']),
-      estimateMin: _double(estimate?['min']),
-      estimateMax: _double(estimate?['max']),
       paymentStatus: _string(json['payment_status']),
       amountDue: _int(json['amount_due']),
       feePaid: _bool(json['fee_paid']) || _string(json['payment_status']) == 'paid',
@@ -614,9 +604,8 @@ class DeliveryTracking {
   final String status;
   final bool isActive;
   final double? distanceKm;
+  /// The fixed delivery fee (buyer view).
   final int? fee;
-  final double? estimateMin;
-  final double? estimateMax;
   final String? paymentStatus;
   final int amountDue;
 
