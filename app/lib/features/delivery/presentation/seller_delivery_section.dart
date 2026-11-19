@@ -55,7 +55,7 @@ class SellerDeliverySection extends ConsumerWidget {
             if (tracking.driver != null) BoltDriverCard(driver: tracking.driver!, trackingUrl: tracking.trackingUrl),
             if (!{'pending_quote', 'pending_payment', 'cancelled'}.contains(tracking.status))
               DeliveryCard(title: l10n.deliveryTimelineTitle, child: DeliveryProgress(tracking: tracking)),
-            if (tracking.returnInfo?.request != null) ReturnSection(tracking: tracking, isSeller: true),
+            if (tracking.returnInfo?.request != null) ReturnSection(tracking: tracking, isSeller: true, buyer: order.buyer),
           ],
         );
       },

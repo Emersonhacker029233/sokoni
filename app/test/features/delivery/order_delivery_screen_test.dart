@@ -9,6 +9,7 @@ import 'package:sokoni/core/router/routes.dart';
 import 'package:sokoni/data/models/delivery.dart';
 import 'package:sokoni/data/models/order.dart';
 import 'package:sokoni/data/models/user.dart';
+import 'package:sokoni/features/moderation/presentation/moderation_menu.dart';
 import 'package:sokoni/features/orders/presentation/order_detail_screen.dart';
 import 'package:sokoni/features/orders/providers/order_providers.dart';
 
@@ -245,6 +246,14 @@ void main() {
       expect(find.text('It is the blue one, I ordered black.'), findsOneWidget);
       expect(find.byKey(const Key('accept-return')), findsOneWidget);
       expect(find.byKey(const Key('report-return')), findsOneWidget);
+      // Report the request and block the buyer, from the request itself.
+      final menu = tester.widget<ModerationMenuButton>(
+        find.descendant(of: find.byKey(const Key('report-return')), matching: find.byType(ModerationMenuButton)),
+      );
+      expect(menu.target.reportType, 'return_request');
+      expect(menu.target.reportLabel, 'Report this return request');
+      expect(menu.target.authorUserId, 1);
+      expect(menu.target.authorName, 'Neema Buyer');
 
       await tester.ensureVisible(find.byKey(const Key('reject-return')));
       await tester.tap(find.byKey(const Key('reject-return')));

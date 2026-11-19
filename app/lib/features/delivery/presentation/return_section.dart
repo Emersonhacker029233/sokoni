@@ -12,8 +12,10 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/delivery.dart';
+import '../../../data/models/user.dart';
 import '../../../shared/widgets/report_sheet.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../moderation/presentation/moderation_menu.dart';
 import '../providers/delivery_providers.dart';
 import 'delivery_labels.dart';
 import 'widgets/delivery_widgets.dart';
@@ -24,10 +26,14 @@ import 'widgets/delivery_widgets.dart';
 /// Only built when the server sent a `return` block, i.e. for users inside
 /// the returns launch.
 class ReturnSection extends ConsumerWidget {
-  const ReturnSection({required this.tracking, required this.isSeller, super.key});
+  const ReturnSection({required this.tracking, required this.isSeller, this.buyer, super.key});
 
   final DeliveryTracking tracking;
   final bool isSeller;
+
+  /// The order's buyer, on the shop's side, so the shop can block them
+  /// from the request.
+  final SokoniUser? buyer;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,7 +41,9 @@ class ReturnSection extends ConsumerWidget {
     final info = tracking.returnInfo;
     if (info == null) return const SizedBox.shrink();
     final request = info.request;
-    if (request != null) return _ReturnCard(orderId: tracking.orderId, request: request, isSeller: isSeller);
+    if (request != null) {
+      return _ReturnCard(orderId: tracking.orderId, request: request, isSeller: isSeller, buyer: buyer);
+    }
     if (isSeller) return const SizedBox.shrink();
 
     final until = info.eligibleUntil;
@@ -142,11 +150,12 @@ class _ReturnsTermsSheetState extends ConsumerState<_ReturnsTermsSheet> {
 }
 
 class _ReturnCard extends ConsumerStatefulWidget {
-  const _ReturnCard({required this.orderId, required this.request, required this.isSeller});
+  const _ReturnCard({required this.orderId, required this.request, required this.isSeller, this.buyer});
 
   final int orderId;
   final ReturnRequestInfo request;
   final bool isSeller;
+  final SokoniUser? buyer;
 
   @override
   ConsumerState<_ReturnCard> createState() => _ReturnCardState();
@@ -209,7 +218,24 @@ class _ReturnCardState extends ConsumerState<_ReturnCard> {
             children: [
               Expanded(child: Text(returnReasonLabel(l10n, r.reason), style: theme.textTheme.titleSmall)),
               Chip(key: const Key('return-status'), label: Text(returnStatusLabel(l10n, r.status))),
-              if (a.canReport)
+              // Apple Guideline 1.2: the shop can report the request and
+              // block the buyer from the request itself. The buyer's own
+              // block can't make a return disappear: the request then goes
+              // to Sokoni support (docs/delivery/RETURNS.md).
+              if (a.canReport && widget.buyer != null)
+                KeyedSubtree(
+                  key: const Key('report-return'),
+                  child: ModerationMenuButton(
+                    target: ModerationTarget(
+                      reportType: 'return_request',
+                      reportId: r.id,
+                      reportLabel: l10n.moderationReportReturn,
+                      authorName: widget.buyer!.name,
+                      authorUserId: widget.buyer!.id,
+                    ),
+                  ),
+                )
+              else if (a.canReport)
                 IconButton(
                   key: const Key('report-return'),
                   tooltip: l10n.returnReport,

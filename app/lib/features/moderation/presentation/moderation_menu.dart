@@ -26,7 +26,7 @@ class ModerationTarget {
   }) : assert(authorUserId != null || authorSellerId != null, 'Someone must be blockable');
 
   /// The API's report type: product, shop, message, comment, review,
-  /// showcase, update, offer or user.
+  /// showcase, update, offer, user or return_request.
   final String reportType;
   final int reportId;
 

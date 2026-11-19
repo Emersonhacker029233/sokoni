@@ -1291,6 +1291,8 @@
   "@moderationReportPost": {},
   "moderationReportMessage": "Report this message",
   "@moderationReportMessage": {},
+  "moderationReportReturn": "Report this return request",
+  "@moderationReportReturn": {},
   "moderationReportUser": "Report {name}",
   "@moderationReportUser": {"placeholders": {"name": {"type": "String"}}},
   "moderationBlock": "Block {name}",

@@ -680,6 +680,7 @@
   "moderationReportReview": "Ripoti tathmini hii",
   "moderationReportPost": "Ripoti chapisho hili",
   "moderationReportMessage": "Ripoti ujumbe huu",
+  "moderationReportReturn": "Ripoti ombi hili la kurudisha",
   "moderationReportUser": "Ripoti {name}",
   "moderationBlock": "Mzuie {name}",
   "moderationUnblock": "Ondoa kizuizi kwa {name}",

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,9 +13,14 @@ import 'package:sokoni/core/network/dio_client.dart';
 import 'package:sokoni/core/providers.dart';
 import 'package:sokoni/core/storage/secure_storage.dart';
 import 'package:sokoni/data/models/category.dart';
+import 'package:sokoni/data/models/conversation.dart';
 import 'package:sokoni/data/models/feed_item.dart';
+import 'package:sokoni/data/models/message.dart';
 import 'package:sokoni/data/models/product.dart';
 import 'package:sokoni/data/models/seller_summary.dart';
+import 'package:sokoni/data/models/user.dart';
+import 'package:sokoni/features/chat/presentation/conversation_thread_screen.dart';
+import 'package:sokoni/features/chat/providers/chat_providers.dart';
 import 'package:sokoni/features/moderation/presentation/blocked_accounts_screen.dart';
 import 'package:sokoni/shared/widgets/feed_card.dart';
 
@@ -81,7 +87,24 @@ const _product = Product(
   seller: SellerSummary(id: 1, shopName: 'Amina Electronics', handle: 'amina', isVerified: true),
 );
 
-Future<void> _pump(WidgetTester tester, _ModerationApi api, {Widget? home}) async {
+/// A thread with one message from the shop, served without polling.
+class _Thread extends ChatThreadController {
+  _Thread(super.conversationId);
+
+  @override
+  Future<ThreadState> build() async => const ThreadState(
+    messages: [ChatMessage(id: 41, conversationId: 7, senderId: 9, body: 'Bei ni 850,000')],
+    otherPartyTyping: false,
+  );
+}
+
+const _conversation = Conversation(
+  id: 7,
+  buyer: SokoniUser(id: 5, name: 'Buyer', isSeller: false, termsAccepted: true),
+  seller: SellerSummary(id: 1, shopName: 'Amina Electronics', handle: 'amina', isVerified: true),
+);
+
+Future<void> _pump(WidgetTester tester, _ModerationApi api, {Widget? home, List<Override> overrides = const []}) async {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -99,6 +122,7 @@ Future<void> _pump(WidgetTester tester, _ModerationApi api, {Widget? home}) asyn
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        ...overrides,
         authStateProvider.overrideWith(_SignedIn.new),
         secureStorageProvider.overrideWithValue(_TokenStorage()),
         dioProvider.overrideWith((ref) {
@@ -165,6 +189,51 @@ void main() {
     expect(api.posts.entries.firstWhere((e) => e.key.endsWith('/blocks')).value, {'seller_id': 1});
     expect(find.text('Samsung Galaxy A54', findRichText: true), findsNothing);
     expect(find.text('Amina Electronics is blocked.'), findsOneWidget);
+  });
+
+  /// Every content type offers both: a chat message is reported, and its
+  /// sender blocked, from the message itself (press and hold).
+  group('a chat message', () {
+    final threadOverrides = <Override>[
+      conversationsProvider.overrideWith((ref) async => const [_conversation]),
+      chatThreadProvider.overrideWith2(_Thread.new),
+    ];
+
+    testWidgets('press and hold reports the message', (tester) async {
+      final api = _ModerationApi();
+      await _pump(tester, api, home: const ConversationThreadScreen(conversationId: 7), overrides: threadOverrides);
+
+      await tester.longPress(find.text('Bei ni 850,000'));
+      await tester.pumpAndSettle();
+      expect(find.text('Report this message'), findsOneWidget);
+      expect(find.text('Block Amina Electronics'), findsOneWidget);
+
+      await tester.tap(find.text('Report this message'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Harassment or hate'));
+      await tester.pumpAndSettle();
+
+      expect(api.posts.entries.firstWhere((e) => e.key.endsWith('/reports')).value, {
+        'reportable_type': 'message',
+        'reportable_id': 41,
+        'reason': 'harassment',
+      });
+    });
+
+    testWidgets('press and hold blocks the sender', (tester) async {
+      final api = _ModerationApi();
+      await _pump(tester, api, home: const ConversationThreadScreen(conversationId: 7), overrides: threadOverrides);
+
+      await tester.longPress(find.text('Bei ni 850,000'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Block Amina Electronics'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Block'));
+      await tester.pumpAndSettle();
+
+      expect(api.posts.entries.firstWhere((e) => e.key.endsWith('/blocks')).value, {'seller_id': 1});
+      expect(find.text('Bei ni 850,000'), findsNothing);
+    });
   });
 
   testWidgets('Blocked accounts lists them and Unblock removes the block', (tester) async {

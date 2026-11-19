@@ -193,7 +193,7 @@ class _ConversationThreadScreenState extends ConsumerState<ConversationThreadScr
                       );
                     }
                     final message = state.messages[index];
-                    return _MessageBubble(message: message, imageUrls: imageUrls);
+                    return _MessageBubble(message: message, imageUrls: imageUrls, sender: moderationTarget);
                   },
                 );
               },
@@ -282,9 +282,37 @@ class _PinnedProductContext extends StatelessWidget {
 }
 
 class _MessageBubble extends ConsumerWidget {
-  const _MessageBubble({required this.message, required this.imageUrls});
+  const _MessageBubble({required this.message, required this.imageUrls, this.sender});
 
   final ChatMessage message;
+
+  /// The other party, for "Block {name}" next to "Report this message".
+  /// Null until the conversation has loaded; the long-press then offers
+  /// reporting only.
+  final ModerationTarget? sender;
+
+  /// Apple Guideline 1.2: a message can be reported, and its sender
+  /// blocked, from the message itself.
+  void _onLongPress(BuildContext context, WidgetRef ref) {
+    final sender = this.sender;
+    if (sender == null) {
+      showReportSheet(context, ref, reportableType: 'message', reportableId: message.id);
+      return;
+    }
+    showModerationMenu(
+      context,
+      ref,
+      ModerationTarget(
+        reportType: 'message',
+        reportId: message.id,
+        reportLabel: AppLocalizations.of(context).moderationReportMessage,
+        authorName: sender.authorName,
+        authorUserId: sender.authorUserId,
+        authorSellerId: sender.authorSellerId,
+        authorHandle: sender.authorHandle,
+      ),
+    );
+  }
 
   /// Every image attachment currently loaded in this thread, in order —
   /// used to seed the full-screen viewer's swipe-between-images paging.
@@ -304,9 +332,7 @@ class _MessageBubble extends ConsumerWidget {
         crossAxisAlignment: align,
         children: [
           GestureDetector(
-            onLongPress: message.isMine
-                ? null
-                : () => showReportSheet(context, ref, reportableType: 'message', reportableId: message.id),
+            onLongPress: message.isMine ? null : () => _onLongPress(context, ref),
             child: Container(
               constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.72),
               padding: const EdgeInsets.all(SokoniDimens.space12),
