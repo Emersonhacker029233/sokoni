@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:sokoni/core/config/social_auth_config.dart';
 import 'package:sokoni/core/l10n/gen/app_localizations.dart';
 import 'package:sokoni/features/auth/presentation/social_sign_in_buttons.dart';
 
@@ -31,6 +32,42 @@ Future<void> _pump(
 }
 
 void main() {
+  /// Android 1.1 shows Google and Apple; iOS keeps 1.0 (9)'s sign-in
+  /// screen with neither, whatever the build passes.
+  testWidgets(
+    'Android offers Google and Apple with no build flags',
+    (tester) async {
+      expect(SokoniSocialAuthConfig.isGoogleConfigured, isTrue);
+      expect(SokoniSocialAuthConfig.isAppleConfigured, isTrue);
+      expect(SokoniSocialAuthConfig.anySocialConfigured, isTrue);
+      expect(SokoniSocialAuthConfig.googleServerClientId, endsWith('.apps.googleusercontent.com'));
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'iOS offers neither, and the default buttons render nothing',
+    (tester) async {
+      expect(SokoniSocialAuthConfig.isGoogleConfigured, isFalse);
+      expect(SokoniSocialAuthConfig.isAppleConfigured, isFalse);
+      expect(SokoniSocialAuthConfig.anySocialConfigured, isFalse);
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: SocialSignInButtons()),
+          ),
+        ),
+      );
+      expect(find.byType(OutlinedButton), findsNothing);
+      expect(find.text('Continue with Google'), findsNothing);
+      expect(find.text('Continue with Apple'), findsNothing);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
   testWidgets('renders nothing at all when neither provider is configured', (tester) async {
     await _pump(tester, googleConfigured: false, appleConfigured: false);
 

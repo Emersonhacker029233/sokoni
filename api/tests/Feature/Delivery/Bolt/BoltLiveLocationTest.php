@@ -211,27 +211,37 @@ class BoltLiveLocationTest extends TestCase
         $this->actingAs($job->order->buyer)->getJson($url)->assertNotFound();
     }
 
-    public function test_the_order_screen_says_when_the_map_has_a_driver_and_shows_bolts_receipt(): void
+    /** Flat delivery fee: the buyer keeps the fixed fee after delivery and never gets Bolt's receipt. */
+    public function test_the_order_screen_says_when_the_map_has_a_driver_and_never_gets_bolts_receipt(): void
     {
         $job = $this->bookedJob();
         $buyer = $job->order->buyer;
         $show = "/api/delivery/orders/{$job->order_id}";
 
-        $this->actingAs($buyer)->getJson($show)->assertJsonPath('data.live_location', false)->assertJsonPath('data.final_cost', null);
+        $this->actingAs($buyer)->getJson($show)->assertJsonPath('data.live_location', false)->assertJsonMissingPath('data.final_cost');
         $job = $this->boltMoves($job, 'DRIVER_ON_ROUTE_TO_CLIENT');
         $this->actingAs($buyer)->getJson($show)->assertJsonPath('data.live_location', true);
 
         $this->boltReceipt = ['amount' => 5900, 'currency_code' => 'TZS', 'fare_breakdown' => []];
-        $this->boltMoves($job, 'COMPLETED');
+        $job = $this->boltMoves($job, 'COMPLETED');
+        $this->assertSame(5900.0, $job->fresh()->final_cost, 'the admin record has the receipt');
         $this->actingAs($buyer)->getJson($show)
             ->assertJsonPath('data.live_location', false)
             ->assertJsonPath('data.fee', self::FEE)
             ->assertJsonPath('data.payment.delivery_fee', self::FEE)
-            ->assertJsonPath('data.final_cost', 5900);
+            ->assertJsonMissingPath('data.final_cost')
+            ->assertJsonMissingPath('data.cost_difference');
 
         $seller = $this->actingAs($job->order->seller->user)->getJson($show)->json('data');
         $this->assertArrayNotHasKey('final_cost', $seller);
+        $this->assertArrayNotHasKey('cost_difference', $seller);
         $this->assertArrayNotHasKey('live_location', $seller);
+
+        // The live map itself carries no price at all.
+        $location = $this->actingAs($buyer)->getJson("{$show}/location")->assertOk()->json('data');
+        foreach (['fee', 'final_cost', 'cost_difference', 'estimate', 'min', 'max', 'receipt'] as $key) {
+            $this->assertArrayNotHasKey($key, $location, "the live map carries {$key}");
+        }
     }
 
     public function test_the_location_path_is_configurable(): void

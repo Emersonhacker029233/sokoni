@@ -9,6 +9,7 @@ import 'package:sokoni/core/router/routes.dart';
 import 'package:sokoni/data/models/delivery.dart';
 import 'package:sokoni/data/models/order.dart';
 import 'package:sokoni/data/models/user.dart';
+import 'package:sokoni/features/moderation/presentation/moderation_menu.dart';
 import 'package:sokoni/features/orders/presentation/order_detail_screen.dart';
 import 'package:sokoni/features/orders/providers/order_providers.dart';
 
@@ -84,6 +85,11 @@ void main() {
     expect(find.text('Pay for delivery'), findsOneWidget);
     expect(find.text('TSh 26,400'), findsWidgets); // total, from the server
     expect(find.text('Pay now · TSh 6,400'), findsOneWidget);
+    // Flat delivery fee: the amount is fixed, and nothing says it could be lower.
+    expect(find.text('Fixed delivery fee'), findsWidgets);
+    expect(find.text("Pay now covers the fixed delivery fee. It won't change after you pay."), findsOneWidget);
+    expect(find.textContaining('can be lower'), findsNothing);
+    expect(find.textContaining('estimate'), findsNothing);
     expect(find.textContaining('Pay within'), findsOneWidget);
     expect(find.byKey(const Key('bolt-tracking')), findsNothing);
 
@@ -246,6 +252,14 @@ void main() {
       expect(find.text('It is the blue one, I ordered black.'), findsOneWidget);
       expect(find.byKey(const Key('accept-return')), findsOneWidget);
       expect(find.byKey(const Key('report-return')), findsOneWidget);
+      // Report the request and block the buyer, from the request itself.
+      final menu = tester.widget<ModerationMenuButton>(
+        find.descendant(of: find.byKey(const Key('report-return')), matching: find.byType(ModerationMenuButton)),
+      );
+      expect(menu.target.reportType, 'return_request');
+      expect(menu.target.reportLabel, 'Report this return request');
+      expect(menu.target.authorUserId, 1);
+      expect(menu.target.authorName, 'Neema Buyer');
 
       await tester.ensureVisible(find.byKey(const Key('reject-return')));
       await tester.tap(find.byKey(const Key('reject-return')));
@@ -363,36 +377,39 @@ void main() {
       await disposeTree(tester);
     });
 
-    testWidgets('before paying: Bolt\'s estimate, that its final price can be lower, and the return policy', (tester) async {
+    // Flat delivery fee: one fixed fee before and after paying; never Bolt's
+    // estimate range, receipt or a "can be lower" note.
+    testWidgets('before paying: the fixed fee and the return policy, no Bolt estimate', (tester) async {
       await _pump(tester, view: buyerView(status: 'pending_payment', returnBlock: returnBlockJson(canRequest: false)));
 
-      expect(
-        find.text("Bolt estimate: TSh 5,200 to TSh 6,400. You pay the top of Bolt's estimate. Bolt's final price for the trip can be lower."),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('pay-fixed-fee')), findsOneWidget);
+      expect(find.text("Pay now covers the fixed delivery fee. It won't change after you pay."), findsOneWidget);
       expect(find.text('Returns: Returns within 3 days\nUnused, in the original box.'), findsOneWidget);
-      // The order summary: the fee to pay and the range it came from.
-      expect(find.descendant(of: find.byKey(const Key('order-delivery-fee')), matching: find.text('Delivery fee')), findsOneWidget);
-      expect(find.text('Bolt estimate: TSh 5,200 to TSh 6,400'), findsOneWidget);
+      final fee = find.byKey(const Key('order-delivery-fee'));
+      expect(find.descendant(of: fee, matching: find.text('Fixed delivery fee')), findsOneWidget);
+      expect(find.descendant(of: fee, matching: find.text('TSh 6,400')), findsOneWidget);
+      expect(find.byKey(const Key('pay-bolt-estimate')), findsNothing);
+      expect(find.textContaining('Bolt estimate'), findsNothing);
+      expect(find.textContaining('can be lower'), findsNothing);
+      expect(find.textContaining('TSh 5,200'), findsNothing);
       await disposeTree(tester);
     });
 
-    testWidgets('after delivery: the fee paid and Bolt\'s receipt, or "waiting for Bolt" until it arrives', (tester) async {
-      await _pump(tester, view: buyerView(status: 'delivered', finalCost: 5900), orderStatus: 'completed');
+    testWidgets('after delivery: the fixed fee paid, never Bolt\'s receipt, even if a server sent one', (tester) async {
+      await _pump(tester, view: buyerView(status: 'delivered')..['final_cost'] = 5900, orderStatus: 'completed');
       final fee = find.byKey(const Key('order-delivery-fee'));
-      expect(find.descendant(of: fee, matching: find.text('Delivery fee paid')), findsOneWidget);
+      expect(find.descendant(of: fee, matching: find.text('Fixed delivery fee, paid')), findsOneWidget);
       expect(find.descendant(of: fee, matching: find.text('TSh 6,400')), findsOneWidget);
-      final receipt = find.byKey(const Key('order-bolt-receipt'));
-      expect(find.descendant(of: receipt, matching: find.text("Bolt's receipt")), findsOneWidget);
-      expect(find.descendant(of: receipt, matching: find.text('TSh 5,900')), findsOneWidget);
-      expect(find.text("You paid the top of Bolt's estimate. Bolt's receipt is what the trip finally cost."), findsOneWidget);
+      expect(find.byKey(const Key('order-bolt-receipt')), findsNothing);
+      expect(find.textContaining("Bolt's receipt"), findsNothing);
+      expect(find.text('TSh 5,900'), findsNothing);
+      expect(find.textContaining('can be lower'), findsNothing);
       await disposeTree(tester);
 
       await _pump(tester, view: buyerView(status: 'delivered'), orderStatus: 'completed', locale: const Locale('sw'));
-      final pending = find.byKey(const Key('order-bolt-receipt'));
-      expect(find.descendant(of: pending, matching: find.text('Risiti ya Bolt')), findsOneWidget);
-      expect(find.descendant(of: pending, matching: find.text('Inasubiri Bolt')), findsOneWidget);
-      expect(find.text('Ada ya usafirishaji iliyolipwa'), findsOneWidget);
+      expect(find.text('Ada ya usafirishaji isiyobadilika, imelipwa'), findsOneWidget);
+      expect(find.textContaining('Risiti ya Bolt'), findsNothing);
+      expect(find.textContaining('Inasubiri Bolt'), findsNothing);
       await disposeTree(tester);
     });
 

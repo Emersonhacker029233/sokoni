@@ -254,10 +254,9 @@ bool _showOrderCancel(Order order, {required bool isSeller, required DeliveryTra
 
 /// Buyer's totals for a Bolt delivery: goods from the order, the fee and
 /// total from the delivery job once the shop has accepted (both stored by
-/// the server). Before that, the fee is shown as not yet confirmed. Before
-/// payment the fee is Bolt's estimate range's top; once paid it reads "fee
-/// paid"; after delivery Bolt's receipt (what the trip finally cost) is
-/// shown under it, or "waiting for Bolt" until Bolt sends it.
+/// the server). Before that, the fee is shown as not yet set. Flat delivery
+/// fee: the buyer sees the one fixed fee, before and after paying, and never
+/// Bolt's estimate range or receipt.
 class _DispatchSummary extends StatelessWidget {
   const _DispatchSummary({required this.order, required this.delivery});
 
@@ -267,11 +266,9 @@ class _DispatchSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     final d = delivery;
     final p = d?.payment;
     final paid = p?.receipt != null || d?.paymentStatus == 'paid';
-    final showEstimate = !paid && d?.estimateMin != null && d?.estimateMax != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -279,21 +276,8 @@ class _DispatchSummary extends StatelessWidget {
         _SummaryRow(
           key: const Key('order-delivery-fee'),
           label: paid ? l10n.orderDeliveryFeePaid : l10n.deliveryFeeLine,
-          value: p == null ? l10n.deliveryFeeAfterAccept : SokoniFormat.tzs(p.receipt?.amount ?? p.deliveryFee),
+          value: p == null ? l10n.deliveryFeeAfterAccept : SokoniFormat.tzs(p.deliveryFee),
         ),
-        if (showEstimate)
-          Text(
-            l10n.checkoutBoltRange(SokoniFormat.tzs(d!.estimateMin!.round()), SokoniFormat.tzs(d.estimateMax!.ceil())),
-            style: theme.textTheme.bodySmall,
-          ),
-        if (d != null && d.isDelivered) ...[
-          _SummaryRow(
-            key: const Key('order-bolt-receipt'),
-            label: l10n.orderBoltReceipt,
-            value: d.finalCost == null ? l10n.orderBoltReceiptPending : SokoniFormat.tzs(d.finalCost!),
-          ),
-          Text(l10n.orderBoltReceiptNote, style: theme.textTheme.bodySmall),
-        ],
         _SummaryRow(label: l10n.checkoutTotal, value: SokoniFormat.tzs(p?.total ?? order.subtotal), emphasize: true),
       ],
     );

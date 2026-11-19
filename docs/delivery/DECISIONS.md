@@ -166,7 +166,7 @@ Branch `feature/bolt-delivery` (from `feature/delivery`, with production's `fix/
 
 ## Live tracking, prices everywhere and the returns check, 2026-11-19
 
-Branch `feature/bolt-live-tracking`. The brief named `release/android-1.1` as the base, but no branch of that name exists locally, on `origin` or in any reflog; it was cut from `feature/bolt-delivery` (ed5efa6), the only branch with `BOLT_ENABLED`/`BOLT_TEST_PHONES` and app build 1.1.0+10. Rebase onto the real release branch if it is somewhere else. No migrations; everything stays behind the existing flags. RELEASE.md still describes the `feature/bolt-delivery` dark package (commit 5fa4c80): deploying this branch needs its own code package (new files: `BoltDriverLocation.php`, `DriverLocationService.php`, `app/Filament/Support/LivePosition.php`), and no database step.
+Branch `feature/bolt-live-tracking`. The brief named `release/android-1.1` as the base, but no branch of that name existed then; it was cut from `feature/bolt-delivery` (ed5efa6), the only branch with `BOLT_ENABLED`/`BOLT_TEST_PHONES` and app build 1.1.0+10. `release/android-1.1` was later created from the same ed5efa6 and merged in (see "Merge" below). No migrations; everything stays behind the existing flags. The deploy on top of the dark release (5fa4c80) is [RELEASE-live-tracking.md](RELEASE-live-tracking.md).
 
 **Live tracking**
 
@@ -181,10 +181,10 @@ Branch `feature/bolt-live-tracking`. The brief named `release/android-1.1` as th
 - **Polling in the app:** every 5 s (the server's `poll_seconds`, kept to 5 to 10) only while the screen is open and the app in the foreground; 10 s after a failed poll, keeping the map and saying "reconnecting"; none once `active` is false. A status change re-reads the order's delivery view at once.
 - **Admins see the live position on a running delivery's or return ride's page only.** List pages link to Bolt's tracking page instead, so opening a list never calls Bolt.
 
-**Price**
+**Price** (superseded the same day by the flat delivery fee below)
 
-- **The buyer sees Bolt's receipt (`final_cost`) after delivery,** next to the fee paid, as asked, with the note at checkout and on Pay now that Bolt's final price can be lower. **Needs a client decision:** the difference is not refunded automatically (unchanged policy: Sokoni keeps it against trips where Bolt charges more). If buyers should get it back, it can be recorded like the other refunds.
-- **Every number is a stored one:** the quote's range and fee at checkout, the job's estimate and fee on Pay now and the order, the recorded payment, Bolt's receipt.
+- ~~The buyer sees Bolt's receipt (`final_cost`) after delivery, next to the fee paid, with the note at checkout and on Pay now that Bolt's final price can be lower.~~ Replaced: the buyer pays one fixed fee and never sees Bolt's range, receipt or a "can be lower" note. The difference question is settled the same way: Sokoni keeps it.
+- **Every number is a stored one:** the fixed fee at checkout, on Pay now and on the order, and the recorded payment.
 
 **Returns**
 
@@ -192,3 +192,17 @@ Branch `feature/bolt-live-tracking`. The brief named `release/android-1.1` as th
 - **A ride back that fails with the item in the car is a support case:** it counts as `needsAdmin()`, so both sides see "handled by support" and the admin queue flags it, and both are told.
 - **Admins can record a ride-back fee paid outside the app,** as for delivery fees, because production has no payment provider yet and the buyer could otherwise never book the pickup.
 - **What is still incomplete** is listed in RETURNS.md § 9.
+
+## Flat delivery fee, Android 1.1.0+11 (`release/android-1.1`), 2026-11-19
+
+- **The buyer pays one fixed delivery fee: the quoted amount.** It is still set when the shop accepts (the upper bound of Bolt's estimate then, rounded up), shown before the buyer pays, and never changes after that, whatever Bolt's trip finally costs. Sokoni keeps any difference and covers any shortfall.
+- **The checkout fee is not locked at checkout.** The shop's acceptance re-prices it, as before, and the checkout note says so. Locking the checkout figure would need the quote stored on the order (a new column and a migration) and would make Sokoni absorb any Bolt price change between checkout and acceptance. Left as a business decision.
+- **Bolt's own prices never leave the admin.** The quote no longer sends `min`, `max` or `estimate: true`; the buyer's delivery view no longer sends `estimate`; a return's `ride` no longer sends `estimate`. `final_cost` and `cost_difference` were already admin-only, and tests now lock that in for both sides, including after Bolt's receipt arrives. `payment.receipt` stays: it is the buyer's own payment of the fixed fee.
+- **Wording, English and Swahili, same keys:** "Fixed delivery fee" on checkout, Pay now and the order screen; checkout's "Bolt estimate X to Y. You pay the upper amount." and "Estimated total" are gone; the checkout note and Pay now both say the fee is fixed and won't change after paying.
+
+## Merge: `release/android-1.1` into `feature/bolt-live-tracking`, app 1.2.0+12, 2026-11-19
+
+- **The flat-fee rule wins over this branch's price screens.** Removed: checkout's Bolt-estimate box ("Bolt estimate … · You pay for delivery … · Bolt's final price for the trip can be lower"), the range and "can be lower" line on Pay now, and the "Bolt's receipt" row and note on the order screen, with their strings (`checkoutBoltRange`, `checkoutBoltYouPay`, `checkoutBoltFinalCanBeLower`, `orderBoltReceipt`, `orderBoltReceiptPending`, `orderBoltReceiptNote`) in both languages. `final_cost` left the buyer's delivery view again. The paid line reads "Fixed delivery fee, paid" and shows the fee, not a receipt amount.
+- **The live tracking screen shows no price,** only the driver, the status and the ETA ("estimated" there is the ETA, not a price).
+- **Admin keeps everything:** estimate range, `final_cost`, `cost_difference`, invoice, on deliveries and return rides.
+- **Version 1.2.0+12:** above the Play bundle 1.1.0+11 built from `release/android-1.1`, and a minor version for live tracking.

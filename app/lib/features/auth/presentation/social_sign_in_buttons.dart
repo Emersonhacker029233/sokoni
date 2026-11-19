@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -15,8 +18,9 @@ enum _Provider { google, apple }
 /// Google / Apple buttons (CLAUDE.md feature 4) — real native SDK flows,
 /// each ending in a POST to `/auth/social` where the token is verified
 /// server-side (never trusted client-side, see `HttpSocialAuthVerifier`).
+/// Shown on Android only (`SokoniSocialAuthConfig`); iOS renders nothing.
 /// A provider's button is omitted entirely — not shown disabled — when
-/// its credential (BLOCKERS.md item 3) isn't configured yet. Apple App
+/// its credential (BLOCKERS.md item 3) isn't configured. Apple App
 /// Review rejected an earlier build under Guideline 2.1(a) ("Sign in with
 /// Apple and Continue with Google were unresponsive when tapped") for
 /// exactly the previous approach: a disabled button with a long-press
@@ -90,13 +94,20 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
       _error = null;
     });
     try {
+      // Android's result comes back through an exported activity any app
+      // could open, so only the answer to *this* request is accepted.
+      final state = _randomState();
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
         webAuthenticationOptions: WebAuthenticationOptions(
           clientId: SokoniSocialAuthConfig.appleServiceId,
           redirectUri: Uri.parse(SokoniSocialAuthConfig.appleRedirectUri),
         ),
+        state: state,
       );
+      if (credential.state != state) {
+        throw StateError('Apple returned a different sign-in request.');
+      }
       final identityToken = credential.identityToken;
       if (identityToken == null) {
         throw StateError('Apple did not return an identity token.');
@@ -113,6 +124,11 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
     } finally {
       if (mounted) setState(() => _loading = null);
     }
+  }
+
+  static String _randomState() {
+    final random = Random.secure();
+    return base64UrlEncode(List<int>.generate(16, (_) => random.nextInt(256))).replaceAll('=', '');
   }
 
   @override

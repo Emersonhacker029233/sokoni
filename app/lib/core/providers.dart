@@ -84,10 +84,13 @@ class AuthStateController extends Notifier<AuthState> {
     } catch (_) {
       // Could not determine the real state — leave it undetermined rather
       // than asserting "signed out" and forcing a real session to look lost.
-      state = const AuthState(AuthStatus.unknown);
+      if (ref.mounted) state = const AuthState(AuthStatus.unknown);
       return;
     }
 
+    // The container may have gone while the keystore answered (a closed
+    // test tree, a disposed scope): nothing is left to update.
+    if (!ref.mounted) return;
     state = AuthState(token != null ? AuthStatus.authenticated : AuthStatus.unauthenticated);
     if (token != null) unawaited(ref.read(pushServiceProvider).registerDevice());
   }

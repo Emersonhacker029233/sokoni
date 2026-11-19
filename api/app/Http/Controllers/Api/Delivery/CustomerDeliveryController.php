@@ -62,9 +62,10 @@ class CustomerDeliveryController extends Controller
     }
 
     /**
-     * GET /delivery/quote?seller_id&lat&lng. Bolt's estimate for checkout:
-     * the range, and the fee the buyer will pay (its upper bound). The
-     * binding fee is set when the shop accepts.
+     * GET /delivery/quote?seller_id&lat&lng. The fixed delivery fee for
+     * checkout (Bolt's estimate's upper bound, rounded up). The fee is
+     * locked when the shop accepts and never changes after that. Bolt's own
+     * prices (the estimate range, the receipt) are admin-only.
      */
     public function quote(DeliveryQuoteRequest $request, DeliveryQuoter $quoter): JsonResponse
     {
@@ -85,12 +86,9 @@ class CustomerDeliveryController extends Controller
             'provider' => 'bolt',
             'distance_km' => $km,
             'currency' => $estimate->currency ?? 'TZS',
-            'min' => $estimate->minAmount,
-            'max' => $estimate->maxAmount,
             'fee' => $estimate->customerFee(),
             'category' => $estimate->category,
             'eta_seconds' => $estimate->etaSeconds,
-            'estimate' => true,
             // Shown at checkout before the buyer pays (docs/delivery/RETURNS.md).
             'return_policy' => DeliveryAccess::returnsEligible($request->user(), $shop)
                 ? ReturnPolicy::toArray($shop->return_policy, $shop->return_notes)

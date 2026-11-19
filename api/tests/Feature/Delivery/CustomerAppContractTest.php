@@ -83,23 +83,25 @@ class CustomerAppContractTest extends TestCase
         $this->actingAs(User::factory()->create())->getJson('/api/delivery/config')->assertNotFound();
     }
 
-    public function test_quote_returns_the_bolt_range_and_the_upper_bound_the_buyer_pays(): void
+    /** Flat delivery fee: checkout gets the one fixed fee, never Bolt's own price range. */
+    public function test_quote_returns_the_fixed_fee_and_not_bolts_range(): void
     {
         $shop = $this->shop();
-        $this->actingAs(User::factory()->create())
+        $quote = $this->actingAs(User::factory()->create())
             ->getJson('/api/delivery/quote?'.http_build_query(['seller_id' => $shop->id, 'lat' => self::DROP_LAT, 'lng' => self::DROP_LNG]))
             ->assertOk()
             ->assertJsonPath('data.provider', 'bolt')
-            ->assertJsonPath('data.estimate', true)
             ->assertJsonPath('data.currency', 'TZS')
-            ->assertJsonPath('data.min', 5200)
-            ->assertJsonPath('data.max', 6400)
             ->assertJsonPath('data.fee', self::FEE)
             ->assertJsonPath('data.category', 'bolt_send')
             ->assertJsonPath('data.eta_seconds', 240)
-            ->assertJsonStructure(['data' => ['distance_km']]);
+            ->assertJsonStructure(['data' => ['distance_km']])
+            ->json('data');
 
-        $this->assertArrayNotHasKey('fare_id', $this->getJson('/api/features')->json('data'));
+        foreach (['min', 'max', 'estimate', 'fare_id', 'final_cost', 'cost_difference'] as $key) {
+            $this->assertArrayNotHasKey($key, $quote, "{$key} reached checkout");
+        }
+        $this->assertStringNotContainsString('5200', json_encode($quote), "Bolt's lower estimate reached checkout");
     }
 
     public function test_quote_explains_why_delivery_is_unavailable(): void
@@ -174,7 +176,7 @@ class CustomerAppContractTest extends TestCase
         $view = $this->actingAs($seller)->getJson("/api/delivery/orders/{$order->id}")->assertOk()
             ->assertJsonPath('data.fee_paid', true)
             ->json('data');
-        foreach (['fee', 'estimate', 'payment', 'dropoff', 'amount_due', 'refund', 'actions', 'final_cost', 'live_location'] as $hidden) {
+        foreach (['fee', 'estimate', 'payment', 'dropoff', 'amount_due', 'refund', 'actions', 'final_cost', 'cost_difference', 'live_location'] as $hidden) {
             $this->assertArrayNotHasKey($hidden, $view, "seller view leaks {$hidden}");
         }
     }
@@ -210,8 +212,9 @@ class CustomerAppContractTest extends TestCase
             ->assertJsonPath('data.provider', 'bolt')
             ->assertJsonPath('data.status', 'pending_payment')
             ->assertJsonPath('data.amount_due', self::FEE)
-            ->assertJsonPath('data.estimate.min', 5200)
-            ->assertJsonPath('data.estimate.max', 6400)
+            ->assertJsonMissingPath('data.estimate')
+            ->assertJsonMissingPath('data.final_cost')
+            ->assertJsonMissingPath('data.cost_difference')
             ->assertJsonPath('data.payment.goods_total', 20000)
             ->assertJsonPath('data.payment.delivery_fee', self::FEE)
             ->assertJsonPath('data.payment.total', 20000 + self::FEE)
@@ -221,7 +224,7 @@ class CustomerAppContractTest extends TestCase
             ->assertJsonPath('data.tracking_url', null)
             ->assertJsonStructure(['data' => [
                 'id', 'order_id', 'order_code', 'provider', 'status', 'is_active', 'distance_km', 'currency', 'fee',
-                'estimate' => ['min', 'max', 'category'], 'payment_status', 'amount_due',
+                'payment_status', 'amount_due',
                 'pickup' => ['shop_name', 'lat', 'lng'],
                 'dropoff' => ['lat', 'lng', 'address', 'phone'],
                 'payment' => ['mode', 'status', 'amount_due', 'covers', 'goods_paid_to', 'goods_total', 'delivery_fee',

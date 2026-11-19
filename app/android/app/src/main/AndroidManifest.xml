@@ -60,6 +60,24 @@
                 <data android:scheme="https" android:host="sokoni.co.tz" android:pathPrefix="/products"/>
             </intent-filter>
         </activity>
+        <!-- Sign in with Apple on Android (sign_in_with_apple's web flow).
+             Apple posts the result to https://sokoni.co.tz/auth/apple/callback
+             (AppleSignInCallbackController), which redirects the Custom Tab to
+             intent://callback?...#Intent;package=tz.co.sokoni.sokoni;scheme=signinwithapple;end.
+             This activity receives that intent and hands the result back to
+             the plugin. MainActivity must stay singleTop (above) for the
+             return to land in the running app. -->
+        <activity
+            android:name="com.aboutyou.dart_packages.sign_in_with_apple.SignInWithAppleCallback"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="signinwithapple" />
+                <data android:path="callback" />
+            </intent-filter>
+        </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

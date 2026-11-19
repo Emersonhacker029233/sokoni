@@ -116,16 +116,8 @@ class _PayNowCardState extends ConsumerState<PayNowCard> {
           const Divider(),
           _Line(label: l10n.checkoutTotal, value: SokoniFormat.tzs(payment.total), bold: true),
           const SizedBox(height: SokoniDimens.space4),
-          Text(l10n.deliveryPayCoversFee, style: theme.textTheme.bodySmall),
-          if (widget.tracking.estimateMin != null && widget.tracking.estimateMax != null) ...[
-            const SizedBox(height: SokoniDimens.space4),
-            Text(
-              '${l10n.checkoutBoltRange(SokoniFormat.tzs(widget.tracking.estimateMin!.round()), SokoniFormat.tzs(widget.tracking.estimateMax!.ceil()))}. '
-              '${l10n.checkoutBoltFinalCanBeLower}',
-              key: const Key('pay-bolt-estimate'),
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
+          // Flat delivery fee: the fixed fee and nothing of Bolt's own prices.
+          Text(l10n.deliveryPayCoversFee, key: const Key('pay-fixed-fee'), style: theme.textTheme.bodySmall),
           // The return policy copied onto this order at checkout, once more before paying.
           if (widget.tracking.returnInfo?.policy case final policy?) ...[
             const SizedBox(height: SokoniDimens.space8),

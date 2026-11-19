@@ -20,8 +20,6 @@ void main() {
       expect(t.isActive, isTrue);
       expect(t.distanceKm, 4.23); // sent as "4.23"
       expect(t.fee, 6400);
-      expect(t.estimateMin, 5200);
-      expect(t.estimateMax, 6400);
       expect(t.driver!.name, 'Seyf Driver');
       expect(t.driver!.phone, '+255700667788');
       expect(t.driver!.plate, 'T123ABC');
@@ -111,11 +109,9 @@ void main() {
     expect(f.returnsTermsAccepted, isFalse);
   });
 
-  test('the checkout quote reads the Bolt range, ETA and return policy', () {
+  test('the checkout quote reads the fixed fee, ETA and return policy', () {
     final q = DeliveryQuote.fromJson(quoteJson(returnPolicy: {'code': '7d', 'hours': 168, 'label': 'Returns within 7 days', 'notes': null}));
     expect(q.fee, 6400);
-    expect(q.min, 5200);
-    expect(q.max, 6400);
     expect(q.etaSeconds, 240);
     expect(q.returnPolicy!.code, '7d');
     expect(DeliveryQuote.fromJson(quoteJson()).returnPolicy, isNull);

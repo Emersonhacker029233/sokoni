@@ -40,11 +40,11 @@ Public. What this user may see. Guests always get `false`.
 
 ## `GET /delivery/quote?seller_id=&lat=&lng=`
 
-Bolt's estimate for the checkout screen, shop → drop-off. The fee the buyer pays is the upper bound, rounded up. The binding fee is set when the shop accepts.
+The **fixed delivery fee** for the checkout screen, shop → drop-off. Sokoni sets it from Bolt's estimate (its upper bound, rounded up); it is confirmed when the shop accepts, the buyer sees it before paying, and it never changes after that, whatever Bolt's trip finally costs. Bolt's own prices (the estimate range, the receipt, the final cost and the difference) are never in a buyer's or a shop's response; they are in the admin only.
 
 ```json
-{ "data": { "provider": "bolt", "distance_km": 4.23, "currency": "TZS", "min": 5200, "max": 6400, "fee": 6400,
-  "category": "Bolt", "eta_seconds": 300, "estimate": true,
+{ "data": { "provider": "bolt", "distance_km": 4.23, "currency": "TZS", "fee": 6400,
+  "category": "Bolt", "eta_seconds": 300,
   "return_policy": { "code": "24h", "hours": 24, "label": "Returns within 24 hours", "notes": null } } }
 ```
 
@@ -88,7 +88,6 @@ Buyer view:
 { "data": {
   "id": 12, "order_id": 345, "order_code": "SKAB12CD34", "provider": "bolt", "status": "driver_assigned", "is_active": true,
   "distance_km": 4.23, "currency": "TZS", "fee": 6400,
-  "estimate": { "min": 5200, "max": 6400, "category": "Bolt" },
   "payment_status": "paid", "amount_due": 0,
   "pickup": { "shop_name": "Duka la Juma", "lat": -6.819, "lng": 39.276 },
   "dropoff": { "lat": -6.79, "lng": 39.28, "address": "Mtaa wa Uhuru 12", "phone": "+255765000123" },
@@ -102,7 +101,6 @@ Buyer view:
               "photo_url": "https://...", "eta_seconds": 240 },
   "tracking_url": "https://bolt.eu/...",
   "live_location": true,
-  "final_cost": null,
   "refund": null,
   "actions": { "can_pay": false, "can_cancel": true, "can_retry": false, "can_switch_to_pickup": false },
   "timeline": [ { "status": "pending_payment", "at": "...", "by": "system", "reason": null } ],
@@ -112,15 +110,15 @@ Buyer view:
 } }
 ```
 
+- `fee` is the fixed delivery fee. `payment.receipt` is the buyer's own payment of that fee, never Bolt's receipt.
 - `driver` appears once Bolt assigns one (and stays after delivery, without phone or ETA). `driver.phone` only while the driver is on the job.
 - `tracking_url` (Bolt's tracking page) only while the ride runs (`pending_driver` to `on_the_way`).
 - `live_location`: the in-app map has a driver to show (`driver_assigned`, `arrived_at_shop`, `on_the_way`); see below.
-- `final_cost`: Bolt's receipt for the trip (whole shillings) once Bolt has sent it after `delivered`, else null. The buyer paid `fee`, the top of Bolt's estimate; Bolt's final price can be lower.
 - `failure_reason` on `no_driver_found` / `failed`: `no_driver_found`, `no_driver_available`, `area_not_serviced`, `shop_no_show`, `payment_booking_failed`, `provider_cancelled`, `client_cancelled`, `provider_cancelled_in_transit`, `client_cancelled_in_transit`, `booking_failed`, `quote_failed`. `can_retry` is true for all of them except `area_not_serviced` and the two `_in_transit` ones (the parcel was in the car: Sokoni support handles those).
 - `timeline[].reason`: `payment_timeout`, `seller_cancelled_after_assign`, `provider_cancel_failed` (Bolt refused the cancel; an admin checks the bill), or null.
 - `return` only while returns are on for the viewer ([RETURNS.md](RETURNS.md)).
 
-Shop view: the same base fields (no `fee`, `estimate`, `payment`, `dropoff`, `refund`, `live_location` or `final_cost`) plus
+Shop view: the same base fields (no `fee`, `payment`, `dropoff`, `refund` or `live_location`) plus
 
 ```json
 { "fee_paid": true,

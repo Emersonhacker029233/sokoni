@@ -53,24 +53,44 @@ void main() {
     expect(find.text('Sokoni Terms of Use'), findsNothing);
   });
 
-  /// Neither Google nor Apple is configured in a plain test binary (no
-  /// `--dart-define`s passed) — exactly how iOS 1.0 (7) was built, and how
-  /// 1.0 (9) must be built too. This locks in that the sheet degrades
-  /// cleanly in that state: no orphaned "or" divider sitting above an
-  /// empty social section (BLOCKERS.md item 3, the Guideline 2.1(a)
-  /// rejection fix).
-  testWidgets('shows no social section or divider when neither provider is configured', (tester) async {
-    await _openSheet(tester);
-    await tester.ensureVisible(find.text('Agree and continue'));
-    await tester.tap(find.text('Agree and continue'));
-    await tester.pumpAndSettle();
+  /// iOS stays exactly as the reviewed 1.0 (9): no Google, no Apple, and
+  /// no orphaned "or" divider above an empty social section (BLOCKERS.md
+  /// item 3, the Guideline 2.1(a) rejection fix). The plain test binary
+  /// passes no `--dart-define`s, like every release build.
+  testWidgets(
+    'iOS shows no social section or divider',
+    (tester) async {
+      await _openSheet(tester);
+      await tester.ensureVisible(find.text('Agree and continue'));
+      await tester.tap(find.text('Agree and continue'));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(Divider), findsNothing);
-    expect(find.text('Continue with Google'), findsNothing);
-    expect(find.text('Continue with Apple'), findsNothing);
-    // The rest of the sheet still renders normally.
-    expect(find.text('Sign in'), findsOneWidget);
-  });
+      expect(find.byType(Divider), findsNothing);
+      expect(find.text('Continue with Google'), findsNothing);
+      expect(find.text('Continue with Apple'), findsNothing);
+      // The rest of the sheet still renders normally.
+      expect(find.text('Sign in'), findsOneWidget);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+  /// Android 1.1 offers Google and Apple with no `--dart-define`, so the
+  /// documented `flutter build appbundle --release --flavor prod` shows them.
+  testWidgets(
+    'Android shows Google and Apple above the divider',
+    (tester) async {
+      await _openSheet(tester);
+      await tester.ensureVisible(find.text('Agree and continue'));
+      await tester.tap(find.text('Agree and continue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Continue with Google'), findsOneWidget);
+      expect(find.text('Continue with Apple'), findsOneWidget);
+      expect(find.byType(Divider), findsWidgets);
+      expect(find.text('Sign in'), findsOneWidget);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 
   testWidgets('agreeing once is remembered for the rest of the session', (tester) async {
     await _openSheet(tester);
