@@ -69,6 +69,9 @@ return [
         'team_id' => env('APPLE_TEAM_ID'),
         'key_id' => env('APPLE_KEY_ID'),
         'private_key_path' => env('APPLE_PRIVATE_KEY_PATH'),
+        // The Play package that /auth/apple/callback sends Android's Sign
+        // in with Apple result back to (AppleSignInCallbackController).
+        'android_package' => env('APPLE_ANDROID_PACKAGE', 'tz.co.sokoni.sokoni'),
     ],
 
     // App Review bypass (Apple rejection PART B — the reviewer has no

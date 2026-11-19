@@ -13,6 +13,7 @@ use App\Http\Controllers\Web\Account\ShopHoursController;
 use App\Http\Controllers\Web\Account\ShopLogoController;
 use App\Http\Controllers\Web\Account\ShopProductMediaController;
 use App\Http\Controllers\Web\Account\ShopProductsController;
+use App\Http\Controllers\Web\Auth\AppleSignInCallbackController;
 use App\Http\Controllers\Web\Auth\GoogleAuthController;
 use App\Http\Controllers\Web\Auth\IntentController;
 use App\Http\Controllers\Web\Auth\OtpAuthController;
@@ -112,6 +113,12 @@ Route::post('/auth/otp/request', [OtpAuthController::class, 'requestOtp'])->name
 Route::post('/auth/otp/verify', [OtpAuthController::class, 'verifyOtp'])->name('web.auth.otp.verify');
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('web.auth.google.redirect');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('web.auth.google.callback');
+// Sign in with Apple on Android: Apple posts the result here and it goes
+// straight back to the app. CSRF-exempt (bootstrap/app.php); see the
+// controller's docblock.
+Route::post('/auth/apple/callback', AppleSignInCallbackController::class)
+    ->middleware('throttle:30,1')
+    ->name('web.auth.apple.callback');
 
 Route::middleware(['auth:web', 'web.onboarded'])->group(function () {
     Route::post('/logout', [OtpAuthController::class, 'logout'])->name('web.logout');

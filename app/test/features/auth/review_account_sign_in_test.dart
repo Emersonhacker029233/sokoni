@@ -188,6 +188,9 @@ Future<ProviderContainer> _pump(WidgetTester tester, _ReviewApi api) async {
   return ProviderScope.containerOf(tester.element(find.text('open')));
 }
 
+/// The App Store reviewer signs in on iOS.
+final _iosReviewBuild = TargetPlatformVariant.only(TargetPlatform.iOS);
+
 /// Open the sheet: the Terms come first, with one Agree button and no way
 /// past them without it. Agree, then choose "Sign in".
 Future<void> _agreeAndChooseSignIn(WidgetTester tester) async {
@@ -200,8 +203,8 @@ Future<void> _agreeAndChooseSignIn(WidgetTester tester) async {
   await tester.tap(find.text('Agree and continue'));
   await tester.pumpAndSettle();
 
-  // The iOS 1.0 (9) build defines no Google or Apple credentials, exactly
-  // like build 7, so neither button exists (auth_entry_sheet_test.dart).
+  // iOS shows no Google or Apple button, exactly like builds 7 and 9
+  // (auth_entry_sheet_test.dart). These tests run as iOS: App Review.
   expect(find.textContaining('Google'), findsNothing);
   expect(find.textContaining('Apple'), findsNothing);
 
@@ -255,7 +258,7 @@ void main() {
     expect(api.termsVersionOnFile, '1.1');
 
     _expectSignedInWithNothingElseToAgree(tester, container);
-  });
+  }, variant: _iosReviewBuild);
 
   /// The App Store Connect username is `appreview`: same first screen, same
   /// single request, no code step.
@@ -273,7 +276,7 @@ void main() {
     expect(api.termsVersionOnFile, '1.1');
 
     _expectSignedInWithNothingElseToAgree(tester, container);
-  });
+  }, variant: _iosReviewBuild);
 
   /// If the production `.env` were missing REVIEW_ACCOUNT_PASSWORD, the
   /// right password leads to a code step instead of straight in. The
@@ -299,7 +302,7 @@ void main() {
     expect(verify['terms_version'], '1.1');
 
     _expectSignedInWithNothingElseToAgree(tester, container);
-  });
+  }, variant: _iosReviewBuild);
 
   /// The other route in the App Review notes: "Sign in with phone number
   /// instead", 783 029 233, Send code, 123456. The Terms agreed to on the
@@ -327,7 +330,7 @@ void main() {
     expect(api.termsVersionOnFile, '1.1');
 
     _expectSignedInWithNothingElseToAgree(tester, container);
-  });
+  }, variant: _iosReviewBuild);
 
   /// A server that still has an older version on file (for example one
   /// not yet updated) gets the one-tap acceptance screen right after
@@ -351,7 +354,7 @@ void main() {
     expect(api.requests.entries.firstWhere((e) => e.key.endsWith('/auth/terms/accept')).value['version'], '1.1');
     expect(find.byType(TermsAcceptanceScreen), findsNothing);
     expect(find.text('open'), findsOneWidget);
-  });
+  }, variant: _iosReviewBuild);
 }
 
 /// Wraps [_ReviewApi] but drops `terms_version` from sign-in, like an API

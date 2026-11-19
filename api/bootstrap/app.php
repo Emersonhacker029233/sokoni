@@ -37,8 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Kibonet's delivery-report callback is posted by Kibonet itself,
         // not a browser with a Sokoni session — see
         // SmsDeliveryCallbackController's own docblock.
+        // Apple posts the Android Sign in with Apple result the same way
+        // (AppleSignInCallbackController).
         $middleware->validateCsrfTokens(except: [
             'sms/delivery-callback',
+            'auth/apple/callback',
         ]);
         // Laravel's Authenticate middleware redirects an unauthenticated
         // web request to a route literally named `login` by default — this

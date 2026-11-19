@@ -142,19 +142,21 @@ The signed release APK/AAB is built locally (or in CI), not on the cPanel server
 
 The app's API base URL (`app/lib/core/network/dio_client.dart`) defaults to a local-dev loopback address in debug/profile builds and to the live production API automatically in any `--release` build — no flag needed for the common case. `--dart-define=API_BASE_URL=...` still overrides either default, for a staging build or pointing a debug build at a real server.
 
-**Google/Apple sign-in (BLOCKERS.md item 3, the Guideline 2.1(a) fix) need two more `--dart-define`s on every release build, Android and iOS alike** — without them, `SokoniSocialAuthConfig.isGoogleConfigured`/`isAppleConfigured` stay false and both buttons are omitted entirely (not shown disabled — see that class's own docblock for why):
+**Google/Apple sign-in (BLOCKERS.md item 3) show on Android and never on iOS, with no `--dart-define`.** Since Android 1.1.0+11, `SokoniSocialAuthConfig` carries the two public identifiers below as defaults and decides by platform: Android shows both buttons, iOS shows neither (exactly like iOS 1.0 builds 7 and 9). The plain commands are the release commands:
 
 ```bash
-flutter build appbundle --release --flavor prod \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=825257290618-pis0jcmn11bo5n3vpi5q0nchagrlhbuq.apps.googleusercontent.com \
-  --dart-define=APPLE_SERVICE_ID=tz.co.sokoni.signin
-flutter build apk --release --flavor prod \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=825257290618-pis0jcmn11bo5n3vpi5q0nchagrlhbuq.apps.googleusercontent.com \
-  --dart-define=APPLE_SERVICE_ID=tz.co.sokoni.signin
-flutter build ipa --release \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=825257290618-pis0jcmn11bo5n3vpi5q0nchagrlhbuq.apps.googleusercontent.com \
-  --dart-define=APPLE_SERVICE_ID=tz.co.sokoni.signin
+flutter build appbundle --release --flavor prod   # Play Store
+flutter build apk --release --flavor prod         # direct install
+flutter build ipa --release                       # iOS: phone and password only
 ```
+
+A `--dart-define=GOOGLE_SERVER_CLIENT_ID=...` or `--dart-define=APPLE_SERVICE_ID=...` still overrides a default (set one to `REPLACE_ME` to hide that button on Android). Nothing makes them show on iOS; that takes a code change and an App Review.
+
+**For Android sign-in to work, the server and the consoles need:**
+
+- `api/.env`: `GOOGLE_CLIENT_ID=825257290618-pis0jcmn11bo5n3vpi5q0nchagrlhbuq.apps.googleusercontent.com` and `APPLE_SERVICE_ID=tz.co.sokoni.signin`, the same values as the app's defaults.
+- Sign in with Apple on Android is Apple's web flow. Apple posts the result to `https://sokoni.co.tz/auth/apple/callback` (`AppleSignInCallbackController`), which hands it back to the app. That route must be deployed, and the URL must be listed under the Service ID's **Return URLs** in Apple Developer (Identifiers → Services IDs → `tz.co.sokoni.signin` → Configure), with `sokoni.co.tz` under its domains.
+- Google Sign-In on a Play Store install runs under the **Play App Signing** key, not the upload key. That key's SHA-1 (Play Console → App integrity → App signing key certificate) must be registered on the Android app in Firebase project `sokoni-71910`. Without it, Google sign-in fails on store installs but works on a sideloaded APK.
 
 **`GOOGLE_SERVER_CLIENT_ID` must be the Web application-type OAuth client, not the iOS or Android client from the same Firebase project** — Google's own SDK requires this specifically for `GoogleSignIn.instance.initialize(serverClientId: ...)` to mint a server-verifiable ID token, and it's also what `api/.env`'s `GOOGLE_CLIENT_ID` must match for the backend's `aud`-claim check to succeed (`HttpSocialAuthVerifier::verifyGoogle()`) — the value above (`...pis0jcmn11bo5n3vpi5q0nchagrlhbuq...`) is the Web client Firebase auto-created when the Android app's SHA-1 fingerprints were registered (visible as `client_type: 3` in `app/android/app/google-services.json`, or in Google Cloud Console → APIs & Services → Credentials). It is **not** the same value as `GoogleService-Info.plist`'s own `CLIENT_ID` field (that one's an iOS-type client, used only for the native iOS flow/URL scheme, never as `serverClientId`) — double-check this distinction before building if the Firebase/Cloud console project is ever regenerated, since reusing the wrong client type here fails silently as an "audience mismatch", not a clear error.
 
