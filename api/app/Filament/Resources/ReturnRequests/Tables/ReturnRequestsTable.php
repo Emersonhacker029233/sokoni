@@ -46,6 +46,22 @@ class ReturnRequestsTable
                 TextColumn::make('payer')->label('Ride paid by')->badge(),
                 TextColumn::make('fee')->label('Ride fee')->money('TZS', divideBy: 1)->placeholder('—'),
                 TextColumn::make('fee_status')->label('Fee')->placeholder('—'),
+                TextColumn::make('final_cost')->label('Bolt charged')->money('TZS', divideBy: 1)->placeholder('—')->toggleable(),
+                TextColumn::make('driver')
+                    ->label('Driver')
+                    ->state(fn (ReturnRequest $record) => collect([$record->provider_driver['name'] ?? null, $record->provider_driver['plate'] ?? null])->filter()->implode(' · ') ?: null)
+                    ->placeholder('—')
+                    ->toggleable(),
+                TextColumn::make('refund')
+                    ->label('Refund')
+                    ->badge()
+                    ->state(fn (ReturnRequest $record) => match (true) {
+                        $record->refunded_at !== null => 'Refunded',
+                        $record->received_at !== null && $record->status !== 'closed' => 'Shop to refund',
+                        default => null,
+                    })
+                    ->color(fn (?string $state) => $state === 'Refunded' ? 'success' : 'warning')
+                    ->placeholder('—'),
                 TextColumn::make('escalation_reason')->label('Escalated')->placeholder('—'),
                 TextColumn::make('created_at')->label('Requested')->dateTime()->sortable(),
             ])

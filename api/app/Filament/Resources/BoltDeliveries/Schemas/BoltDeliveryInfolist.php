@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\BoltDeliveries\Schemas;
 
+use App\Filament\Support\LivePosition;
 use App\Models\DeliveryJob;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -47,6 +48,8 @@ class BoltDeliveryInfolist
                             ->url(fn (?string $state) => $state, shouldOpenInNewTab: true)
                             ->placeholder('—'),
                         TextEntry::make('booked_at')->dateTime()->placeholder('—'),
+                        TextEntry::make('delivered_at')->label('Delivered (Bolt COMPLETED)')->dateTime()->placeholder('—'),
+                        LivePosition::entry('live_position', fn (DeliveryJob $record) => $record->hasLiveLocation() ? (string) $record->provider_ref : null),
                     ]),
 
                 Section::make('Money')

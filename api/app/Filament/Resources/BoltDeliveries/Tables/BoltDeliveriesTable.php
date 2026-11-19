@@ -4,6 +4,7 @@ namespace App\Filament\Resources\BoltDeliveries\Tables;
 
 use App\Filament\Resources\BoltDeliveries\BoltDeliveryResource;
 use App\Models\DeliveryJob;
+use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -31,6 +32,17 @@ class BoltDeliveriesTable
                         default => 'warning',
                     }),
                 TextColumn::make('provider_state')->label('Bolt state')->placeholder('—'),
+                TextColumn::make('driver')
+                    ->label('Driver')
+                    ->state(fn (DeliveryJob $record) => collect([$record->provider_driver['name'] ?? null, $record->provider_driver['plate'] ?? null])->filter()->implode(' · ') ?: null)
+                    ->placeholder('—')
+                    ->toggleable(),
+                TextColumn::make('estimate')
+                    ->label('Bolt estimate')
+                    ->state(fn (DeliveryJob $record) => $record->estimate_max === null ? null
+                        : number_format((float) $record->estimate_min).' – '.number_format((float) $record->estimate_max))
+                    ->placeholder('—')
+                    ->toggleable(),
                 TextColumn::make('fee')->label('Customer paid')->money('TZS', divideBy: 1)->sortable(),
                 TextColumn::make('final_cost')->label('Bolt charged')->money('TZS', divideBy: 1)->placeholder('—')->sortable(),
                 TextColumn::make('cost_difference')
@@ -54,6 +66,14 @@ class BoltDeliveriesTable
                     ->query(fn (Builder $query) => $query->where('cost_difference', '<', 0)),
                 SelectFilter::make('status')->options(array_combine(DeliveryJob::STATUSES, DeliveryJob::STATUSES)),
             ])
-            ->recordActions([ViewAction::make()]);
+            ->recordActions([
+                ViewAction::make(),
+                // Bolt's own live page: no API call, so cheap on a list.
+                Action::make('trackOnBolt')
+                    ->label('Track on Bolt')
+                    ->icon('heroicon-o-map')
+                    ->visible(fn (DeliveryJob $record) => $record->isRideActive() && filled($record->provider_driver['tracking_url'] ?? null))
+                    ->url(fn (DeliveryJob $record) => $record->provider_driver['tracking_url'] ?? null, shouldOpenInNewTab: true),
+            ]);
     }
 }
