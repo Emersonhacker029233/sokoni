@@ -59,5 +59,8 @@ return [
         'seller_received' => ['title' => 'Return delivered to your shop', 'body' => 'Order :code is back at your shop. Check it, refund the buyer, then confirm in the app.'],
         'buyer_received' => ['title' => 'Return delivered', 'body' => 'Your return of order :code reached :shop. They will now refund you.'],
         'buyer_refunded' => ['title' => 'Refund confirmed', 'body' => ':shop confirmed your refund for order :code.'],
+        'buyer_ride_failed_in_transit' => ['title' => 'Return pickup stopped', 'body' => 'The Bolt trip with your return of order :code ended before reaching :shop. Sokoni support will contact you.'],
+        'seller_ride_failed_in_transit' => ['title' => 'Return pickup stopped', 'body' => 'The Bolt trip bringing back order :code ended on the way. Sokoni support will contact you.'],
+        'buyer_ride_fee_refunded' => ['title' => 'Pickup fee refunded', 'body' => 'Sokoni refunded the TSh :fee Bolt pickup fee for order :code.'],
     ],
 ];

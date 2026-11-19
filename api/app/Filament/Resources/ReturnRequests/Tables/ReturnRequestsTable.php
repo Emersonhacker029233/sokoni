@@ -18,13 +18,18 @@ class ReturnRequestsTable
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['order', 'buyer', 'shop']))
             ->defaultSort(fn (Builder $query) => $query
-                ->orderByRaw("case when status = 'disputed' or (status = 'requested' and escalated_at is not null) then 0 else 1 end")
+                ->orderByRaw('case when '.ReturnRequestResource::NEEDS_ADMIN_SQL.' then 0 else 1 end')
                 ->orderByDesc('created_at'))
             ->columns([
                 TextColumn::make('needs')
                     ->label('')
                     ->badge()
-                    ->state(fn (ReturnRequest $record) => $record->needsAdmin() ? 'Needs Sokoni' : null)
+                    ->state(fn (ReturnRequest $record) => match (true) {
+                        $record->rideFailedInTransit() => 'Item stuck with Bolt',
+                        $record->needsAdmin() => 'Needs Sokoni',
+                        $record->rideFeeRefundPending() => 'Refund ride fee',
+                        default => null,
+                    })
                     ->color('danger'),
                 TextColumn::make('order.code')->label('Order')->searchable(),
                 TextColumn::make('status')
@@ -46,7 +51,7 @@ class ReturnRequestsTable
             ])
             ->filters([
                 Filter::make('needs_admin')
-                    ->label('Needs Sokoni (escalated or disputed)')
+                    ->label('Needs Sokoni (decide, recover the item, or refund a ride fee)')
                     ->toggle()
                     ->query(fn (Builder $query) => ReturnRequestResource::needsAdmin($query)),
                 SelectFilter::make('status')->options(array_combine(ReturnRequest::STATUSES, ReturnRequest::STATUSES)),

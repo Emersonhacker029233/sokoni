@@ -128,10 +128,29 @@ class ReturnRequest extends Model
         return in_array($this->fee_status, ['paid', 'owed_by_seller', 'waived'], true);
     }
 
-    /** Sokoni support decides: the shop didn't answer in time, the buyer disputed, or the shop blocked the buyer. */
+    /**
+     * Sokoni support must act: the shop didn't answer in time, the buyer
+     * disputed, the shop blocked the buyer, or Bolt's ride back ended with
+     * the item in the car.
+     */
     public function needsAdmin(): bool
     {
-        return $this->status === 'disputed' || ($this->status === 'requested' && $this->escalated_at !== null);
+        return $this->status === 'disputed'
+            || ($this->status === 'requested' && $this->escalated_at !== null)
+            || $this->rideFailedInTransit();
+    }
+
+    /** The ride back failed after the driver collected the item: a person must recover it. */
+    public function rideFailedInTransit(): bool
+    {
+        return $this->status === 'return_in_transit' && $this->picked_up_at !== null
+            && in_array($this->ride_status, ['failed', 'no_driver_found'], true);
+    }
+
+    /** A buyer-paid ride back that never carried the item, still to be paid back by an admin. */
+    public function rideFeeRefundPending(): bool
+    {
+        return $this->fee_status === 'refund_pending';
     }
 
     public function sellerDeadline(): Carbon

@@ -215,7 +215,9 @@ class ReturnService
             throw ReturnActionException::make('cannot_withdraw', 409);
         }
 
-        $return = $this->transition($return, 'closed', fn () => ['closed_at' => now(), 'closed_reason' => 'withdrawn']);
+        $return = $this->transition($return, 'closed', fn (ReturnRequest $locked) => [
+            'closed_at' => now(), 'closed_reason' => 'withdrawn', ...self::unusedRideFee($locked),
+        ]);
         $this->messages->toSeller($return, 'withdrawn');
 
         return $return;
@@ -229,9 +231,10 @@ class ReturnService
             $this->cancelRide($return);
         }
 
-        $return = $this->transition($return, 'closed', fn () => [
+        $return = $this->transition($return, 'closed', fn (ReturnRequest $locked) => [
             'closed_at' => now(), 'closed_reason' => 'admin', 'resolution_note' => $note,
             'decided_by' => $admin->id, 'decided_role' => 'admin',
+            ...self::unusedRideFee($locked),
         ]);
         $this->messages->toBuyer($return, 'closed', ['note' => $note]);
         $this->messages->toSeller($return, 'closed', ['note' => $note]);
@@ -246,7 +249,7 @@ class ReturnService
 
         return DB::transaction(function () use ($return, $payer, $admin) {
             $locked = ReturnRequest::query()->lockForUpdate()->findOrFail($return->id);
-            if ($locked->fee_status === 'paid' || $locked->provider_ref !== null) {
+            if (! in_array($locked->fee_status, [null, 'unpaid', 'owed_by_seller'], true) || $locked->provider_ref !== null) {
                 throw ReturnActionException::make('invalid_transition', 409, ['from' => $locked->status, 'to' => "payer:{$payer}"]);
             }
             $locked->forceFill([
@@ -323,16 +326,48 @@ class ReturnService
         ]);
     }
 
-    /** Verified payment of a buyer-paid ride (DeliveryPaymentService). Idempotent. */
+    /**
+     * Verified payment of a buyer-paid ride (DeliveryPaymentService).
+     * Idempotent. A payment that lands after the return already ended
+     * (withdrawn, closed, or refunded some other way while the prompt was
+     * open) is kept as owed back to the buyer, never as a fee for a ride
+     * that will not happen.
+     */
     public function markFeePaid(ReturnRequest $return, ?string $reference = null): ReturnRequest
     {
-        $updated = ReturnRequest::query()->whereKey($return->id)->where('fee_status', 'unpaid')
-            ->update(['fee_status' => 'paid', 'paid_at' => now(), 'updated_at' => now()]);
+        $late = false;
+        $updated = DB::transaction(function () use ($return, &$late) {
+            $locked = ReturnRequest::query()->lockForUpdate()->find($return->id);
+            if ($locked === null || $locked->fee_status !== 'unpaid') {
+                return false;
+            }
+            $late = $locked->status !== 'accepted';
+            $locked->forceFill(['fee_status' => $late ? 'refund_pending' : 'paid', 'paid_at' => now()])->save();
+
+            return true;
+        });
         $return = $return->fresh();
-        if ($updated === 1) {
+        if ($updated && $late) {
+            Log::notice("[returns] return #{$return->id} ride fee paid after the return ended ({$return->status}); refund pending".($reference ? " ({$reference})" : ''));
+        } elseif ($updated) {
             Log::info("[returns] return #{$return->id} ride fee paid".($reference ? " ({$reference})" : ''));
             $this->messages->toBuyer($return, 'fee_paid');
         }
+
+        return $return;
+    }
+
+    /** An admin paid back a ride fee that was owed to the buyer (Admin > Returns > Mark ride fee refunded). */
+    public function markRideFeeRefunded(ReturnRequest $return, User $admin, string $reference): ReturnRequest
+    {
+        $updated = ReturnRequest::query()->whereKey($return->id)->where('fee_status', 'refund_pending')
+            ->update(['fee_status' => 'refunded', 'updated_at' => now()]);
+        if ($updated !== 1) {
+            throw ReturnActionException::make('invalid_transition', 409, ['from' => (string) $return->fee_status, 'to' => 'refunded']);
+        }
+        Log::info("[returns] ride fee of return #{$return->id} refunded by admin #{$admin->id} ({$reference})");
+        $return = $return->fresh();
+        $this->messages->toBuyer($return, 'ride_fee_refunded');
 
         return $return;
     }
@@ -457,7 +492,13 @@ class ReturnService
                 $return = $this->transition($return, 'accepted', fn () => []);
                 $this->messages->toBuyer($return, 'ride_failed');
             } else {
+                // The item is in a Bolt car that won't arrive: a person must recover it.
+                // ReturnRequest::needsAdmin() puts it in the admin queue; both sides are told.
                 Log::critical("[returns] Bolt ride {$return->provider_ref} of return #{$return->id} ended ({$details->state}) with the item in the car. Support must act.");
+                if ($previous !== $rideStatus) {
+                    $this->messages->toBuyer($return, 'ride_failed_in_transit');
+                    $this->messages->toSeller($return, 'ride_failed_in_transit');
+                }
             }
         }
 
@@ -501,6 +542,7 @@ class ReturnService
             'received_at' => $locked->received_at ?? now(),
             'refunded_at' => now(),
             'resolution_note' => $note !== null && trim($note) !== '' ? trim($note) : $locked->resolution_note,
+            ...self::unusedRideFee($locked),
         ]);
         $this->messages->toBuyer($return, 'refunded');
 
@@ -605,6 +647,16 @@ class ReturnService
 
             return $locked->fresh(['order', 'shop', 'buyer']);
         });
+    }
+
+    /**
+     * A ride back the buyer paid for that never carried the item (the
+     * return was withdrawn, closed, or refunded before a driver collected
+     * it) is owed back: `refund_pending` until an admin pays it.
+     */
+    private static function unusedRideFee(ReturnRequest $locked): array
+    {
+        return $locked->fee_status === 'paid' && $locked->picked_up_at === null ? ['fee_status' => 'refund_pending'] : [];
     }
 
     private function updateRide(ReturnRequest $return, array $attributes): ReturnRequest

@@ -14,6 +14,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -68,12 +69,24 @@ class ReturnRequestResource extends Resource
         ];
     }
 
+    /**
+     * Sokoni must act: decide (escalated or disputed), recover an item a
+     * failed Bolt ride is still carrying, or pay back a ride fee that
+     * bought no ride. Same as ReturnRequest::needsAdmin() plus refunds.
+     */
     public static function needsAdmin(Builder $query): Builder
     {
         return $query->where(fn (Builder $q) => $q
             ->where('status', 'disputed')
-            ->orWhere(fn (Builder $r) => $r->where('status', 'requested')->whereNotNull('escalated_at')));
+            ->orWhere(fn (Builder $r) => $r->where('status', 'requested')->whereNotNull('escalated_at'))
+            ->orWhere(fn (Builder $r) => $r->where('status', 'return_in_transit')->whereNotNull('picked_up_at')->whereIn('ride_status', ['failed', 'no_driver_found']))
+            ->orWhere('fee_status', 'refund_pending'));
     }
+
+    /** SQL twin of needsAdmin(), for sorting those rows first. */
+    public const NEEDS_ADMIN_SQL = "status = 'disputed' or (status = 'requested' and escalated_at is not null)"
+        ." or (status = 'return_in_transit' and picked_up_at is not null and ride_status in ('failed', 'no_driver_found'))"
+        ." or fee_status = 'refund_pending'";
 
     public static function getNavigationBadge(): ?string
     {
@@ -119,13 +132,32 @@ class ReturnRequestResource extends Resource
         return Action::make('setPayer')
             ->label('Who pays the ride back')
             ->icon('heroicon-o-banknotes')
-            ->visible(fn (ReturnRequest $record) => $record->fee_status !== 'paid' && $record->provider_ref === null && $record->status !== 'closed')
+            ->visible(fn (ReturnRequest $record) => in_array($record->fee_status, [null, 'unpaid', 'owed_by_seller'], true)
+                && $record->provider_ref === null && ! in_array($record->status, ['closed', 'refunded'], true))
             ->fillForm(fn (ReturnRequest $record) => ['payer' => $record->payer])
             ->schema([
                 Select::make('payer')->options(['buyer' => 'Buyer (changed mind)', 'seller' => 'Seller (owed by seller)'])->required(),
             ])
             ->action(fn (ReturnRequest $record, array $data) => static::run($record, 'return.payer', $data['payer'],
                 fn (ReturnService $returns) => $returns->setPayer($record, Auth::user(), $data['payer'])));
+    }
+
+    /**
+     * The buyer paid for a ride back that never carried the item
+     * (`refund_pending`). Sokoni pays it back outside the app, then records
+     * it here; the buyer is told. Admin role only, logged.
+     */
+    public static function markRideFeeRefundedAction(): Action
+    {
+        return Action::make('markRideFeeRefunded')
+            ->label('Mark ride fee refunded')
+            ->icon('heroicon-o-arrow-uturn-left')
+            ->visible(fn (ReturnRequest $record) => Auth::user()?->isAdminRole() && $record->rideFeeRefundPending())
+            ->requiresConfirmation()
+            ->modalDescription(fn (ReturnRequest $record) => 'Only once TSh '.number_format((int) $record->fee).' has been sent back to the buyer.')
+            ->schema([TextInput::make('reference')->label('Refund reference')->required()->maxLength(80)])
+            ->action(fn (ReturnRequest $record, array $data) => static::run($record, 'return.ride_fee_refunded', $data['reference'],
+                fn (ReturnService $returns) => $returns->markRideFeeRefunded($record, Auth::user(), $data['reference'])));
     }
 
     /** Moderation, same as Report > Hide content: the comment and photos disappear for the shop. */

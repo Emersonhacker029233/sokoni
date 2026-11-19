@@ -59,5 +59,8 @@ return [
         'seller_received' => ['title' => 'Bidhaa imerudi dukani', 'body' => 'Oda :code imerudi dukani kwako. Ikague, mrudishie mnunuzi pesa, kisha thibitisha kwenye programu.'],
         'buyer_received' => ['title' => 'Bidhaa imefika', 'body' => 'Bidhaa uliyorudisha ya oda :code imefika :shop. Sasa watakurudishia pesa.'],
         'buyer_refunded' => ['title' => 'Pesa imerudishwa', 'body' => ':shop wamethibitisha kukurudishia pesa ya oda :code.'],
+        'buyer_ride_failed_in_transit' => ['title' => 'Uchukuaji umesimama', 'body' => 'Safari ya Bolt iliyobeba bidhaa uliyorudisha ya oda :code imeisha kabla ya kufika :shop. Huduma kwa wateja ya Sokoni itawasiliana nawe.'],
+        'seller_ride_failed_in_transit' => ['title' => 'Uchukuaji umesimama', 'body' => 'Safari ya Bolt iliyokuwa ikirudisha oda :code imeisha njiani. Huduma kwa wateja ya Sokoni itawasiliana nawe.'],
+        'buyer_ride_fee_refunded' => ['title' => 'Ada ya uchukuaji imerudishwa', 'body' => 'Sokoni imekurudishia ada ya uchukuaji wa Bolt ya TSh :fee ya oda :code.'],
     ],
 ];
