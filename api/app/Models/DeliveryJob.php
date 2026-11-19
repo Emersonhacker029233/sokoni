@@ -48,6 +48,13 @@ class DeliveryJob extends Model
     /** A booked Bolt ride is running: its state is polled every 10 s. */
     public const RIDE_ACTIVE_STATUSES = ['pending_driver', 'driver_assigned', 'arrived_at_shop', 'on_the_way'];
 
+    /**
+     * The buyer's live map shows the driver: from the moment Bolt assigns
+     * one until the ride completes (Bolt's location endpoint answers for
+     * active rides only).
+     */
+    public const LIVE_LOCATION_STATUSES = ['driver_assigned', 'arrived_at_shop', 'on_the_way'];
+
     /** Goods have left the shop: no cancelling, only deliver or fail. */
     public const IN_TRANSIT_STATUSES = ['picked_up', 'on_the_way', 'arrived'];
 
@@ -143,6 +150,11 @@ class DeliveryJob extends Model
     public function isRideActive(): bool
     {
         return $this->provider_ref !== null && in_array($this->status, self::RIDE_ACTIVE_STATUSES, true);
+    }
+
+    public function hasLiveLocation(): bool
+    {
+        return $this->isBolt() && $this->provider_ref !== null && in_array($this->status, self::LIVE_LOCATION_STATUSES, true);
     }
 
     public function isInTransit(): bool

@@ -205,6 +205,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('delivery-quotes', function (Request $request) {
             return Limit::perMinute(15)->by($request->user()?->id ?: $request->ip());
         });
+        // The live map polls every ~5 s (12 a minute); room for a second
+        // phone on the same account. Bolt itself is asked at most once per
+        // ride per 5 s whatever this allows (DriverLocationService).
+        RateLimiter::for('delivery-location', function (Request $request) {
+            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
 
         // Every web page's header needs the category nav — one composer
         // rather than every Web controller passing it explicitly.

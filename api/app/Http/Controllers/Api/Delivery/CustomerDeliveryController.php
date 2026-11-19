@@ -15,6 +15,7 @@ use App\Services\Delivery\DeliveryJobService;
 use App\Services\Delivery\DeliveryPaymentService;
 use App\Services\Delivery\DeliveryQuoter;
 use App\Services\Delivery\DeliveryUnavailableException;
+use App\Services\Delivery\DriverLocationService;
 use App\Support\DeliveryAccess;
 use App\Support\DeliverySettings;
 use App\Support\ReturnPolicy;
@@ -52,7 +53,10 @@ class CustomerDeliveryController extends Controller
                 'covers' => ['delivery_fee'],
                 'goods_paid_to' => 'shop',
             ],
-            'tracking' => ['poll_seconds' => max(5, (int) config('delivery.bolt.poll_seconds', 10))],
+            'tracking' => [
+                'poll_seconds' => max(5, (int) config('delivery.bolt.poll_seconds', 10)),
+                'location_poll_seconds' => DriverLocationService::pollSeconds(),
+            ],
             'returns_enabled' => DeliveryAccess::returnsEnabledFor($request->user()),
         ]]);
     }
@@ -113,6 +117,25 @@ class CustomerDeliveryController extends Controller
         $viewer = $request->user()->can('isBuyer', $job) ? DeliveryJobResource::BUYER : DeliveryJobResource::SELLER;
 
         return response()->json(['data' => DeliveryJobResource::for($job->fresh(), $viewer)->resolve($request)]);
+    }
+
+    /**
+     * GET /delivery/orders/{order}/location. The buyer's live map, polled
+     * every few seconds while the tracking screen is open: the Bolt
+     * driver's position (Bolt's ride-location endpoint, cached per ride),
+     * the delivery status and an ETA. Only while the ride is active, from
+     * driver assigned until completed; otherwise `active: false` tells the
+     * app to stop. Buyer only: the shop never sees the driver's position.
+     */
+    public function location(Request $request, Order $order, DriverLocationService $locations): JsonResponse
+    {
+        $job = $this->buyersJob($order);
+        if ($job->isRideActive() && Cache::add("delivery:lazy-sync:{$job->id}", true, max(1, (int) config('delivery.bolt.poll_seconds', 10)))) {
+            // Shares the order screen's window, so the map never adds ride-details calls beyond Bolt's 10-second rule.
+            $job = $this->jobs->sync($job);
+        }
+
+        return response()->json(['data' => $locations->forJob($job->fresh())]);
     }
 
     /**

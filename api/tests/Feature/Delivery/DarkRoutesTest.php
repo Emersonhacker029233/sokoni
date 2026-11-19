@@ -23,6 +23,7 @@ class DarkRoutesTest extends TestCase
             'config' => ['GET', '/api/delivery/config'],
             'quote' => ['GET', '/api/delivery/quote?seller_id=1&lat=1&lng=1'],
             'order view' => ['GET', '/api/delivery/orders/999'],
+            'live location' => ['GET', '/api/delivery/orders/999/location'],
             'pay' => ['POST', '/api/delivery/orders/999/pay'],
             'returns list' => ['GET', '/api/returns'],
             'request a return' => ['POST', '/api/orders/999/returns'],

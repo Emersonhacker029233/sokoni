@@ -72,6 +72,7 @@ class CustomerAppContractTest extends TestCase
             ->assertJsonPath('data.payment.covers', ['delivery_fee'])
             ->assertJsonPath('data.payment.goods_paid_to', 'shop')
             ->assertJsonPath('data.tracking.poll_seconds', 10)
+            ->assertJsonPath('data.tracking.location_poll_seconds', 5)
             ->assertJsonPath('data.returns_enabled', false)
             ->assertJsonStructure(['data' => ['max_distance_km', 'payment' => ['channels', 'sandbox']]]);
     }
@@ -173,7 +174,7 @@ class CustomerAppContractTest extends TestCase
         $view = $this->actingAs($seller)->getJson("/api/delivery/orders/{$order->id}")->assertOk()
             ->assertJsonPath('data.fee_paid', true)
             ->json('data');
-        foreach (['fee', 'estimate', 'payment', 'dropoff', 'amount_due', 'refund', 'actions'] as $hidden) {
+        foreach (['fee', 'estimate', 'payment', 'dropoff', 'amount_due', 'refund', 'actions', 'final_cost', 'live_location'] as $hidden) {
             $this->assertArrayNotHasKey($hidden, $view, "seller view leaks {$hidden}");
         }
     }

@@ -51,7 +51,18 @@ return [
         'live_base_url' => env('BOLT_LIVE_BASE_URL', 'https://node.bolt.eu/ride-booker-api'),
         'paths' => [
             'cancel' => env('BOLT_CANCEL_PATH', 'rides/cancel'),
+            // Bolt's ride-location endpoint (the driver's position, active
+            // rides only). Bolt's PDF names it but leaves the path to the
+            // Swagger file: GET {base}/reseller/v1/{path}?ride_id=... Check it
+            // before relying on live tracking (BOLT.md, "Confirm before going live").
+            'location' => env('BOLT_LOCATION_PATH', 'rides/location'),
         ],
+
+        // Bolt allows the location endpoint every second, but the buyer's map
+        // only needs a fresh point every few seconds: each ride's answer is
+        // cached this long, so any number of app polls make at most one Bolt
+        // call per ride per window.
+        'location_cache_seconds' => max(1, (int) env('BOLT_LOCATION_CACHE_SECONDS', 5)),
 
         'connect_timeout_seconds' => 5,
         'timeout_seconds' => (int) env('BOLT_TIMEOUT_SECONDS', 15),
@@ -63,6 +74,17 @@ return [
         // is retried this many times by the minute cron, 1, 2, 4, 8 ... min
         // apart, then the buyer is told no driver could be booked.
         'max_booking_attempts' => (int) env('BOLT_MAX_BOOKING_ATTEMPTS', 5),
+    ],
+
+    // The buyer's live tracking screen (GET /api/delivery/orders/{order}/location).
+    'tracking' => [
+        // How often the app asks for the driver's position while the screen is open.
+        'location_poll_seconds' => 5,
+        // Bolt gives an ETA to the pickup (the shop) only. Once the parcel is
+        // in the car the app shows a rough "about N min" instead: straight-line
+        // distance to the customer x road factor / average city speed.
+        'eta_speed_kmh' => 20,
+        'eta_road_factor' => 1.4,
     ],
 
     'firebase' => [

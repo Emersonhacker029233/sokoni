@@ -120,7 +120,12 @@ class DeliveryJobResource extends JsonResource
             'payment' => $this->paymentView(),
             'driver' => $this->driverView(phone: $this->isDriverActive()),
             'tracking_url' => $this->trackingUrl(),
-            'refund' => $this->refund_amount ? ['amount' => (int) $this->refund_amount, 'status' => $this->refund_status] : null,
+            // The in-app map (GET …/location) has a driver to show.
+            'live_location' => $this->hasLiveLocation(),
+            // Bolt's receipt once the ride is done. The buyer paid the top of
+            // Bolt's estimate (`fee`); Bolt's final price can be lower.
+            'final_cost' => $this->final_cost === null ? null : (int) round($this->final_cost),
+            'refund' =>$this->refund_amount ? ['amount' => (int) $this->refund_amount, 'status' => $this->refund_status] : null,
             'actions' => [
                 'can_pay' => $this->amountDue() > 0 && app(DeliveryPaymentService::class)->onlinePaymentAvailable(),
                 'can_cancel' => ! $this->isTerminal() && $atShop,

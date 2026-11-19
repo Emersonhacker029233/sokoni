@@ -97,6 +97,26 @@ class BoltClient
         return BoltRideDetails::fromArray(['ride_id' => $rideId, ...$body]);
     }
 
+    /**
+     * The driver's position (Bolt: "ride location", active rides only,
+     * lightweight, may be called every second). One attempt and no backoff
+     * sleep: the buyer's app asks again in a few seconds anyway, and a web
+     * request must not hang on a rate-limited Bolt. The path is a config
+     * value because Bolt's PDF doesn't give it (BOLT_LOCATION_PATH).
+     */
+    public function driverLocation(string $rideId): BoltDriverLocation
+    {
+        $body = $this->send(
+            'location',
+            'GET',
+            (string) ($this->config['paths']['location'] ?? 'rides/location'),
+            query: ['ride_id' => $rideId],
+            attempts: 1,
+        );
+
+        return BoltDriverLocation::fromArray($body);
+    }
+
     public function receipt(string $rideId): BoltReceipt
     {
         return BoltReceipt::fromArray($this->send('receipt', 'GET', 'rides/receipt', query: ['ride_id' => $rideId]));
@@ -141,6 +161,7 @@ class BoltClient
         ?array $json = null,
         ?string $sandboxPrefix = null,
         bool $withUuid = true,
+        ?int $attempts = null,
     ): array {
         if ($withUuid && ! $this->isConfigured()) {
             throw BoltApiException::notConfigured($operation);
@@ -151,7 +172,7 @@ class BoltClient
             $query['uuid'] = (string) $this->config['sandbox_uuid'];
         }
 
-        $maxAttempts = max(1, (int) ($this->config['max_attempts'] ?? 3));
+        $maxAttempts = max(1, $attempts ?? (int) ($this->config['max_attempts'] ?? 3));
         $retriedAuth = false;
 
         for ($attempt = 1; ; $attempt++) {

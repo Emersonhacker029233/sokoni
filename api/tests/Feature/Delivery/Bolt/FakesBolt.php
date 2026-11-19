@@ -44,6 +44,16 @@ trait FakesBolt
 
     protected int $boltNextRide = 1001;
 
+    /**
+     * What the ride-location endpoint answers per ride while it is active.
+     * No entry = Bolt can't locate the driver (UNABLE_TO_LOCATE_DRIVER).
+     *
+     * @var array<string, array>
+     */
+    protected array $boltLocations = [];
+
+    protected int $boltLocationCalls = 0;
+
     protected function boltConfig(): array
     {
         return [
@@ -57,7 +67,8 @@ trait FakesBolt
             'scope' => 'ridebooker:api',
             'live_base_url' => 'https://node.bolt.eu/ride-booker-api',
             'sandbox_base_url' => 'https://node.bolt.eu/ride-booker-api-sandbox',
-            'paths' => ['cancel' => 'rides/cancel'],
+            'paths' => ['cancel' => 'rides/cancel', 'location' => 'rides/location'],
+            'location_cache_seconds' => 5,
             'timeout_seconds' => 5,
             'connect_timeout_seconds' => 2,
             'max_attempts' => 3,
@@ -119,9 +130,15 @@ trait FakesBolt
         $this->boltRides[$rideId] = $state;
     }
 
-    protected function boltFailNext(string $operation, int $status, ?string $code = null, array $body = []): void
+    protected function boltFailNext(string $operation, int $status, ?string $code = null, array $body = [], array $headers = []): void
     {
-        $this->boltFailures[$operation][] = ['status' => $status, 'code' => $code, 'body' => $body];
+        $this->boltFailures[$operation][] = ['status' => $status, 'code' => $code, 'body' => $body, 'headers' => $headers];
+    }
+
+    /** Where the ride's driver is, as Bolt's location endpoint would say. */
+    protected function boltDriverAt(string $rideId, float $lat, float $lng, ?int $timestamp = null): void
+    {
+        $this->boltLocations[$rideId] = ['lat' => $lat, 'lng' => $lng, 'bearing' => 90, 'timestamp' => $timestamp ?? now()->getTimestamp()];
     }
 
     protected function fakeBolt(): void
@@ -140,10 +157,15 @@ trait FakesBolt
                 str_ends_with($path, '/rides/cancel') => 'cancel',
                 str_ends_with($path, '/rides/control/state') => 'state',
                 str_ends_with($path, '/sandbox/control/create') => 'sandbox_create',
+                preg_match('#/rides/[a-z_-]*location$#', $path) === 1 => 'location',
                 str_ends_with($path, '/rides') && $request->method() === 'POST' => 'create',
                 str_ends_with($path, '/rides') => 'details',
                 default => 'unknown',
             };
+
+            if ($operation === 'location') {
+                $this->boltLocationCalls++;
+            }
 
             $this->boltFailures[$operation] ??= [];
             if (($failure = array_shift($this->boltFailures[$operation])) !== null) {
@@ -151,6 +173,7 @@ trait FakesBolt
                     'x-bolt-error-code' => $failure['code'],
                     'x-bolt-error-message' => $failure['code'] ? 'fake '.$failure['code'] : null,
                     'x-bolt-tracking' => 'trk-'.$operation,
+                    ...($failure['headers'] ?? []),
                 ]));
             }
 
@@ -189,6 +212,17 @@ trait FakesBolt
                     return Http::response([]);
                 })(),
                 'sandbox_create' => Http::response(['uuid' => 'b1034a93-c5af-4fa1-a3b5-1bdb255f8967']),
+                'location' => (function () use ($query) {
+                    $id = (string) ($query['ride_id'] ?? '');
+                    $state = $this->boltRides[$id] ?? null;
+
+                    return match (true) {
+                        $state === null => Http::response('', 404, ['x-bolt-error-code' => 'RIDE_BOOKER_API_MISSING_ORDER']),
+                        ! in_array($state, ['SEARCHING', 'DRIVER_ON_ROUTE_TO_CLIENT', 'ARRIVED_AT_CLIENT', 'DRIVING_WITH_CLIENT'], true) => Http::response('', 409, ['x-bolt-error-code' => 'RIDE_BOOKER_API_INACTIVE_RIDE_REQUESTED']),
+                        ! isset($this->boltLocations[$id]) => Http::response('', 409, ['x-bolt-error-code' => 'RIDE_BOOKER_API_UNABLE_TO_LOCATE_DRIVER']),
+                        default => Http::response($this->boltLocations[$id]),
+                    };
+                })(),
                 default => Http::response('', 404),
             };
         });

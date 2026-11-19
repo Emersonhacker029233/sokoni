@@ -30,6 +30,8 @@ class BoltApiException extends RuntimeException
         public readonly ?string $tracking = null,
         public readonly array $validationErrors = [],
         ?Throwable $previous = null,
+        // Seconds from Bolt's Retry-After header (429/503), when it sent one.
+        public readonly ?int $retryAfter = null,
     ) {
         parent::__construct($message, 0, $previous);
     }
@@ -39,6 +41,7 @@ class BoltApiException extends RuntimeException
         $code = $response->header('x-bolt-error-code') ?: null;
         $message = $response->header('x-bolt-error-message') ?: null;
         $validation = $response->json('validation_errors');
+        $retryAfter = $response->header('Retry-After');
 
         return new self(
             "Bolt {$operation} failed with HTTP {$response->status()}".($code ? " ({$code})" : '').($message ? ": {$message}" : ''),
@@ -48,6 +51,7 @@ class BoltApiException extends RuntimeException
             $message,
             $response->header('x-bolt-tracking') ?: null,
             is_array($validation) ? $validation : [],
+            retryAfter: is_numeric($retryAfter) ? (int) $retryAfter : null,
         );
     }
 
