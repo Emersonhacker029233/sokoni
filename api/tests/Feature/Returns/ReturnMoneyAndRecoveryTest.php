@@ -115,6 +115,27 @@ class ReturnMoneyAndRecoveryTest extends TestCase
         $this->assertSame('paid', $return->fresh()->fee_status);
     }
 
+    public function test_without_online_payment_an_admin_records_the_ride_fee_and_the_buyer_can_book(): void
+    {
+        config(['payments.provider' => 'none']);
+        $return = $this->requestedReturn('changed_mind');
+        $this->asSeller($return)->postJson("/api/returns/{$return->id}/accept")->assertOk();
+        $this->asBuyer($return)->getJson("/api/returns/{$return->id}")
+            ->assertJsonPath('data.payment.amount_due', self::FEE)
+            ->assertJsonPath('data.actions.can_pay', false)
+            ->assertJsonPath('data.actions.can_book_ride', false);
+
+        $this->actingAsAdmin(User::factory()->admin()->create());
+        Livewire::test(ViewReturnRequest::class, ['record' => $return->id])
+            ->callAction('recordRideFeePaid', data: ['reference' => 'QK7RETURN1'])
+            ->assertHasNoActionErrors();
+
+        $this->assertSame('paid', $return->fresh()->fee_status);
+        Livewire::test(ViewReturnRequest::class, ['record' => $return->id])->assertActionHidden('recordRideFeePaid');
+        $this->asBuyer($return)->getJson("/api/returns/{$return->id}")->assertJsonPath('data.actions.can_book_ride', true);
+        $this->asBuyer($return)->postJson("/api/returns/{$return->id}/book")->assertOk()->assertJsonPath('data.status', 'return_in_transit');
+    }
+
     public function test_a_ride_back_that_ends_with_the_item_in_the_car_goes_to_sokoni_and_both_sides_hear(): void
     {
         $return = $this->requestedReturn('wrong_item');

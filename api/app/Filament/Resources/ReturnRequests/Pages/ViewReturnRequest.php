@@ -15,6 +15,7 @@ class ViewReturnRequest extends ViewRecord
             ReturnRequestResource::acceptAction(),
             ReturnRequestResource::closeAction(),
             ReturnRequestResource::payerAction(),
+            ReturnRequestResource::recordRideFeePaidAction(),
             ReturnRequestResource::markRideFeeRefundedAction(),
             ReturnRequestResource::hideAction(),
         ];

@@ -325,6 +325,21 @@ void main() {
       );
       expect(find.widgetWithText(ChoiceChip, 'Airtel Money'), findsOneWidget);
       expect(find.widgetWithText(ChoiceChip, 'M-Pesa'), findsNothing);
+      expect(find.byKey(const Key('return-pay-unavailable')), findsNothing);
+      await disposeTree(tester);
+    });
+
+    testWidgets('owing the ride fee without online payment: told to contact Sokoni, never a dead end', (tester) async {
+      await _pump(
+        tester,
+        orderStatus: 'completed',
+        view: buyerView(
+          status: 'delivered',
+          returnBlock: returnBlockJson(canRequest: false, request: returnRequestJson(status: 'accepted', payer: 'buyer', actions: {'can_withdraw': true})),
+        ),
+      );
+      expect(find.text("Online payment isn't available right now. Contact Sokoni support."), findsOneWidget);
+      expect(find.byKey(const Key('pay-return-ride')), findsNothing);
       await disposeTree(tester);
     });
   });

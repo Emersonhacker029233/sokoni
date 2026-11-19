@@ -143,6 +143,25 @@ class ReturnRequestResource extends Resource
     }
 
     /**
+     * A "changed my mind" buyer paid the ride-back fee outside the app (no
+     * payment provider yet, as on production). Same as the deliveries'
+     * "Record fee paid": the buyer can then book the Bolt pickup.
+     */
+    public static function recordRideFeePaidAction(): Action
+    {
+        return Action::make('recordRideFeePaid')
+            ->label('Record ride fee paid')
+            ->icon('heroicon-o-banknotes')
+            ->visible(fn (ReturnRequest $record) => Auth::user()?->isAdminRole() && $record->status === 'accepted'
+                && $record->payer === 'buyer' && $record->fee_status === 'unpaid' && (int) $record->fee > 0)
+            ->requiresConfirmation()
+            ->modalDescription(fn (ReturnRequest $record) => 'Only once TSh '.number_format((int) $record->fee).' has reached Sokoni. The buyer can then book the Bolt pickup.')
+            ->schema([TextInput::make('reference')->label('Payment reference (M-Pesa code, receipt no.)')->required()->maxLength(80)])
+            ->action(fn (ReturnRequest $record, array $data) => static::run($record, 'return.ride_fee_recorded', $data['reference'],
+                fn (ReturnService $returns) => $returns->markFeePaid($record, 'manual:'.$data['reference'])));
+    }
+
+    /**
      * The buyer paid for a ride back that never carried the item
      * (`refund_pending`). Sokoni pays it back outside the app, then records
      * it here; the buyer is told. Admin role only, logged.

@@ -278,6 +278,9 @@ class _ReturnCardState extends ConsumerState<_ReturnCard> {
             BoltDriverCard(driver: ride!.driver!, trackingUrl: ride.trackingUrl, title: l10n.returnRideDriverTitle),
           ],
           if (a.canPay) _ReturnPayForm(orderId: widget.orderId, request: r),
+          // Owed, but the app can't take the money (no online payment yet): Sokoni records it.
+          if (!widget.isSeller && !a.canPay && r.amountDue > 0 && r.feeStatus == 'unpaid')
+            Text(l10n.deliveryPayUnavailable, key: const Key('return-pay-unavailable'), style: theme.textTheme.bodySmall?.copyWith(color: SokoniColors.danger)),
           // Buyer actions.
           if (a.canBookRide)
             FilledButton.icon(
