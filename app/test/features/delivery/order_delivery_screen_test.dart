@@ -62,6 +62,7 @@ Future<FakeDeliveryRepository> _pump(
         routerConfig: GoRouter(routes: [
           GoRoute(path: '/', builder: (context, state) => const OrderDetailScreen(orderId: 345)),
           GoRoute(path: SokoniRoutes.requestReturnPattern, builder: (context, state) => Text('request return ${state.pathParameters['id']}')),
+          GoRoute(path: SokoniRoutes.deliveryTrackingPattern, builder: (context, state) => Text('live tracking ${state.pathParameters['id']}')),
         ]),
       ),
     ),
@@ -293,6 +294,98 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repo.calls.where((c) => c['call'] == 'return:refunded'), hasLength(1));
+      await disposeTree(tester);
+    });
+
+    testWidgets('a pickup fee for a ride that never carried the item is shown as being refunded', (tester) async {
+      await _pump(
+        tester,
+        orderStatus: 'completed',
+        view: buyerView(
+          status: 'delivered',
+          returnBlock: returnBlockJson(canRequest: false, request: returnRequestJson(status: 'closed', payer: 'buyer', feeStatus: 'refund_pending')),
+        ),
+      );
+      expect(find.text('Sokoni is refunding your TSh 6,400 pickup fee.'), findsOneWidget);
+      expect(find.textContaining('You pay the Bolt pickup'), findsNothing);
+      await disposeTree(tester);
+    });
+
+    testWidgets('paying for the ride back offers only the channels the server takes', (tester) async {
+      await _pump(
+        tester,
+        orderStatus: 'completed',
+        view: buyerView(
+          status: 'delivered',
+          returnBlock: returnBlockJson(
+            canRequest: false,
+            request: returnRequestJson(status: 'accepted', payer: 'buyer', channels: ['airtel'], actions: {'can_pay': true}),
+          ),
+        ),
+      );
+      expect(find.widgetWithText(ChoiceChip, 'Airtel Money'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'M-Pesa'), findsNothing);
+      await disposeTree(tester);
+    });
+  });
+
+  group('live tracking and price', () {
+    testWidgets('"Track live on the map" from driver assigned until the ride ends, and it opens the map', (tester) async {
+      await _pump(tester, view: buyerView(status: 'awaiting_ready'));
+      expect(find.byKey(const Key('open-live-tracking')), findsNothing);
+      await disposeTree(tester);
+
+      await _pump(tester, view: buyerView(status: 'delivered'), orderStatus: 'completed');
+      expect(find.byKey(const Key('open-live-tracking')), findsNothing);
+      await disposeTree(tester);
+
+      await _pump(tester, view: buyerView(status: 'on_the_way'));
+      expect(find.text('Track live on the map'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('open-live-tracking')));
+      await tester.tap(find.byKey(const Key('open-live-tracking')));
+      await tester.pumpAndSettle();
+      expect(find.text('live tracking 345'), findsOneWidget);
+      await disposeTree(tester);
+    });
+
+    testWidgets('before paying: Bolt\'s estimate, that its final price can be lower, and the return policy', (tester) async {
+      await _pump(tester, view: buyerView(status: 'pending_payment', returnBlock: returnBlockJson(canRequest: false)));
+
+      expect(
+        find.text("Bolt estimate: TSh 5,200 to TSh 6,400. You pay the top of Bolt's estimate. Bolt's final price for the trip can be lower."),
+        findsOneWidget,
+      );
+      expect(find.text('Returns: Returns within 3 days\nUnused, in the original box.'), findsOneWidget);
+      // The order summary: the fee to pay and the range it came from.
+      expect(find.descendant(of: find.byKey(const Key('order-delivery-fee')), matching: find.text('Delivery fee')), findsOneWidget);
+      expect(find.text('Bolt estimate: TSh 5,200 to TSh 6,400'), findsOneWidget);
+      await disposeTree(tester);
+    });
+
+    testWidgets('after delivery: the fee paid and Bolt\'s receipt, or "waiting for Bolt" until it arrives', (tester) async {
+      await _pump(tester, view: buyerView(status: 'delivered', finalCost: 5900), orderStatus: 'completed');
+      final fee = find.byKey(const Key('order-delivery-fee'));
+      expect(find.descendant(of: fee, matching: find.text('Delivery fee paid')), findsOneWidget);
+      expect(find.descendant(of: fee, matching: find.text('TSh 6,400')), findsOneWidget);
+      final receipt = find.byKey(const Key('order-bolt-receipt'));
+      expect(find.descendant(of: receipt, matching: find.text("Bolt's receipt")), findsOneWidget);
+      expect(find.descendant(of: receipt, matching: find.text('TSh 5,900')), findsOneWidget);
+      expect(find.text("You paid the top of Bolt's estimate. Bolt's receipt is what the trip finally cost."), findsOneWidget);
+      await disposeTree(tester);
+
+      await _pump(tester, view: buyerView(status: 'delivered'), orderStatus: 'completed', locale: const Locale('sw'));
+      final pending = find.byKey(const Key('order-bolt-receipt'));
+      expect(find.descendant(of: pending, matching: find.text('Risiti ya Bolt')), findsOneWidget);
+      expect(find.descendant(of: pending, matching: find.text('Inasubiri Bolt')), findsOneWidget);
+      expect(find.text('Ada ya usafirishaji iliyolipwa'), findsOneWidget);
+      await disposeTree(tester);
+    });
+
+    testWidgets('the shop never sees the fee or Bolt\'s receipt', (tester) async {
+      await _pump(tester, view: sellerView(status: 'delivered'), user: testSeller, orderStatus: 'completed');
+      expect(find.byKey(const Key('order-bolt-receipt')), findsNothing);
+      expect(find.byKey(const Key('order-delivery-fee')), findsNothing);
+      expect(find.byKey(const Key('open-live-tracking')), findsNothing);
       await disposeTree(tester);
     });
   });

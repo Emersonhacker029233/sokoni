@@ -258,13 +258,18 @@ class _ReturnCardState extends ConsumerState<_ReturnCard> {
           if (r.decisionNote != null && r.status == 'rejected') Text(l10n.returnShopReason(r.decisionNote!)),
           if (r.disputeComment != null) Text(l10n.returnYourDispute(r.disputeComment!), style: theme.textTheme.bodySmall),
           if (r.resolutionNote != null) Text(l10n.returnSokoniDecision(r.resolutionNote!), style: theme.textTheme.bodySmall),
-          if (r.fee != null && {'accepted', 'return_in_transit', 'received'}.contains(r.status))
+          if (r.fee != null && {'accepted', 'return_in_transit', 'received'}.contains(r.status) && !{'refund_pending', 'refunded'}.contains(r.feeStatus))
             Text(
               r.payer == 'seller'
                   ? l10n.returnRidePaidByShop(SokoniFormat.tzs(r.fee!))
                   : (r.feeStatus == 'paid' ? l10n.returnRidePaid(SokoniFormat.tzs(r.fee!)) : l10n.returnRideYouPay(SokoniFormat.tzs(r.fee!))),
               style: theme.textTheme.bodySmall,
             ),
+          // A pickup fee the buyer paid for a ride that never carried the item.
+          if (r.fee != null && r.feeStatus == 'refund_pending' && !widget.isSeller)
+            Text(l10n.returnRideFeeRefundPending(SokoniFormat.tzs(r.fee!)), key: const Key('return-fee-refund'), style: theme.textTheme.bodySmall),
+          if (r.fee != null && r.feeStatus == 'refunded' && !widget.isSeller)
+            Text(l10n.returnRideFeeRefunded(SokoniFormat.tzs(r.fee!)), key: const Key('return-fee-refund'), style: theme.textTheme.bodySmall),
           if (ride?.status == 'unavailable') Text(l10n.returnRideUnavailable, style: theme.textTheme.bodySmall),
           if (ride != null && {'no_driver_found', 'failed'}.contains(ride.status) && r.status == 'accepted')
             Text(l10n.returnRideFailed, style: theme.textTheme.bodySmall?.copyWith(color: SokoniColors.danger)),
@@ -394,7 +399,7 @@ class _ReturnPayForm extends ConsumerStatefulWidget {
 
 class _ReturnPayFormState extends ConsumerState<_ReturnPayForm> {
   final _phone = TextEditingController();
-  String _channel = 'mpesa';
+  String? _channel;
   bool _sending = false;
   bool _prefilled = false;
   String? _error;
@@ -405,6 +410,9 @@ class _ReturnPayFormState extends ConsumerState<_ReturnPayForm> {
     _phone.dispose();
     super.dispose();
   }
+
+  /// The channels the server's payment gateway takes (the same list as Pay now for delivery).
+  List<String> get _channels => widget.request.paymentChannels.isEmpty ? const ['mpesa'] : widget.request.paymentChannels;
 
   Future<void> _pay() async {
     final l10n = AppLocalizations.of(context);
@@ -420,7 +428,7 @@ class _ReturnPayFormState extends ConsumerState<_ReturnPayForm> {
     _pendingKey ??= newIdempotencyKey();
     try {
       await ref.read(deliveryTrackingProvider(widget.orderId).notifier).returnAction(widget.request.id, 'pay', {
-        'channel': _channel,
+        'channel': _channel ?? _channels.first,
         'msisdn': msisdn,
         'idempotency_key': _pendingKey,
       });
@@ -460,8 +468,12 @@ class _ReturnPayFormState extends ConsumerState<_ReturnPayForm> {
         Wrap(
           spacing: SokoniDimens.space8,
           children: [
-            for (final channel in const ['mpesa', 'airtel', 'mixx', 'halopesa'])
-              ChoiceChip(label: Text(paymentChannelLabel(l10n, channel)), selected: _channel == channel, onSelected: (_) => setState(() => _channel = channel)),
+            for (final channel in _channels)
+              ChoiceChip(
+                label: Text(paymentChannelLabel(l10n, channel)),
+                selected: (_channel ?? _channels.first) == channel,
+                onSelected: (_) => setState(() => _channel = channel),
+              ),
           ],
         ),
         TextField(

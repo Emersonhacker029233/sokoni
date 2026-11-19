@@ -19,6 +19,8 @@ class DeliveryApi {
 
   Future<dynamic> tracking(int orderId) async => (await _dio.get<dynamic>('/delivery/orders/$orderId')).data;
 
+  Future<dynamic> driverLocation(int orderId) async => (await _dio.get<dynamic>('/delivery/orders/$orderId/location')).data;
+
   Future<dynamic> pay(int orderId, {required String channel, required String msisdn, required String idempotencyKey}) async =>
       (await _dio.post<dynamic>(
         '/delivery/orders/$orderId/pay',

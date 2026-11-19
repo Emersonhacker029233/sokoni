@@ -40,6 +40,8 @@ abstract final class SokoniRoutes {
   static const deliveryLocation = '/checkout/location';
   static String requestReturn(int orderId) => '/orders/$orderId/return';
   static const requestReturnPattern = '/orders/:id/return';
+  static String deliveryTracking(int orderId) => '/orders/$orderId/track';
+  static const deliveryTrackingPattern = '/orders/:id/track';
 
   static const newProduct = '/sell/products/new';
   static String editProduct(int id) => '/sell/products/$id/edit';

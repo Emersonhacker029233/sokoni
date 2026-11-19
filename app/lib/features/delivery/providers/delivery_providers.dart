@@ -171,6 +171,101 @@ final deliveryTrackingProvider = AsyncNotifierProvider.autoDispose.family<Delive
   DeliveryTrackingController.new,
 );
 
+/// What the live map shows: the server's last answer, and whether the
+/// latest poll failed (the map keeps that answer and says it is reconnecting).
+class LiveMapState {
+  const LiveMapState(this.location, {this.reconnecting = false});
+
+  final DriverLiveLocation location;
+  final bool reconnecting;
+}
+
+/// The Bolt driver's position for the live tracking map
+/// (`GET /delivery/orders/{order}/location`).
+///
+/// Polls only while a screen watches it: autoDispose cancels the timer as
+/// soon as the tracking screen closes, the screen pauses it while the app
+/// is in the background, and it stops by itself once the server says the
+/// ride is over (`active: false`). Every ~5 s (the server's
+/// `poll_seconds`, kept between 5 and 10); after a failed poll it keeps
+/// the last answer and waits 10 s. When the delivery status moves on, the
+/// order's delivery view is re-read at once so the timeline and the
+/// driver card follow.
+class DriverLocationController extends AsyncNotifier<LiveMapState> {
+  DriverLocationController(this.orderId);
+
+  final int orderId;
+  Timer? _timer;
+  bool _disposed = false;
+  bool _paused = false;
+
+  @override
+  Future<LiveMapState> build() async {
+    _disposed = false;
+    ref.onDispose(() {
+      _disposed = true;
+      _timer?.cancel();
+    });
+    final first = LiveMapState(await ref.read(deliveryRepositoryProvider).driverLocation(orderId));
+    _schedule(first);
+    return first;
+  }
+
+  /// When to ask again, or null to stop: the ride is over.
+  static Duration? nextPoll(LiveMapState map) {
+    if (!map.location.active) return null;
+    if (map.reconnecting) return const Duration(seconds: 10);
+    return Duration(seconds: map.location.pollSeconds.clamp(5, 10));
+  }
+
+  bool get isPolling => _timer?.isActive ?? false;
+
+  void _schedule(LiveMapState? map) {
+    _timer?.cancel();
+    if (_disposed || _paused || map == null) return;
+    final wait = nextPoll(map);
+    if (wait != null) _timer = Timer(wait, refresh);
+  }
+
+  /// The app went to the background (true) or came back (false).
+  void setPaused(bool paused) {
+    if (_paused == paused || _disposed) return;
+    _paused = paused;
+    if (paused) {
+      _timer?.cancel();
+    } else if (state.value?.location.active ?? true) {
+      unawaited(refresh());
+    }
+  }
+
+  Future<void> refresh() async {
+    if (_disposed) return;
+    final previous = state.value;
+    try {
+      final next = LiveMapState(await ref.read(deliveryRepositoryProvider).driverLocation(orderId));
+      if (_disposed) return;
+      state = AsyncData(next);
+      if (previous != null && previous.location.status != next.location.status) {
+        unawaited(ref.read(deliveryTrackingProvider(orderId).notifier).refresh());
+      }
+      _schedule(next);
+    } catch (e, st) {
+      if (_disposed) return;
+      if (previous == null) {
+        state = AsyncError(e, st);
+        return;
+      }
+      final kept = LiveMapState(previous.location, reconnecting: true);
+      state = AsyncData(kept);
+      _schedule(kept);
+    }
+  }
+}
+
+final driverLocationProvider = AsyncNotifierProvider.autoDispose.family<DriverLocationController, LiveMapState, int>(
+  DriverLocationController.new,
+);
+
 /// A fresh key per payment attempt; a retry of the same request reuses it.
 String newIdempotencyKey() {
   final random = Random.secure();

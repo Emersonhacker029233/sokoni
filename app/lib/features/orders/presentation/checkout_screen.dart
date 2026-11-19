@@ -447,12 +447,7 @@ class _DispatchSummary extends StatelessWidget {
       children: [
         _SummaryRow(label: l10n.checkoutGoods, value: SokoniFormat.tzs(subtotal)),
         _SummaryRow(label: feeLabel, value: feeText),
-        if (value?.min != null && value?.max != null)
-          Text(
-            l10n.checkoutBoltRange(SokoniFormat.tzs(value!.min!.round()), SokoniFormat.tzs(value.max!.ceil())),
-            key: const Key('checkout-bolt-range'),
-            style: theme.textTheme.bodySmall,
-          ),
+        if (value != null) _BoltEstimate(quote: value),
         if (value?.etaSeconds != null) Text(l10n.checkoutBoltEta((value!.etaSeconds! / 60).ceil()), style: theme.textTheme.bodySmall),
         if (quote != null && quote!.isLoading && !quote!.hasValue) const LinearProgressIndicator(minHeight: 2),
         const Divider(),
@@ -482,6 +477,50 @@ class _DispatchSummary extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Bolt's estimate and what the buyer will actually pay for delivery: the
+/// top of the range, with the honest note that Bolt's final price for the
+/// trip can come in lower. Every number is the server's quote.
+class _BoltEstimate extends StatelessWidget {
+  const _BoltEstimate({required this.quote});
+
+  final DeliveryQuote quote;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    return Container(
+      key: const Key('checkout-bolt-estimate'),
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: SokoniDimens.space8),
+      padding: const EdgeInsets.all(SokoniDimens.space12),
+      decoration: BoxDecoration(
+        border: Border.all(color: dark ? SokoniColors.darkOutline : SokoniColors.outline),
+        borderRadius: BorderRadius.circular(SokoniDimens.radiusField),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (quote.min != null && quote.max != null)
+            Text(
+              l10n.checkoutBoltRange(SokoniFormat.tzs(quote.min!.round()), SokoniFormat.tzs(quote.max!.ceil())),
+              key: const Key('checkout-bolt-range'),
+              style: theme.textTheme.bodyMedium,
+            ),
+          Text(
+            l10n.checkoutBoltYouPay(SokoniFormat.tzs(quote.fee)),
+            key: const Key('checkout-bolt-you-pay'),
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: SokoniDimens.space4),
+          Text(l10n.checkoutBoltFinalCanBeLower, style: theme.textTheme.bodySmall),
+        ],
+      ),
     );
   }
 }

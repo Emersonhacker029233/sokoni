@@ -43,6 +43,22 @@ class FakeDeliveryRepository extends DeliveryRepository {
     return DeliveryTracking.fromJson(view!);
   }
 
+  /// What `GET …/location` answers, in order; the last one keeps repeating.
+  List<Map<String, dynamic>> locations = [];
+
+  /// When set, the next location polls fail with it (no connection).
+  Object? locationError;
+  int locationCalls = 0;
+
+  @override
+  Future<DriverLiveLocation> driverLocation(int orderId) async {
+    locationCalls++;
+    calls.add({'call': 'location', 'order': orderId});
+    if (locationError != null) throw locationError!;
+    final json = locations.length > 1 ? locations.removeAt(0) : locations.single;
+    return DriverLiveLocation.fromJson(json);
+  }
+
   @override
   Future<DeliveryTracking> retry(int orderId) async {
     calls.add({'call': 'retry', 'order': orderId});

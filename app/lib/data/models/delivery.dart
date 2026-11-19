@@ -70,6 +70,7 @@ class DeliveryConfig {
     required this.sandbox,
     required this.channels,
     required this.pollSeconds,
+    this.locationPollSeconds = 5,
     this.returnsEnabled = false,
   });
 
@@ -85,6 +86,7 @@ class DeliveryConfig {
       sandbox: _bool(payment['sandbox']),
       channels: _strings(payment['channels']),
       pollSeconds: _int(tracking['poll_seconds'], 10),
+      locationPollSeconds: _int(tracking['location_poll_seconds'], 5),
       returnsEnabled: _bool(json['returns_enabled']),
     );
   }
@@ -97,6 +99,9 @@ class DeliveryConfig {
   final bool sandbox;
   final List<String> channels;
   final int pollSeconds;
+
+  /// How often the live map asks for the driver's position.
+  final int locationPollSeconds;
   final bool returnsEnabled;
 }
 
@@ -446,6 +451,7 @@ class ReturnRequestInfo {
     this.ride,
     this.amountDue = 0,
     this.paymentAttempt,
+    this.paymentChannels = const [],
     this.closedReason,
     this.createdAt,
   });
@@ -476,6 +482,7 @@ class ReturnRequestInfo {
       ride: ReturnRide.fromJson(json['ride']),
       amountDue: _int(payment?['amount_due']),
       paymentAttempt: PaymentAttempt.fromJson(payment?['attempt']),
+      paymentChannels: _strings(payment?['channels']),
       closedReason: _string(json['closed_reason']),
       createdAt: _date(json['created_at']),
       actions: ReturnActions.fromJson(_map(json['actions'])),
@@ -500,7 +507,8 @@ class ReturnRequestInfo {
   final String payer;
   final int? fee;
 
-  /// unpaid | paid | owed_by_seller | waived
+  /// unpaid | paid | owed_by_seller | waived, or refund_pending | refunded
+  /// when the buyer paid for a ride back that never carried the item.
   final String? feeStatus;
   final DateTime? sellerDeadline;
   final String? decisionBy;
@@ -510,6 +518,9 @@ class ReturnRequestInfo {
   final ReturnRide? ride;
   final int amountDue;
   final PaymentAttempt? paymentAttempt;
+
+  /// Mobile-money channels the server's gateway takes for the ride back.
+  final List<String> paymentChannels;
   final String? closedReason;
   final DateTime? createdAt;
   final ReturnActions actions;
@@ -560,6 +571,8 @@ class DeliveryTracking {
     this.payment,
     this.driver,
     this.trackingUrl,
+    this.liveLocation = false,
+    this.finalCost,
     this.refund,
     this.returnInfo,
     this.cancelledBy,
@@ -591,6 +604,8 @@ class DeliveryTracking {
       payment: payment == null ? null : DeliveryPaymentState.fromJson(payment),
       driver: BoltDriver.fromJson(json['driver']),
       trackingUrl: _string(json['tracking_url']),
+      liveLocation: _bool(json['live_location']),
+      finalCost: _intOrNull(json['final_cost']),
       refund: refund == null ? null : DeliveryRefund(amount: _int(refund['amount']), status: _string(refund['status']) ?? 'pending'),
       returnInfo: OrderReturnInfo.fromJson(json['return']),
       actions: DeliveryActions.fromJson(_map(json['actions'])),
@@ -629,6 +644,13 @@ class DeliveryTracking {
 
   /// Bolt's live tracking page, only while the ride is running.
   final String? trackingUrl;
+
+  /// Buyer view: the in-app map has a driver to show (assigned until completed).
+  final bool liveLocation;
+
+  /// Buyer view: what Bolt finally charged for the trip (its receipt), once
+  /// Bolt has sent it. The buyer paid [fee], the top of Bolt's estimate.
+  final int? finalCost;
   final DeliveryRefund? refund;
   final OrderReturnInfo? returnInfo;
   final DeliveryActions actions;
@@ -644,6 +666,7 @@ class DeliveryTracking {
   bool get isTerminal => terminalStatuses.contains(status);
   bool get isInTransit => inTransitStatuses.contains(status);
   bool get awaitingPayment => status == 'pending_payment';
+  bool get isDelivered => status == 'delivered';
 
   /// Bolt sent the ride back to searching after a driver had taken it.
   bool get driverChanged {
@@ -658,6 +681,96 @@ class DeliveryTracking {
     }
     return null;
   }
+}
+
+/// Where the Bolt driver is, as Bolt last reported it.
+class DriverPosition {
+  const DriverPosition({required this.lat, required this.lng, this.bearing, this.recordedAt});
+
+  static DriverPosition? fromJson(Object? json) {
+    final map = _map(json);
+    final lat = _double(map?['lat']);
+    final lng = _double(map?['lng']);
+    if (lat == null || lng == null) return null;
+    return DriverPosition(lat: lat, lng: lng, bearing: _double(map?['bearing']), recordedAt: _date(map?['recorded_at']));
+  }
+
+  final double lat;
+  final double lng;
+
+  /// Degrees clockwise from north, when Bolt sends it.
+  final double? bearing;
+  final DateTime? recordedAt;
+}
+
+/// How long until the driver reaches the shop (Bolt's own figure) or the
+/// customer (a rough estimate from the distance; Bolt gives none).
+class DeliveryEta {
+  const DeliveryEta({required this.seconds, required this.to, required this.isEstimate});
+
+  static DeliveryEta? fromJson(Object? json) {
+    final map = _map(json);
+    if (map == null || map['seconds'] == null) return null;
+    return DeliveryEta(seconds: _int(map['seconds']), to: _string(map['to']) ?? 'customer', isEstimate: _string(map['source']) != 'bolt');
+  }
+
+  final int seconds;
+
+  /// shop | customer
+  final String to;
+  final bool isEstimate;
+
+  int get minutes => (seconds / 60).ceil().clamp(1, 999);
+}
+
+/// `GET /delivery/orders/{order}/location`: the buyer's live map.
+class DriverLiveLocation {
+  const DriverLiveLocation({
+    required this.status,
+    required this.active,
+    required this.pollSeconds,
+    this.pickup,
+    this.dropoff,
+    this.position,
+    this.stale = false,
+    this.reason,
+    this.eta,
+    this.checkedAt,
+  });
+
+  factory DriverLiveLocation.fromJson(Map<String, dynamic> json) => DriverLiveLocation(
+    status: _string(json['status']) ?? '',
+    active: _bool(json['active']),
+    pollSeconds: _int(json['poll_seconds'], 5),
+    pickup: DeliveryPoint.fromJson(_map(json['pickup'])),
+    dropoff: DeliveryPoint.fromJson(_map(json['dropoff'])),
+    position: DriverPosition.fromJson(json['location']),
+    stale: _bool(json['stale']),
+    reason: _string(json['reason']),
+    eta: DeliveryEta.fromJson(json['eta']),
+    checkedAt: _date(json['checked_at']),
+  );
+
+  /// The delivery status, as on the order screen.
+  final String status;
+
+  /// The Bolt ride is running: keep polling. False once it is over.
+  final bool active;
+  final int pollSeconds;
+  final DeliveryPoint? pickup;
+  final DeliveryPoint? dropoff;
+
+  /// Null until Bolt has located the assigned driver.
+  final DriverPosition? position;
+
+  /// [position] is the last known one: Bolt couldn't give a fresh fix.
+  final bool stale;
+
+  /// no_driver_yet | driver_not_located | rate_limited | unavailable |
+  /// ride_ended | ride_not_active, or null when all is well.
+  final String? reason;
+  final DeliveryEta? eta;
+  final DateTime? checkedAt;
 }
 
 /// A delivery or return action the server refused, with its stable `code`

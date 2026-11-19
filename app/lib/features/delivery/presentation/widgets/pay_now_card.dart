@@ -117,6 +117,33 @@ class _PayNowCardState extends ConsumerState<PayNowCard> {
           _Line(label: l10n.checkoutTotal, value: SokoniFormat.tzs(payment.total), bold: true),
           const SizedBox(height: SokoniDimens.space4),
           Text(l10n.deliveryPayCoversFee, style: theme.textTheme.bodySmall),
+          if (widget.tracking.estimateMin != null && widget.tracking.estimateMax != null) ...[
+            const SizedBox(height: SokoniDimens.space4),
+            Text(
+              '${l10n.checkoutBoltRange(SokoniFormat.tzs(widget.tracking.estimateMin!.round()), SokoniFormat.tzs(widget.tracking.estimateMax!.ceil()))}. '
+              '${l10n.checkoutBoltFinalCanBeLower}',
+              key: const Key('pay-bolt-estimate'),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+          // The return policy copied onto this order at checkout, once more before paying.
+          if (widget.tracking.returnInfo?.policy case final policy?) ...[
+            const SizedBox(height: SokoniDimens.space8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(policy.acceptsReturns ? Icons.assignment_return_outlined : Icons.block_outlined, size: 18),
+                const SizedBox(width: SokoniDimens.space4),
+                Expanded(
+                  child: Text(
+                    [l10n.checkoutReturnsLine(returnPolicyLabel(l10n, policy.code)), ?policy.notes].join('\n'),
+                    key: const Key('pay-return-policy'),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (minutesLeft != null) ...[
             const SizedBox(height: SokoniDimens.space8),
             Row(

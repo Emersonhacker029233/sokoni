@@ -21,6 +21,7 @@ Map<String, dynamic> buyerView({
   List<Map<String, dynamic>>? timeline,
   String? failureReason,
   Map<String, dynamic>? returnBlock,
+  int? finalCost,
 }) {
   final paid = !['pending_quote', 'pending_payment'].contains(status);
   final active = _active.contains(status);
@@ -72,6 +73,8 @@ Map<String, dynamic> buyerView({
     },
     'driver': _driverAssigned.contains(status) ? boltDriverJson(withPhone: active) : null,
     'tracking_url': active ? 'https://bolt.eu/track/abc' : null,
+    'live_location': active,
+    'final_cost': finalCost,
     'refund': null,
     'actions': {
       'can_pay': status == 'pending_payment',
@@ -123,6 +126,8 @@ Map<String, dynamic> returnRequestJson({
   String payer = 'seller',
   Map<String, bool> actions = const {},
   Map<String, dynamic>? ride,
+  String? feeStatus,
+  List<String> channels = const ['mpesa'],
 }) => {
   'id': 7,
   'order_id': 345,
@@ -138,7 +143,7 @@ Map<String, dynamic> returnRequestJson({
   'handled_by_support': false,
   'payer': payer,
   'fee': status == 'requested' ? null : 6400,
-  'fee_status': status == 'requested' ? null : (payer == 'seller' ? 'owed_by_seller' : 'unpaid'),
+  'fee_status': feeStatus ?? (status == 'requested' ? null : (payer == 'seller' ? 'owed_by_seller' : 'unpaid')),
   'currency': 'TZS',
   'seller_deadline': status == 'requested' ? '2026-11-19T09:00:00Z' : null,
   'escalated': false,
@@ -146,7 +151,7 @@ Map<String, dynamic> returnRequestJson({
   'dispute': null,
   'resolution_note': null,
   'ride': ride,
-  'payment': payer == 'buyer' ? {'amount_due': 6400, 'online_available': true, 'sandbox': true, 'channels': ['mpesa'], 'attempt': null, 'receipt': null} : null,
+  'payment': payer == 'buyer' ? {'amount_due': 6400, 'online_available': true, 'sandbox': true, 'channels': channels, 'attempt': null, 'receipt': null} : null,
   'received_at': null,
   'refunded_at': null,
   'closed_at': null,
@@ -172,6 +177,31 @@ Map<String, dynamic> deliveryConfigJson() => {
   },
   'tracking': {'poll_seconds': 10},
   'returns_enabled': true,
+};
+
+/// `GET /api/delivery/orders/{order}/location`, shaped like
+/// DriverLocationService::forJob (api/tests/Feature/Delivery/Bolt/BoltLiveLocationTest.php).
+Map<String, dynamic> liveLocationJson({
+  String status = 'driver_assigned',
+  bool? active,
+  double? lat = -6.815,
+  double? lng = 39.27,
+  double? bearing = 90,
+  String? recordedAt = '2026-11-17T08:23:00Z',
+  bool stale = false,
+  String? reason,
+  Map<String, dynamic>? eta = const {'seconds': 180, 'to': 'shop', 'source': 'bolt'},
+}) => {
+  'status': status,
+  'active': active ?? ['pending_driver', 'driver_assigned', 'arrived_at_shop', 'on_the_way'].contains(status),
+  'poll_seconds': 5,
+  'pickup': {'lat': -6.819, 'lng': 39.276},
+  'dropoff': {'lat': -6.79, 'lng': 39.28},
+  'location': lat == null || lng == null ? null : {'lat': lat, 'lng': lng, 'bearing': bearing, 'recorded_at': recordedAt},
+  'stale': stale,
+  'reason': reason,
+  'eta': eta,
+  'checked_at': '2026-11-17T08:23:01Z',
 };
 
 Map<String, dynamic> quoteJson({Map<String, dynamic>? returnPolicy}) => {

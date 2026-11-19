@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/gen/app_localizations.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/dimens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/delivery.dart';
@@ -132,6 +134,21 @@ class _BodyState extends ConsumerState<_Body> {
           DeliveryNotice(icon: Icons.receipt_long_rounded, text: l10n.deliveryPaidReceipt(SokoniFormat.tzs(payment!.receipt!.amount))),
 
         if (t.driver != null) BoltDriverCard(driver: t.driver!, trackingUrl: t.trackingUrl),
+
+        // The in-app map, from driver assigned until Bolt completes the ride.
+        if (t.liveLocation)
+          Padding(
+            padding: const EdgeInsets.only(bottom: SokoniDimens.space12),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                key: const Key('open-live-tracking'),
+                onPressed: () => context.push(SokoniRoutes.deliveryTracking(t.orderId)),
+                icon: const Icon(Icons.map_rounded),
+                label: Text(l10n.deliveryLiveOpen),
+              ),
+            ),
+          ),
 
         if (!{'pending_quote', 'pending_payment', 'cancelled'}.contains(t.status))
           DeliveryCard(title: l10n.deliveryTimelineTitle, child: DeliveryProgress(tracking: t)),

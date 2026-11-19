@@ -161,7 +161,7 @@ class _OrderDetailBodyState extends ConsumerState<_OrderDetailBody> {
             ),
           const Divider(),
           if (order.isDispatch && !isSeller)
-            _DispatchSummary(order: order, payment: delivery?.payment)
+            _DispatchSummary(order: order, delivery: delivery)
           else if (order.isDispatch)
             _SummaryRow(label: l10n.checkoutTotal, value: SokoniFormat.tzs(order.total), emphasize: true)
           else ...[
@@ -252,23 +252,48 @@ bool _showOrderCancel(Order order, {required bool isSeller, required DeliveryTra
   return !delivery.isInTransit && !delivery.isTerminal;
 }
 
-/// Buyer's totals for a Sokoni delivery: goods from the order, the fee and
+/// Buyer's totals for a Bolt delivery: goods from the order, the fee and
 /// total from the delivery job once the shop has accepted (both stored by
-/// the server). Before that, the fee is shown as not yet confirmed.
+/// the server). Before that, the fee is shown as not yet confirmed. Before
+/// payment the fee is Bolt's estimate range's top; once paid it reads "fee
+/// paid"; after delivery Bolt's receipt (what the trip finally cost) is
+/// shown under it, or "waiting for Bolt" until Bolt sends it.
 class _DispatchSummary extends StatelessWidget {
-  const _DispatchSummary({required this.order, required this.payment});
+  const _DispatchSummary({required this.order, required this.delivery});
 
   final Order order;
-  final DeliveryPaymentState? payment;
+  final DeliveryTracking? delivery;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final p = payment;
+    final theme = Theme.of(context);
+    final d = delivery;
+    final p = d?.payment;
+    final paid = p?.receipt != null || d?.paymentStatus == 'paid';
+    final showEstimate = !paid && d?.estimateMin != null && d?.estimateMax != null;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SummaryRow(label: l10n.checkoutGoods, value: SokoniFormat.tzs(order.subtotal)),
-        _SummaryRow(label: l10n.deliveryFeeLine, value: p == null ? l10n.deliveryFeeAfterAccept : SokoniFormat.tzs(p.deliveryFee)),
+        _SummaryRow(
+          key: const Key('order-delivery-fee'),
+          label: paid ? l10n.orderDeliveryFeePaid : l10n.deliveryFeeLine,
+          value: p == null ? l10n.deliveryFeeAfterAccept : SokoniFormat.tzs(p.receipt?.amount ?? p.deliveryFee),
+        ),
+        if (showEstimate)
+          Text(
+            l10n.checkoutBoltRange(SokoniFormat.tzs(d!.estimateMin!.round()), SokoniFormat.tzs(d.estimateMax!.ceil())),
+            style: theme.textTheme.bodySmall,
+          ),
+        if (d != null && d.isDelivered) ...[
+          _SummaryRow(
+            key: const Key('order-bolt-receipt'),
+            label: l10n.orderBoltReceipt,
+            value: d.finalCost == null ? l10n.orderBoltReceiptPending : SokoniFormat.tzs(d.finalCost!),
+          ),
+          Text(l10n.orderBoltReceiptNote, style: theme.textTheme.bodySmall),
+        ],
         _SummaryRow(label: l10n.checkoutTotal, value: SokoniFormat.tzs(p?.total ?? order.subtotal), emphasize: true),
       ],
     );
@@ -445,7 +470,7 @@ class _Timeline extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.label, required this.value, this.emphasize = false});
+  const _SummaryRow({required this.label, required this.value, this.emphasize = false, super.key});
 
   final String label;
   final String value;

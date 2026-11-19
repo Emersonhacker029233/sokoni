@@ -9,6 +9,7 @@ import '../../features/chat/presentation/conversation_thread_screen.dart';
 import '../../features/debug/motion_gallery_screen.dart';
 import '../../features/debug/theme_audit_screen.dart';
 import '../../features/delivery/presentation/delivery_location_picker_screen.dart';
+import '../../features/delivery/presentation/delivery_tracking_screen.dart';
 import '../../features/delivery/presentation/request_return_screen.dart';
 import '../../features/discovery/presentation/home_screen.dart';
 import '../../features/legal/presentation/privacy_screen.dart';
@@ -169,6 +170,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => sharedAxisZPage(
           key: state.pageKey,
           child: RequestReturnScreen(orderId: int.parse(state.pathParameters['id']!)),
+        ),
+      ),
+      GoRoute(
+        path: SokoniRoutes.deliveryTrackingPattern,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => sharedAxisZPage(
+          key: state.pageKey,
+          child: DeliveryTrackingScreen(orderId: int.parse(state.pathParameters['id']!)),
         ),
       ),
       GoRoute(

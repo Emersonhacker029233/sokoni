@@ -197,7 +197,10 @@ void main() {
     expect(find.text('Delivery fee (4.2 km)'), findsOneWidget);
     expect(find.text('TSh 6,400'), findsOneWidget);
     expect(find.text('TSh 26,400'), findsOneWidget);
-    expect(find.text('Bolt estimate TSh 5,200 to TSh 6,400. You pay the upper amount.'), findsOneWidget);
+    // Bolt's estimate, what the buyer pays, and that Bolt's final price can be lower.
+    expect(find.text('Bolt estimate: TSh 5,200 to TSh 6,400'), findsOneWidget);
+    expect(find.text('You pay for delivery: TSh 6,400'), findsOneWidget);
+    expect(find.text("You pay the top of Bolt's estimate. Bolt's final price for the trip can be lower."), findsOneWidget);
     expect(find.text('Nearest Bolt driver about 4 min away'), findsOneWidget);
     expect(find.text('The delivery fee is confirmed when the shop accepts your order.'), findsOneWidget);
     // Returns, shown before the order is placed.

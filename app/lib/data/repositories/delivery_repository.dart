@@ -58,6 +58,15 @@ class DeliveryRepository {
     }
   }
 
+  /// The Bolt driver's position for the live map (buyer only).
+  Future<DriverLiveLocation> driverLocation(int orderId) async {
+    try {
+      return DriverLiveLocation.fromJson(_data(await _api.driverLocation(orderId)));
+    } catch (e) {
+      throw _error(e);
+    }
+  }
+
   Future<DeliveryTracking> pay(int orderId, {required String channel, required String msisdn, required String idempotencyKey}) =>
       _view(() => _api.pay(orderId, channel: channel, msisdn: msisdn, idempotencyKey: idempotencyKey));
 
