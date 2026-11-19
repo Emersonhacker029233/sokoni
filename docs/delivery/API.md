@@ -32,7 +32,7 @@ Public. What this user may see. Guests always get `false`.
   "max_distance_km": 10, "unpaid_timeout_minutes": 20,
   "payment": { "mode": "online", "online_available": true, "sandbox": true, "channels": ["mpesa", "airtel", "mixx", "halopesa"],
                "covers": ["delivery_fee"], "goods_paid_to": "shop" },
-  "tracking": { "poll_seconds": 10 },
+  "tracking": { "poll_seconds": 10, "location_poll_seconds": 5 },
   "returns_enabled": false } }
 ```
 
@@ -101,6 +101,8 @@ Buyer view:
   "driver": { "name": "Juma", "phone": "+255754000000", "plate": "T123ABC", "model": "Toyota IST",
               "photo_url": "https://...", "eta_seconds": 240 },
   "tracking_url": "https://bolt.eu/...",
+  "live_location": true,
+  "final_cost": null,
   "refund": null,
   "actions": { "can_pay": false, "can_cancel": true, "can_retry": false, "can_switch_to_pickup": false },
   "timeline": [ { "status": "pending_payment", "at": "...", "by": "system", "reason": null } ],
@@ -112,11 +114,13 @@ Buyer view:
 
 - `driver` appears once Bolt assigns one (and stays after delivery, without phone or ETA). `driver.phone` only while the driver is on the job.
 - `tracking_url` (Bolt's tracking page) only while the ride runs (`pending_driver` to `on_the_way`).
+- `live_location`: the in-app map has a driver to show (`driver_assigned`, `arrived_at_shop`, `on_the_way`); see below.
+- `final_cost`: Bolt's receipt for the trip (whole shillings) once Bolt has sent it after `delivered`, else null. The buyer paid `fee`, the top of Bolt's estimate; Bolt's final price can be lower.
 - `failure_reason` on `no_driver_found` / `failed`: `no_driver_found`, `no_driver_available`, `area_not_serviced`, `shop_no_show`, `payment_booking_failed`, `provider_cancelled`, `client_cancelled`, `provider_cancelled_in_transit`, `client_cancelled_in_transit`, `booking_failed`, `quote_failed`. `can_retry` is true for all of them except `area_not_serviced` and the two `_in_transit` ones (the parcel was in the car: Sokoni support handles those).
 - `timeline[].reason`: `payment_timeout`, `seller_cancelled_after_assign`, `provider_cancel_failed` (Bolt refused the cancel; an admin checks the bill), or null.
 - `return` only while returns are on for the viewer ([RETURNS.md](RETURNS.md)).
 
-Shop view: the same base fields (no `fee`, `estimate`, `payment`, `dropoff` or `refund`) plus
+Shop view: the same base fields (no `fee`, `estimate`, `payment`, `dropoff`, `refund`, `live_location` or `final_cost`) plus
 
 ```json
 { "fee_paid": true,
@@ -125,6 +129,28 @@ Shop view: the same base fields (no `fee`, `estimate`, `payment`, `dropoff` or `
 ```
 
 `driver.phone` only while the driver is coming to or at the shop; `tracking_url` only until pickup.
+
+## `GET /delivery/orders/{order}/location`
+
+The buyer's live map. **Buyer only** (`403` for the shop or anyone else; `404` outside the launch like every delivery route). Throttled to 30 a minute per user. Poll every `poll_seconds` (5) while the map is open; stop when `active` is false.
+
+```json
+{ "data": {
+  "status": "on_the_way", "active": true, "poll_seconds": 5,
+  "pickup": { "lat": -6.819, "lng": 39.276 }, "dropoff": { "lat": -6.79, "lng": 39.28 },
+  "location": { "lat": -6.80123, "lng": 39.27891, "bearing": 90, "recorded_at": "2026-11-19T08:23:00+00:00" },
+  "stale": false, "reason": null,
+  "eta": { "seconds": 420, "to": "customer", "source": "estimate" },
+  "checked_at": "2026-11-19T08:23:01+00:00"
+} }
+```
+
+- `active`: the Bolt ride is running (`pending_driver` to `on_the_way`). False once it is delivered, cancelled or failed, or before it is booked.
+- `location`: from Bolt's ride-location endpoint, only from `driver_assigned` until the ride completes. `bearing` and `recorded_at` are null when Bolt doesn't send them.
+- `stale`: `location` is the last known position (kept 15 minutes) because Bolt couldn't give a fresh one now.
+- `reason`: `no_driver_yet` (Bolt still searching), `driver_not_located` (Bolt's `UNABLE_TO_LOCATE_DRIVER`), `rate_limited` (Bolt answered 429; not asked again for its `Retry-After`, 5 to 30 s), `ride_ended` (Bolt says the ride is no longer active; the next poll's ride-details read moves the delivery on), `unavailable` (any other Bolt error), `ride_not_active`, or null.
+- `eta`: before pickup, Bolt's own ETA to the shop (`to: "shop"`, `source: "bolt"`); with the parcel in the car, Bolt gives none, so a rough one from the straight-line distance to the customer × 1.4 at 20 km/h (`to: "customer"`, `source: "estimate"`). Null otherwise.
+- Bolt is asked at most once per ride per `BOLT_LOCATION_CACHE_SECONDS` (5), whoever polls, with one attempt and no retry sleep. The poll also refreshes the ride's state from Bolt within the same 10-second window as the order view.
 
 ## Buyer actions
 

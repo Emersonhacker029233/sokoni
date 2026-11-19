@@ -163,3 +163,32 @@ Branch `feature/bolt-delivery` (from `feature/delivery`, with production's `fix/
 
 - **Version stays `1.1.0+10` in this branch,** as asked. Recommended for release: **1.1.0+11** on both stores: a new build number above every build either store has seen, and a minor version because 1.1 adds features over the 1.0 in the stores.
 - **iOS social sign-in stays hidden;** nothing the 1.0 (9) review build uses was changed.
+
+## Live tracking, prices everywhere and the returns check, 2026-11-19
+
+Branch `feature/bolt-live-tracking`. The brief named `release/android-1.1` as the base, but no branch of that name exists locally, on `origin` or in any reflog; it was cut from `feature/bolt-delivery` (ed5efa6), the only branch with `BOLT_ENABLED`/`BOLT_TEST_PHONES` and app build 1.1.0+10. Rebase onto the real release branch if it is somewhere else. No migrations; everything stays behind the existing flags. RELEASE.md still describes the `feature/bolt-delivery` dark package (commit 5fa4c80): deploying this branch needs its own code package (new files: `BoltDriverLocation.php`, `DriverLocationService.php`, `app/Filament/Support/LivePosition.php`), and no database step.
+
+**Live tracking**
+
+- **Bolt's ride-location endpoint, path configurable (`BOLT_LOCATION_PATH`, default `rides/location`).** Bolt's PDF names the endpoint (active rides only, callable every second) but leaves path and fields to the Swagger file. The default mirrors `rides/receipt`; the body is read in every likely shape, and one without usable coordinates (missing, out of range, or 0,0) is "unavailable", never a pin.
+- **One Bolt call per ride per 5 s, whatever polls.** A cache gate lets the first caller in each window ask Bolt; everyone else reads the cached answer. The last good position is kept 15 minutes and shown as stale when Bolt can't give a fresh one.
+- **Bolt's errors are answers, not error pages.** `UNABLE_TO_LOCATE_DRIVER` and anything unexpected: last known position, stale. 429: the gate stays shut for `Retry-After` (5 to 30 s). One attempt per poll and no backoff sleep, unlike the other Bolt calls, because a web request must not hang and the app asks again in 5 s. Each failed Bolt call is logged by the client as usual (at most one per ride per 5 s, with Bolt's tracking headers); the service adds one "unavailable" line per ride per minute for unexpected errors.
+- **`active` means "the ride runs", the point only from driver assigned.** A driver who drops the ride sends Bolt back to SEARCHING; the map keeps polling ("finding a driver") instead of closing. It turns false when the ride is over, which is the app's signal to stop.
+- **The location poll also refreshes the ride's state,** sharing the order screen's 10-second ride-details window (`delivery:lazy-sync:{job}`), so the map's status is never older than the order screen's and Bolt's 10-second rule still holds.
+- **ETA:** Bolt's `eta_to_client` before pickup (for a delivery the "client" is the shop), less the seconds since it was read. Bolt gives none with the parcel in the car, so the app shows "about N min to you" from the straight-line distance × 1.4 at 20 km/h, labelled as an estimate. Both factors are config values (`delivery.tracking`).
+- **Buyer only.** The shop never sees the driver's position, in line with it never seeing the drop-off.
+- **Map: flutter_map with OpenStreetMap tiles,** the package and tiles the checkout pin already uses, so no key is added. The earlier note on OSM's tile policy at scale applies here too.
+- **Polling in the app:** every 5 s (the server's `poll_seconds`, kept to 5 to 10) only while the screen is open and the app in the foreground; 10 s after a failed poll, keeping the map and saying "reconnecting"; none once `active` is false. A status change re-reads the order's delivery view at once.
+- **Admins see the live position on a running delivery's or return ride's page only.** List pages link to Bolt's tracking page instead, so opening a list never calls Bolt.
+
+**Price**
+
+- **The buyer sees Bolt's receipt (`final_cost`) after delivery,** next to the fee paid, as asked, with the note at checkout and on Pay now that Bolt's final price can be lower. **Needs a client decision:** the difference is not refunded automatically (unchanged policy: Sokoni keeps it against trips where Bolt charges more). If buyers should get it back, it can be recorded like the other refunds.
+- **Every number is a stored one:** the quote's range and fee at checkout, the job's estimate and fee on Pay now and the order, the recorded payment, Bolt's receipt.
+
+**Returns**
+
+- **A buyer-paid ride fee is owed back whenever its ride never carried the item** (`picked_up_at` empty): withdrawn, closed by Sokoni, or refunded by the shop before pickup. A payment confirmed after the return ended is owed back too. New `fee_status` values `refund_pending` and `refunded` in the existing string column; an admin pays and marks it, as for delivery refunds.
+- **A ride back that fails with the item in the car is a support case:** it counts as `needsAdmin()`, so both sides see "handled by support" and the admin queue flags it, and both are told.
+- **Admins can record a ride-back fee paid outside the app,** as for delivery fees, because production has no payment provider yet and the buyer could otherwise never book the pickup.
+- **What is still incomplete** is listed in RETURNS.md § 9.
