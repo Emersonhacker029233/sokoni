@@ -1,6 +1,6 @@
 # Delivery by Bolt
 
-Every Sokoni delivery is carried out by a Bolt driver, booked by Sokoni through the **Bolt Ride Booker API** and paid from Sokoni's Bolt Business account. The Sokoni Driver app and own-driver dispatch are retired (git tag `pre-bolt-sokoni-drivers` keeps them). Returns are in [RETURNS.md](RETURNS.md); the production deploy is [RELEASE.md](RELEASE.md).
+Every Sokoni delivery is carried out by a Bolt driver, booked by Sokoni through the **Bolt Ride Booker API** and paid from Sokoni's Bolt Business account. The Sokoni Driver app and own-driver dispatch are retired (git tag `pre-bolt-sokoni-drivers` keeps them). Returns are in [RETURNS.md](RETURNS.md); the production deploy is [RELEASE.md](RELEASE.md) (dark release), then [RELEASE-live-tracking.md](RELEASE-live-tracking.md) (live tracking, flat fee, Android sign-in).
 
 Everything here is **dark**: off by default, and invisible to everyone outside the test until you switch it on.
 
