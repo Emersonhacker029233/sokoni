@@ -104,8 +104,10 @@ class DarkLaunchTest extends TestCase
         $this->actingAs($review)->getJson('/api/features')
             ->assertExactJson(['data' => ['delivery_enabled' => false, 'returns_enabled' => false]]);
         $this->actingAs($review)->getJson('/api/delivery/config')->assertNotFound();
+        $this->actingAs($review)->getJson('/api/delivery/orders/1/location')->assertNotFound();
 
         config(['delivery.test_phones' => '']); // full launch: still never the review account
+        $this->actingAs($review)->getJson('/api/delivery/orders/1/location')->assertNotFound();
         $this->actingAs($review)->getJson('/api/features')->assertJsonPath('data.delivery_enabled', false);
 
         $product = Product::factory()->create(['seller_id' => $this->shop()->id]);
