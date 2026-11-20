@@ -1,0 +1,216 @@
+<?php
+
+namespace App\Http\Controllers\Api\Payments;
+
+use App\Models\DeliveryJob;
+use App\Models\Order;
+use App\Models\Payment;
+use App\Models\PaymentWebhookEvent;
+use App\Models\SellerProfile;
+use App\Models\User;
+use App\Services\Delivery\DeliveryJobService;
+use App\Services\Delivery\DeliveryMessages;
+use App\Services\Delivery\DeliveryPaymentService;
+use App\Services\Payment\Dalipay\DalipayConfig;
+use App\Services\Payment\Dalipay\DalipayWebhookHandler;
+use App\Services\Payment\DalipayGateway;
+use App\Services\Payment\PaymentGatewayFactory;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+
+/**
+ * Staging only (EnsureStagingPaymentsTest): tests Dalipay's TEST mode from
+ * PowerShell (tools/staging-dalipay-test.ps1) while Bolt is switched off,
+ * through the real payment service, gateway, webhook handler and cron.
+ *
+ * Each test makes a delivery fee to pay: a test order from a test shop to a
+ * test buyer (both marked "Staging payments test", never real accounts)
+ * with a delivery job waiting for payment. Nothing is booked on Bolt: the
+ * order never becomes ready. Refused unless PAYMENT_PROVIDER=dalipay with
+ * DALIPAY_ENV=test and valid test keys, so it can't move real money.
+ *
+ *  POST /api/staging/payments                      {msisdn, channel, amount, mode: normal|no_answer}
+ *  GET  /api/staging/payments/{id}                 asks Dalipay, as the app's polling does
+ *  POST /api/staging/payments/{id}/replay-webhook  the same signed webhook twice, signed here
+ *
+ * `no_answer` sends the push to an unreachable address (192.0.2.1), so the
+ * attempt gets no answer and must expire after PAYMENT_ATTEMPT_TIMEOUT_SECONDS.
+ */
+class StagingPaymentTestController
+{
+    private const UNREACHABLE = 'https://192.0.2.1';
+
+    public function store(Request $request, DeliveryPaymentService $payments, PaymentGatewayFactory $gateways): JsonResponse
+    {
+        $gateway = $gateways->current();
+        if (! $gateway instanceof DalipayGateway || ! $gateway->capabilities()->sandbox) {
+            return response()->json([
+                'code' => 'not_dalipay_test',
+                'message' => 'Runs only with PAYMENT_PROVIDER=dalipay, DALIPAY_ENV=test and valid test keys (see storage/logs for "[payments]").',
+            ], 409);
+        }
+
+        $data = $request->validate([
+            'msisdn' => ['required', 'string', 'regex:/^\+255[67]\d{8}$/'],
+            'channel' => ['required', Rule::in($gateway->capabilities()->channels)],
+            'amount' => ['required', 'integer', 'min:100', 'max:10000'],
+            'mode' => ['nullable', Rule::in(['normal', 'no_answer'])],
+        ]);
+        $mode = $data['mode'] ?? 'normal';
+
+        [$buyer, $job] = DB::transaction(fn () => $this->fixtures((int) $data['amount']));
+
+        $service = $mode === 'no_answer'
+            ? new DeliveryPaymentService(
+                new DalipayGateway(DalipayConfig::fromArray([...(array) config('payments.dalipay'), 'base_url' => self::UNREACHABLE, 'timeout_seconds' => 5], false)),
+                app(DeliveryJobService::class),
+                app(DeliveryMessages::class),
+            )
+            : $payments;
+
+        $payment = $service->start($job, $buyer, $data['channel'], $data['msisdn'], 'stg'.Str::random(21));
+        $payment->forceFill(['meta' => [...(array) $payment->fresh()->meta, 'staging_test' => true, 'staging_mode' => $mode]])->save();
+
+        return response()->json(['data' => $this->view($payment->fresh())], 201);
+    }
+
+    public function show(int $payment, DeliveryPaymentService $payments): JsonResponse
+    {
+        return response()->json(['data' => $this->view($payments->confirm($this->testPayment($payment)))]);
+    }
+
+    public function replayWebhook(int $payment, DalipayWebhookHandler $webhooks): JsonResponse
+    {
+        $p = $this->testPayment($payment);
+        $secret = (string) config('payments.dalipay.webhook_secret');
+        if ($secret === '' || $p->provider_reference === null || ! in_array($p->status, ['succeeded', 'failed', 'refund_pending'], true)) {
+            return response()->json(['code' => 'not_replayable', 'message' => 'Needs DALIPAY_WEBHOOK_SECRET and a payment Dalipay has finished (succeeded or failed).'], 409);
+        }
+
+        $failed = $p->status === 'failed';
+        $body = json_encode([
+            'event' => $failed ? 'collection.failed' : 'collection.success',
+            'data' => [
+                'reference' => $p->meta['dalipay_reference'] ?? null,
+                'uuid' => $p->provider_reference,
+                'status' => $failed ? 'failed' : 'success',
+                'amount' => (int) $p->amount,
+                'currency' => $p->currency,
+                'external_id' => $p->meta['external_id'] ?? null,
+            ],
+        ]);
+        $signature = hash_hmac('sha256', $body, $secret);
+
+        [$firstStatus, $first] = $webhooks->handle($body, $signature);
+        [$secondStatus, $second] = $webhooks->handle($body, $signature);
+
+        return response()->json(['data' => [
+            'first' => ['http' => $firstStatus, ...$first],
+            'second' => ['http' => $secondStatus, ...$second],
+            'payment' => $this->view($p->fresh()),
+        ]]);
+    }
+
+    /** @return array{0: User, 1: DeliveryJob} */
+    private function fixtures(int $amount): array
+    {
+        $owner = User::query()->firstOrCreate(['email' => 'staging-payments-shop@sokoni.invalid'], ['name' => 'Staging payments test shop']);
+        $shop = SellerProfile::query()->where('user_id', $owner->id)->first();
+        if ($shop === null) {
+            $shop = new SellerProfile;
+            $shop->forceFill([
+                'user_id' => $owner->id,
+                'shop_name' => 'Staging payments test',
+                'handle' => 'stgpaytest'.random_int(10, 99),
+                'status' => 'verified',
+                'lat' => -6.8161,
+                'lng' => 39.2803,
+                'address' => 'Staging payments test',
+            ])->save();
+        }
+        $buyer = User::query()->firstOrCreate(['email' => 'staging-payments-buyer@sokoni.invalid'], ['name' => 'Staging payments test buyer']);
+
+        $order = new Order;
+        $order->forceFill([
+            'buyer_id' => $buyer->id,
+            'seller_id' => $shop->id,
+            'status' => 'accepted',
+            'accepted_at' => now(),
+            'subtotal' => 0,
+            'delivery_fee' => 0,
+            'total' => 0,
+            'delivery_method' => 'delivery',
+            'fulfilment' => 'dispatch',
+            'address' => 'STAGING PAYMENT TEST',
+            'delivery_lat' => -6.7924,
+            'delivery_lng' => 39.2083,
+            'payment_method' => 'cash_on_delivery',
+            'notes' => 'STAGING PAYMENT TEST (tools/staging-dalipay-test.ps1). Not a real order.',
+        ])->save();
+
+        $job = new DeliveryJob;
+        $job->forceFill([
+            'order_id' => $order->id,
+            'status' => 'pending_payment',
+            'provider' => DeliveryJob::PROVIDER_BOLT,
+            'pickup_lat' => $shop->lat,
+            'pickup_lng' => $shop->lng,
+            'pickup_address' => $shop->address,
+            'dropoff_lat' => $order->delivery_lat,
+            'dropoff_lng' => $order->delivery_lng,
+            'dropoff_address' => $order->address,
+            'distance_km' => 0,
+            'distance_source' => 'straight_line',
+            'base_fee' => 0,
+            'per_km_fee' => 0,
+            'fee' => $amount,
+            'commission_pct' => 0,
+            'commission' => 0,
+            'driver_earnings' => 0,
+            'delivery_pin' => '',
+            'payment_status' => 'unpaid',
+            'currency' => 'TZS',
+            'pending_payment_at' => now(),
+        ])->save();
+
+        return [$buyer, $job];
+    }
+
+    private function testPayment(int $id): Payment
+    {
+        $payment = Payment::query()->find($id);
+        abort_unless($payment !== null && ($payment->meta['staging_test'] ?? false) === true, 404);
+
+        return $payment;
+    }
+
+    /** @return array<string, mixed> */
+    private function view(Payment $payment): array
+    {
+        $uuid = $payment->provider_reference;
+
+        return [
+            'payment_id' => $payment->id,
+            'status' => $payment->status,
+            'failure_reason' => $payment->failure_reason,
+            'amount' => (int) $payment->amount,
+            'channel' => $payment->channel,
+            'mode' => $payment->meta['staging_mode'] ?? null,
+            'dalipay_uuid' => $uuid,
+            'dalipay_reference' => $payment->meta['dalipay_reference'] ?? null,
+            'dalipay_status' => $payment->meta['dalipay_status'] ?? null,
+            'external_id' => $payment->meta['external_id'] ?? null,
+            'late_after' => $payment->meta['late_after'] ?? null,
+            'fee_paid' => $payment->deliveryJob()->value('payment_status') === 'paid',
+            'order_code' => $payment->order()->value('code'),
+            'created_at' => $payment->created_at,
+            'webhooks' => $uuid === null ? [] : PaymentWebhookEvent::query()->where('provider', 'dalipay')
+                ->where('event_id', 'like', $uuid.':%')->orderBy('id')->get()
+                ->map(fn (PaymentWebhookEvent $e) => ['event_id' => $e->event_id, 'result' => $e->result, 'received_at' => $e->created_at])
+                ->all(),
+        ];
+    }
+}

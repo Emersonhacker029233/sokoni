@@ -36,6 +36,11 @@ return [
         'approve_after_seconds' => (int) env('PAYMENT_FAKE_APPROVE_AFTER_SECONDS', 8),
     ],
 
+    // Staging only: the token tools/staging-dalipay-test.ps1 sends to
+    // /api/staging/payments (at least 24 characters). Never set in production,
+    // where those routes answer 404 whatever this says.
+    'staging_test_token' => env('STAGING_PAYMENTS_TEST_TOKEN'),
+
     'dalipay' => [
         // test | live. Test keys (gw_pk_test_ / gw_sk_test_) only with "test",
         // production keys only with "live". Test mode is refused when

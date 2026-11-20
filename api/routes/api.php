@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\Delivery\BoltWebhookController;
 use App\Http\Controllers\Api\Payments\DalipayWebhookController;
+use App\Http\Controllers\Api\Payments\StagingPaymentTestController;
+use App\Http\Middleware\EnsureStagingPaymentsTest;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\NotificationController;
@@ -234,3 +236,12 @@ Route::post('/webhooks/bolt', BoltWebhookController::class)
 Route::post('/payments/webhook/dalipay', DalipayWebhookController::class)
     ->middleware('throttle:120,1')
     ->name('payments.webhook.dalipay');
+
+// Staging only: Dalipay TEST-mode checks from tools/staging-dalipay-test.ps1
+// while Bolt is off. 404 unless APP_ENV is local/staging, the token is set
+// and sent (EnsureStagingPaymentsTest); refused unless Dalipay is in test mode.
+Route::prefix('/staging/payments')->middleware([EnsureStagingPaymentsTest::class, 'throttle:30,1'])->group(function () {
+    Route::post('/', [StagingPaymentTestController::class, 'store']);
+    Route::get('/{payment}', [StagingPaymentTestController::class, 'show'])->whereNumber('payment');
+    Route::post('/{payment}/replay-webhook', [StagingPaymentTestController::class, 'replayWebhook'])->whereNumber('payment');
+});
