@@ -486,7 +486,14 @@ class _ReturnPayFormState extends ConsumerState<_ReturnPayForm> {
     if (attempt?.isPending ?? false) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: SokoniDimens.space8),
-        child: Text(l10n.deliveryPayPending(SokoniFormat.tzs(attempt!.amount))),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.deliveryPayPending(SokoniFormat.tzs(attempt!.amount)), key: const Key('return-pay-pending')),
+            const SizedBox(height: SokoniDimens.space4),
+            Text(l10n.deliveryPayPendingHint, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
       );
     }
     return Column(

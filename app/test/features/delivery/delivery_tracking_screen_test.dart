@@ -104,7 +104,7 @@ void main() {
     expect(find.text('About 4 min to you'), findsOneWidget);
     expect(find.byKey(const Key('live-driver-marker')), findsOneWidget);
 
-    repo.view = buyerView(status: 'delivered', finalCost: 5900);
+    repo.view = buyerView(status: 'delivered');
     final trackingReads = repo.calls.where((c) => c['call'] == 'tracking').length;
     await tester.pump(const Duration(seconds: 5));
     await tester.pump();

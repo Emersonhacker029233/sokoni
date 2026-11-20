@@ -421,4 +421,67 @@ void main() {
       await disposeTree(tester);
     });
   });
+
+  // Pay now with a real mobile-money provider (Dalipay): the networks come
+  // from the server, and every state of an attempt says what happened.
+  group('pay now states', () {
+    const fiveNetworks = ['mpesa', 'airtel', 'mixx', 'halopesa', 'azampesa'];
+    Map<String, dynamic> attempt(String status, [String? reason]) =>
+        {'id': 1, 'status': status, 'amount': 6400, 'channel': 'azampesa', 'msisdn': '+25571••••111', 'failure_reason': reason};
+
+    testWidgets('the networks are the server\'s, AzamPesa included, and live mode shows no test note', (tester) async {
+      await _pump(tester, view: buyerView(status: 'pending_payment', channels: fiveNetworks, sandbox: false));
+
+      for (final label in ['M-Pesa', 'Airtel Money', 'Mixx by Yas', 'HaloPesa', 'AzamPesa']) {
+        expect(find.widgetWithText(ChoiceChip, label), findsOneWidget);
+      }
+      expect(find.textContaining('Test mode'), findsNothing);
+      await disposeTree(tester);
+    });
+
+    testWidgets('pending: approve on the phone, sent to which number and network, and don\'t pay twice', (tester) async {
+      await _pump(tester, view: buyerView(status: 'pending_payment', channels: fiveNetworks, attempt: attempt('pending')));
+
+      expect(find.text('Check your phone and approve TSh 6,400 with your mobile money PIN.'), findsOneWidget);
+      expect(find.text('Request sent to +25571••••111 · AzamPesa'), findsOneWidget);
+      expect(find.byKey(const Key('pay-pending-hint')), findsOneWidget);
+      expect(find.byKey(const Key('pay-now')), findsNothing, reason: 'no second prompt while one is open');
+      await disposeTree(tester);
+    });
+
+    testWidgets('declined, timed out, wrong number and service trouble each say so and offer Try again', (tester) async {
+      const cases = {
+        'declined': 'The payment was declined.',
+        'timeout': 'The payment request expired before it was approved.',
+        'invalid_number': "That number can't receive this payment request. Check the number and the network, then try again.",
+        'gateway_error': "The mobile money service couldn't take the payment just now. Nothing was charged. Try again in a few minutes.",
+      };
+      for (final MapEntry(key: reason, value: text) in cases.entries) {
+        await _pump(tester, view: buyerView(status: 'pending_payment', channels: fiveNetworks, attempt: attempt('failed', reason)));
+        expect(find.text(text), findsOneWidget, reason: reason);
+        expect(find.text('Try again · TSh 6,400'), findsOneWidget, reason: reason);
+        await disposeTree(tester);
+      }
+    });
+
+    testWidgets('success: the fee shows as paid and Pay now is gone', (tester) async {
+      await _pump(tester, view: buyerView(status: 'awaiting_ready', channels: fiveNetworks));
+
+      expect(find.text('Delivery fee paid: TSh 6,400'), findsOneWidget);
+      expect(find.byKey(const Key('pay-now')), findsNothing);
+      await disposeTree(tester);
+    });
+
+    testWidgets('the same states in Swahili', (tester) async {
+      await _pump(tester, view: buyerView(status: 'pending_payment', channels: fiveNetworks, attempt: attempt('pending')), locale: const Locale('sw'));
+      expect(find.text('Angalia simu yako na ukubali TSh 6,400 kwa PIN ya pesa kwa simu.'), findsOneWidget);
+      expect(find.textContaining('usilipe mara mbili'), findsOneWidget);
+      await disposeTree(tester);
+
+      await _pump(tester, view: buyerView(status: 'pending_payment', channels: fiveNetworks, attempt: attempt('failed', 'timeout')), locale: const Locale('sw'));
+      expect(find.text('Ombi la malipo limeisha muda kabla ya kukubaliwa.'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'AzamPesa'), findsOneWidget);
+      await disposeTree(tester);
+    });
+  });
 }

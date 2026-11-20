@@ -34,16 +34,21 @@ int deliveryStageIndex(DeliveryTracking tracking) {
 String boltVehicleSummary(BoltDriver driver) =>
     [driver.model ?? '', driver.plate ?? ''].where((s) => s.isNotEmpty).join(' · ');
 
+/// The mobile-money networks the server offers (its payment gateway's list).
 String paymentChannelLabel(AppLocalizations l10n, String channel) => switch (channel) {
   'airtel' => l10n.deliveryChannelAirtel,
   'mixx' => l10n.deliveryChannelMixx,
   'halopesa' => l10n.deliveryChannelHalopesa,
+  'azampesa' => l10n.deliveryChannelAzampesa,
   _ => l10n.deliveryChannelMpesa,
 };
 
+/// Why an attempt failed, from the server's `failure_reason`.
 String paymentFailureLabel(AppLocalizations l10n, String? reason) => switch (reason) {
   'declined' => l10n.deliveryPayDeclined,
   'timeout' => l10n.deliveryPayExpired,
+  'invalid_number' => l10n.deliveryPayInvalidNumber,
+  'gateway_error' || 'rejected' || 'unsupported_channel' => l10n.deliveryPayServiceError,
   _ => l10n.deliveryPayFailed,
 };
 

@@ -229,6 +229,8 @@ class _Waiting extends StatelessWidget {
             style: theme.textTheme.bodySmall,
           ),
         ],
+        const SizedBox(height: SokoniDimens.space8),
+        Text(l10n.deliveryPayPendingHint, key: const Key('pay-pending-hint'), style: theme.textTheme.bodySmall),
       ],
     );
   }

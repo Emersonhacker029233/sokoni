@@ -21,7 +21,8 @@ Map<String, dynamic> buyerView({
   List<Map<String, dynamic>>? timeline,
   String? failureReason,
   Map<String, dynamic>? returnBlock,
-  int? finalCost,
+  List<String> channels = const ['mpesa', 'airtel', 'mixx', 'halopesa'],
+  bool sandbox = true,
 }) {
   final paid = !['pending_quote', 'pending_payment'].contains(status);
   final active = _active.contains(status);
@@ -65,15 +66,14 @@ Map<String, dynamic> buyerView({
       'total': 26400,
       'deadline': status == 'pending_payment' ? DateTime.now().toUtc().add(const Duration(minutes: 18)).toIso8601String() : null,
       'online_available': true,
-      'sandbox': true,
-      'channels': ['mpesa', 'airtel', 'mixx', 'halopesa'],
+      'sandbox': sandbox,
+      'channels': channels,
       'attempt': attempt,
       'receipt': paid ? {'amount': 6400, 'channel': 'mpesa', 'reference': 'FAKE-approve-1-ABC', 'paid_at': '2026-11-17T08:05:00Z'} : null,
     },
     'driver': _driverAssigned.contains(status) ? boltDriverJson(withPhone: active) : null,
     'tracking_url': active ? 'https://bolt.eu/track/abc' : null,
     'live_location': active,
-    'final_cost': finalCost,
     'refund': null,
     'actions': {
       'can_pay': status == 'pending_payment',
