@@ -206,3 +206,16 @@ Branch `feature/bolt-live-tracking`. The brief named `release/android-1.1` as th
 - **The live tracking screen shows no price,** only the driver, the status and the ETA ("estimated" there is the ETA, not a price).
 - **Admin keeps everything:** estimate range, `final_cost`, `cost_difference`, invoice, on deliveries and return rides.
 - **Version 1.2.0+12:** above the Play bundle 1.1.0+11 built from `release/android-1.1`, and a minor version for live tracking.
+
+## Dalipay collections for the delivery and return ride fees (`feature/dalipay`), 2026-11-20
+
+- **Dalipay behind the existing `PaymentGateway`.** Read from https://dalipay.co.tz/documentation: `X-Public-Key`/`X-Secret-Key` headers, `POST /api/v1/collections`, `GET /api/v1/collections/{uuid}/status` (`processing | success | failed`), webhooks `collection.success|failed` signed with hex HMAC-SHA256 of the raw body in `X-Signature`, no event id, no timestamp, no retries, no refund API.
+- **Keys are checked before any call** (`DalipayConfig`): production keys only with `DALIPAY_ENV=live` (as asked), test keys never with `live`, no mixed or swapped pairs, https for live, and test mode refused when `APP_ENV=production` (it approves payments that never happened). A refused configuration turns Pay now off and logs the reason, never a key; the secret is redacted from dumps and stack traces (`#[SensitiveParameter]`, `__debugInfo`).
+- **The webhook is a hint, the status API decides.** With no timestamp to bound replays, a verified webhook only makes the server ask Dalipay; a payment only ever moves towards paid; `{uuid}:{event}` in `payment_webhook_events` makes duplicates no-ops. Invalid signatures are logged, never stored, so they can't occupy a genuine event's id.
+- **Each payment is asked about through its own provider** (`PaymentGatewayFactory::forProvider`), so a pending Dalipay payment still settles if `PAYMENT_PROVIDER` changes.
+- **No answer when sending is "unknown", not "failed".** The prompt may be on the phone; the attempt stays open (no second prompt) and the webhook's `external_id` attaches it. `external_id` is the app's idempotency key (24 characters) or a 30-character hash of a longer one.
+- **Confirmed money is never dropped.** Late success after the local 120 s timeout is applied (rechecked for 60 minutes by `payments:reconcile`). A success when the fee is already settled (another attempt, or an admin's Record fee paid) becomes `payments.status = refund_pending`. Decided under a lock on the job or return, taken before the payment, the same order as starting a payment. An amount that differs from the attempt is never applied.
+- **`payments:reconcile` runs every minute whenever Dalipay is configured,** independent of the Bolt flags; `delivery:tick` keeps its own payment pass.
+- **No customer name is sent to Dalipay.** It is optional in their API and not needed.
+- **Mixx by Yas is sent as `Tigo`** and AzamPesa is added as a channel; to be confirmed with Dalipay.
+- **Status query failures past the timeout fail the attempt as `timeout`,** so a buyer is never stuck behind an attempt nobody can check; the late check still catches a success.

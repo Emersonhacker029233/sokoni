@@ -95,7 +95,7 @@ BOLT_WEBHOOK_TOKEN=
 
 Optional overrides (defaults in `api/config/delivery.php`): `BOLT_LIVE_BASE_URL`, `BOLT_SANDBOX_BASE_URL`, `BOLT_CANCEL_PATH`, `BOLT_LOCATION_PATH` (default `rides/location`), `BOLT_LOCATION_CACHE_SECONDS` (5), `BOLT_WEBHOOK_IPS` (default Bolt's three: `18.197.164.122,18.184.149.227,3.120.3.19`), `BOLT_MAX_BOOKING_ATTEMPTS`, `BOLT_TIMEOUT_SECONDS`, plus Sokoni's own `SOKONI_DELIVERY_MAX_DISTANCE_KM` (10), `SOKONI_DELIVERY_BUYER_CANCEL_FEE` (1000), `SOKONI_DELIVERY_UNPAID_TIMEOUT_MINUTES` (20).
 
-**Payment:** the delivery fee is collected with the existing Pay now flow. On production that needs a real `PAYMENT_PROVIDER`: today it is `none`, and the sandbox `fake` gateway is refused in production whatever `.env` says. Until a real provider exists, an admin can record a fee paid outside the app (M-Pesa to the company number) in **Bolt deliveries → Record fee paid**, which books the ride exactly like an in-app payment.
+**Payment:** the delivery fee, and a buyer-paid return ride, are collected with Pay now through **Dalipay** mobile money when `PAYMENT_PROVIDER=dalipay` (§ 8). With `none` (production today) there is no Pay now, and the sandbox `fake` gateway is refused in production whatever `.env` says. Either way an admin can record a fee paid outside the app (M-Pesa to the company number) in **Bolt deliveries → Record fee paid** (returns: **Record ride fee paid**), which books the ride exactly like an in-app payment.
 
 ## 4. Under the hood
 
@@ -153,7 +153,7 @@ Bolt's PDF documents the sandbox paths but leaves the live base URL and the on-d
 - [ ] **Currency.** Live estimates must be in TZS; a live estimate in any other currency is refused (logged) rather than charged.
 - [ ] **Bolt Business payment method** set up and in good standing (`PAYMENT_BOOKING_FAILED` otherwise).
 - [ ] **Webhooks:** send Bolt `https://api.sokoni.co.tz/api/webhooks/bolt` and your `BOLT_WEBHOOK_TOKEN`.
-- [ ] **A real payment provider** (`PAYMENT_PROVIDER`), or agree that admins record fees paid outside the app for the test period.
+- [ ] **Dalipay live** (§ 8, "Going live"), or agree that admins record fees paid outside the app for the test period.
 
 ## 7. Rollout
 
@@ -165,3 +165,78 @@ Bolt's PDF documents the sandbox paths but leaves the live base URL and the on-d
 6. **Open up:** empty `BOLT_TEST_PHONES`. Everyone but the review account sees Bolt delivery.
 
 **Switching off again:** set `BOLT_ENABLED=false` and clear the config cache. New delivery orders stop at once and the routes disappear. Deliveries already in progress keep being tracked and completed in the background while the Bolt credentials stay in `.env`, so no paid order is stranded, but their order screens lose the delivery card until it is switched on again. Prefer switching off when Admin → Bolt deliveries shows nothing in progress.
+
+## 8. Payments with Dalipay
+
+Sokoni collects only the **Bolt delivery fee** and the **return ride fee** (when the buyer pays it) with Dalipay mobile-money collections. Goods are still paid to the shop directly and never pass through Sokoni or Dalipay. Source: https://dalipay.co.tz/documentation (read 2026-11-20).
+
+### How it works
+
+- **Pay now** sends a USSD push: `POST {DALIPAY_BASE_URL}/api/v1/collections` with `X-Public-Key` / `X-Secret-Key`, body `{ account_number: "0754123456", amount, currency: "TZS", provider, external_id }`. No customer name is sent. `external_id` is the attempt's idempotency key (or a 30-character hash of it when longer), so a lost answer can still be matched.
+- **Networks** (the app shows the server's list): `mpesa` → `Mpesa`, `airtel` → `Airtel`, `mixx` (Mixx by Yas) → `Tigo`, `halopesa` → `Halopesa`, `azampesa` → `Azampesa` (`payments.dalipay.providers`).
+- **Only the server marks a fee paid**, after `GET /api/v1/collections/{uuid}/status` answers `success`: when the buyer's order screen polls (at most every 3 s), every minute from `payments:reconcile`, and when Dalipay's webhook arrives.
+- **Webhook:** `POST https://api.sokoni.co.tz/api/payments/webhook/dalipay`, outside the delivery flags so Dalipay can always reach it, throttled to 120 a minute.
+  - `X-Signature` must be the HMAC-SHA256 (hex) of the raw body with `DALIPAY_WEBHOOK_SECRET`, compared in constant time. A wrong or missing signature is answered 401, logged without the body, and never stored, so it can't take a genuine event's place.
+  - Each event is stored once in `payment_webhook_events` as `{uuid}:{event}`; a duplicate or replayed body is answered 200 and does nothing.
+  - The body is only a hint: the payment is confirmed by asking the status API, and a payment only ever moves towards "paid". A signed body that says `success` while Dalipay says `processing` changes nothing.
+  - Unknown collections are recorded (`unknown_payment`) and ignored. An amount that differs from the attempt is never applied (`amount_mismatch`, logged as critical).
+  - Dalipay doesn't retry webhooks, which is why the reconcile cron exists.
+- **States the buyer sees:** waiting for the PIN (with "don't pay twice"), declined, expired (no answer within `PAYMENT_ATTEMPT_TIMEOUT_SECONDS`, 120 s), wrong number, payment service trouble, and paid. English and Swahili.
+- **Late and lost answers:**
+  - No answer when the push is sent: the attempt stays open until it expires (no second prompt meanwhile), and the webhook's `external_id` attaches it.
+  - Approved after it expired here: Dalipay is asked again for `DALIPAY_LATE_CHECK_MINUTES` (60), so a late approval with a lost webhook is still applied.
+  - Paid after the delivery was cancelled: kept for a refund (`refund_status = pending`), as before. A return that ended: `fee_status = refund_pending`, as before.
+  - Paid when the fee was already settled (another attempt, or an admin's **Record fee paid**): the payment becomes `refund_pending`, shown as **REFUND OWED** on the admin page.
+- **Admin:** Bolt deliveries and Returns show every attempt (provider, network, amount, status and reason, Dalipay uuid, reference and external_id, last three digits of the number) and every Dalipay webhook received for it, with its result. **Mark payment refunded** closes a payment owed back, with a reference. **Record fee paid** stays the manual fallback.
+- **Code:** `app/Services/Payment/DalipayGateway.php`, `Dalipay/DalipayConfig.php`, `Dalipay/DalipayWebhookHandler.php`, `PaymentGatewayFactory.php`, `DeliveryPaymentService` (confirm, settle, late checks), `PaymentsReconcile`, `Filament/Support/PaymentAttempts.php`. Tests: `tests/Feature/Payments/`.
+
+### Keys
+
+All in `api/.env` only, typed on the server by you. Never committed, never pasted into a ticket or chat, never logged (the gateway logs HTTP status and Dalipay's message only).
+
+| Key | Value |
+|---|---|
+| `PAYMENT_PROVIDER` | `dalipay` |
+| `DALIPAY_ENV` | `test` or `live` |
+| `DALIPAY_BASE_URL` | The host Dalipay gives you, without `/api/v1`. `https` required with `live` |
+| `DALIPAY_PUBLIC_KEY` | `gw_pk_test_…` (test) or `gw_pk_production_…` (live) |
+| `DALIPAY_SECRET_KEY` | `gw_sk_test_…` or `gw_sk_production_…` |
+| `DALIPAY_WEBHOOK_SECRET` | The "callback secret" next to the webhook URL in Dalipay's Settings |
+
+Optional: `DALIPAY_TIMEOUT_SECONDS` (15), `DALIPAY_LATE_CHECK_MINUTES` (60).
+
+**Refused, and Pay now disappears** (the log says `[payments] Dalipay is not used: <reason>`, never a key): a production key unless `DALIPAY_ENV=live`; a test key with `live`; one test and one production key; swapped keys; a missing key or URL; `live` over `http`; and test mode on a server with `APP_ENV=production`, because Dalipay's test mode approves payments that never happened and would book real Bolt rides. Without `DALIPAY_WEBHOOK_SECRET` every webhook is refused and the status checks alone confirm payments.
+
+### Setup on staging (test keys)
+
+1. **Dalipay dashboard:** register the merchant account, open the test keys. In **Settings**, set the webhook URL to `https://staging-api.sokoni.co.tz/api/payments/webhook/dalipay` and copy the callback secret. If you use Dalipay's **IP whitelist**, add the server's outgoing IP (ask the host for the shared server's outgoing address), or leave the list empty.
+2. **Staging `.env`** (staging must not run with `APP_ENV=production`), then clear `bootstrap/cache/config.php` and `routes-v7.php`:
+   ```
+   PAYMENT_PROVIDER=dalipay
+   DALIPAY_ENV=test
+   DALIPAY_BASE_URL=https://<host from Dalipay>
+   DALIPAY_PUBLIC_KEY=gw_pk_test_…
+   DALIPAY_SECRET_KEY=gw_sk_test_…
+   DALIPAY_WEBHOOK_SECRET=<callback secret>
+   ```
+3. **Cron:** nothing to add. The existing `schedule:run` line runs `payments:reconcile` every minute as soon as Dalipay is configured, whether or not Bolt is on.
+4. **Check:** signed in as a test buyer, `GET /api/delivery/config` lists five networks with `sandbox: true`. Place a Bolt order, accept it as the shop, tap **Pay now** in app 1.1: Dalipay's test mode simulates the payment, and the order moves to "Paid". Admin → Bolt deliveries → the delivery shows the attempt with its Dalipay uuid and `col_…` reference, and the webhook with result `pending->succeeded`.
+5. **Pay now missing?** `storage/logs/laravel-*.log`, search `[payments]`.
+
+### Going live
+
+- [ ] **KYC verified** in Dalipay (production settlements require it) and the merchant fee agreed.
+- [ ] **`APP_DEBUG=false` on production** before any live key goes into `.env` (BLOCKERS.md notes it was `true`).
+- [ ] Production keys with `DALIPAY_ENV=live`, the production host over https, the webhook URL `https://api.sokoni.co.tz/api/payments/webhook/dalipay` and its callback secret. Clear the config and routes caches.
+- [ ] Ask Dalipay to confirm what its documentation leaves open: the production host; the webhook signature encoding (the code expects lowercase hex, as in their PHP example); whether a duplicate `external_id` is refused; accepted phone formats (the code sends `07…`/`06…`); amount limits; whether `Tigo` covers Mixx by Yas; rate limits.
+- [ ] First live payments with `BOLT_TEST_PHONES` only and small fees; compare Admin → Bolt deliveries with Dalipay's dashboard for a few days.
+
+### Refunds: recorded, not paid
+
+Dalipay has no refund or reversal API for collections. Refunds stay recorded, as before: `delivery_jobs.refund_status = pending`, `return_requests.fee_status = refund_pending`, and now `payments.status = refund_pending` for a payment that arrived when the fee was already settled. An admin sends the money back outside the app and marks it (**Mark refund paid**, **Mark ride fee refunded**, **Mark payment refunded**).
+
+**What paying refunds in the app would need:** Dalipay's disbursement API (`POST /api/v1/disbursements`: `account_number`, `amount`, `provider`, `external_id`) is the only way to send money from the app. It is a new transfer from Sokoni's Dalipay balance to the buyer's number, not a reversal; it holds the amount plus a fee at once; in production it waits for Dalipay's admin approval (`awaiting_approval`, then `success`, `failed` or `rejected`) and needs KYC. Building it means a payout record with its own states and reconciliation, the buyer's number and network (stored encrypted on the payment), a rule for who pays the payout fee, and a compliance answer on refunds (below).
+
+### Funds flow
+
+Buyer's mobile money → Dalipay collection → **Sokoni's Dalipay merchant balance** (net of Dalipay's fee) → Sokoni withdraws to its own mobile money ("Toa Pesa"; bank settlement isn't documented) → Sokoni pays Bolt through Bolt Business as before. Until Sokoni withdraws, the money sits with Dalipay (DALI GEOTECH INVESTMENT, "powered by PSP" per its site).

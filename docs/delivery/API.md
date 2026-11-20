@@ -36,7 +36,7 @@ Public. What this user may see. Guests always get `false`.
   "returns_enabled": false } }
 ```
 
-`online_available` is false when no payment provider is configured (`PAYMENT_PROVIDER=none`, or the sandbox `fake` on production, which is always refused). The fee is then recorded by an admin (Bolt deliveries → Record fee paid).
+`online_available` is false when no payment provider is configured (`PAYMENT_PROVIDER=none`, the sandbox `fake` on production, or Dalipay with keys that are refused; see [BOLT.md](BOLT.md) § 8). The fee is then recorded by an admin (Bolt deliveries → Record fee paid). `channels` is the active gateway's list: with Dalipay `["mpesa", "airtel", "mixx", "halopesa", "azampesa"]`; `sandbox` is true for the fake gateway and Dalipay's test mode.
 
 ## `GET /delivery/quote?seller_id=&lat=&lng=`
 
@@ -163,15 +163,18 @@ Refunds are recorded (`refund: { amount, status: "pending" }`) and paid by an ad
 
 ### `POST /delivery/orders/{order}/pay`
 
-`{ channel: "mpesa"|"airtel"|"mixx"|"halopesa", msisdn: "+2557XXXXXXXX", idempotency_key: "<8-100 chars [A-Za-z0-9_-]>" }`.
+`{ channel: <one of payment.channels>, msisdn: "+2557XXXXXXXX", idempotency_key: "<8-100 chars [A-Za-z0-9_-]>" }`. A channel the active gateway doesn't offer is a `422`. The same call pays a return's ride fee at `POST /returns/{return}/pay`.
 
 - Answers **202** with the buyer view; `payment.attempt.status` is `pending` while the prompt is on the phone. The amount is never in the request: the server charges the fee set on the job (`amount_due`).
 - Only the server marks a fee paid, after asking the gateway (on the buyer's polls, at most every 3 s, and every minute). The job then moves to `awaiting_ready`, or straight to booking if the shop already marked the order Ready.
 - The same `idempotency_key` returns the same attempt. A new key while one is open: `409 payment_in_progress`; an open attempt expires after 120 s.
-- `failure_reason`: `declined`, `timeout`, `gateway_error`. `409 not_payable`, `409 idempotency_key_reused`, `503 payments_unavailable`.
+- `failure_reason`: `declined`, `timeout`, `invalid_number` (the provider refused the number), `gateway_error` / `rejected` (the provider refused the request; nothing was charged). `409 not_payable`, `409 idempotency_key_reused`, `503 payments_unavailable`.
+- `payment.attempt.status` can also be `succeeded`, or `refund_pending` / `refunded` for a payment that arrived after the fee was already settled (owed back to the buyer).
 - Unpaid 20 minutes after the price was set (`payment.deadline`): job and order cancelled (`cancel_reason: "payment_timeout"`). A payment confirmed after that is kept and marked for refund.
 
 **Sandbox gateway** (`PAYMENT_PROVIDER=fake`, local and staging only): approved by itself after `PAYMENT_FAKE_APPROVE_AFTER_SECONDS` (8). A number ending `0001` is declined; `0002` never answers.
+
+**Dalipay** (`PAYMENT_PROVIDER=dalipay`): a real USSD push ([BOLT.md](BOLT.md) § 8). Dalipay's webhook goes to `POST /payments/webhook/dalipay` (signed, not for the apps).
 
 ## Shop side
 
