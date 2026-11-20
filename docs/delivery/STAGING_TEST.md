@@ -1,6 +1,6 @@
 # Testing the delivery loop on staging (Sokoni 1.1 + Sokoni Driver)
 
-> **Superseded (2026-11-17).** This tested the Sokoni Driver loop, which was removed. For the Bolt flow use [BOLT.md](BOLT.md) § 5 (sandbox, end to end) and [RETURNS.md](RETURNS.md) § 8. The packaging notes in section 1 still apply to staging.
+> **Superseded (2026-11-17).** This tested the Sokoni Driver loop, which was removed. For the Bolt flow use [BOLT.md](BOLT.md) § 5 (sandbox, end to end) and [RETURNS.md](RETURNS.md) § 8. The packaging notes in section 1 still apply to staging. **Bringing staging up to `feature/dalipay` and testing Dalipay with test keys: [STAGING-dalipay.md](STAGING-dalipay.md).**
 
 For whoever runs the end-to-end test against `https://staging-api.sokoni.co.tz`. Nothing here touches production, the live apps, the iOS build in App Review or the App Review account. The staging setup itself is in `staging-deploy/STAGING-STEPS.md` (kept outside git because it holds the staging admin password).
 

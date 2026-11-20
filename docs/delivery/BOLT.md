@@ -209,6 +209,8 @@ Optional: `DALIPAY_TIMEOUT_SECONDS` (15), `DALIPAY_LATE_CHECK_MINUTES` (60).
 
 ### Setup on staging (test keys)
 
+The full staging package, `.env` lines and the PowerShell test (`tools/staging-dalipay-test.ps1`, which works with Bolt off) are in [STAGING-dalipay.md](STAGING-dalipay.md). In short:
+
 1. **Dalipay dashboard:** register the merchant account, open the test keys. In **Settings**, set the webhook URL to `https://staging-api.sokoni.co.tz/api/payments/webhook/dalipay` and copy the callback secret. If you use Dalipay's **IP whitelist**, add the server's outgoing IP (ask the host for the shared server's outgoing address), or leave the list empty.
 2. **Staging `.env`** (staging must not run with `APP_ENV=production`), then clear `bootstrap/cache/config.php` and `routes-v7.php`:
    ```
