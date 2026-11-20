@@ -7,8 +7,10 @@ use App\Models\Payment;
 use App\Models\ReturnRequest;
 use App\Models\User;
 use App\Services\Payment\CollectionRequest;
+use App\Services\Payment\CollectionStatus;
 use App\Services\Payment\GatewayCapabilities;
 use App\Services\Payment\PaymentGateway;
+use App\Services\Payment\PaymentGatewayFactory;
 use App\Services\Returns\ReturnMessages;
 use App\Services\Returns\ReturnService;
 use Illuminate\Database\QueryException;
@@ -18,7 +20,8 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Collecting a Bolt delivery's fee (Sokoni 1.1 "Pay now").
+ * Collecting a Bolt delivery's fee, and a return's ride-back fee (Sokoni
+ * 1.1 "Pay now").
  *
  * What is charged is decided here and only here: the fee frozen on the job
  * when the shop accepted (Bolt's estimate, upper bound). Item money is not
@@ -28,17 +31,27 @@ use Throwable;
  * `succeeded` only when the gateway, asked by this server, says so; then
  * the job is marked paid through DeliveryJobService::markFeePaid, and Bolt
  * is booked once the shop has marked the order ready. Status queries happen
- * when the buyer's order screen polls (throttled) and on every minute cron
- * tick (always).
+ * when the buyer's order screen polls (throttled), on every minute cron
+ * tick (always), and when a verified provider webhook says something
+ * changed (DalipayWebhookHandler): the webhook only triggers the query.
+ *
+ * Money the provider confirms is never dropped: a success that arrives
+ * after the attempt timed out here is still applied, and one that arrives
+ * when the fee is already settled (an earlier attempt, or an admin's
+ * "Record fee paid") is kept as `refund_pending`, owed back to the buyer.
  */
 class DeliveryPaymentService
 {
     public const TIMEOUT = 'timeout';
 
+    /** Failure reasons after which the provider may still complete the payment. */
+    private const MAY_STILL_SUCCEED = [self::TIMEOUT, 'gateway_error'];
+
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly DeliveryJobService $jobs,
         private readonly DeliveryMessages $messages,
+        private readonly ?PaymentGatewayFactory $gateways = null,
     ) {}
 
     public function capabilities(): GatewayCapabilities
@@ -168,7 +181,19 @@ class DeliveryPaymentService
             return $payment->fresh();
         }
 
+        $this->remember($payment, $result->meta);
+
+        if ($result->unknown()) {
+            // The prompt may be on the buyer's phone: keep the attempt open until it times out.
+            Log::warning("[payments] payment #{$payment->id}: the provider didn't confirm the prompt; waiting");
+
+            return $payment->fresh();
+        }
+
         if (! $result->accepted()) {
+            if ($result->providerReference !== null) {
+                $payment->forceFill(['provider_reference' => $result->providerReference])->save();
+            }
             $this->fail($payment, $result->failureReason ?? 'declined');
 
             return $payment->fresh();
@@ -250,6 +275,68 @@ class DeliveryPaymentService
         return $changed;
     }
 
+    /**
+     * From the minute cron: Dalipay attempts that timed out here (or got no
+     * answer when sent) are asked about again for `late_check_minutes`, so
+     * an approval that came late, with its webhook lost, is still recorded.
+     *
+     * @return int how many late payments were found
+     */
+    public function recheckRecentFailures(): int
+    {
+        $found = 0;
+        Payment::query()->where('status', 'failed')->where('provider', 'dalipay')
+            ->whereNotNull('provider_reference')
+            ->whereIn('failure_reason', self::MAY_STILL_SUCCEED)
+            ->where('created_at', '>=', now()->subMinutes(max(1, (int) config('payments.dalipay.late_check_minutes', 60))))
+            ->where(fn ($q) => $q->whereNotNull('delivery_job_id')->orWhereNotNull('return_request_id'))
+            ->orderBy('id')
+            ->each(function (Payment $payment) use (&$found) {
+                if (($payment->meta['provider_final'] ?? null) !== null) {
+                    return;
+                }
+                if (in_array($this->confirm($payment)->status, ['succeeded', 'refund_pending'], true)) {
+                    $found++;
+                }
+            });
+
+        return $found;
+    }
+
+    /**
+     * A verified webhook, or the late check: ask the provider about this
+     * payment and apply the answer, whatever its state here. Only ever
+     * moves a payment towards "paid"; a confirmed payment never goes back.
+     */
+    public function confirm(Payment $payment): Payment
+    {
+        $payment = $payment->fresh();
+        if ($payment->status === 'pending') {
+            return $this->refresh($payment);
+        }
+        if ($payment->status !== 'failed' || $payment->provider_reference === null) {
+            return $payment;
+        }
+
+        try {
+            $status = $this->gatewayFor($payment)->queryCollection($payment->provider_reference);
+        } catch (Throwable $e) {
+            Log::warning("[payments] status query failed for payment #{$payment->id}: ".$e->getMessage());
+
+            return $payment;
+        }
+        $this->remember($payment, $status->meta);
+
+        if ($status->status === 'succeeded') {
+            Log::notice("[payments] payment #{$payment->id} succeeded after it had failed here ({$payment->failure_reason})");
+            $this->settle($payment, $status);
+        } elseif ($status->status === 'failed') {
+            $this->remember($payment, ['provider_final' => 'failed']);
+        }
+
+        return $payment->fresh();
+    }
+
     /** Asks the gateway once and applies the answer. Never trusts anything the app sent. */
     public function refresh(Payment $payment): Payment
     {
@@ -257,7 +344,7 @@ class DeliveryPaymentService
             return $payment;
         }
         if ($payment->provider_reference === null) {
-            // The prompt was never accepted by the gateway; nothing to ask about.
+            // The prompt was never confirmed by the gateway; nothing to ask about.
             if ($this->timedOut($payment)) {
                 $this->fail($payment, self::TIMEOUT);
             }
@@ -266,42 +353,96 @@ class DeliveryPaymentService
         }
 
         try {
-            $status = $this->gateway->queryCollection($payment->provider_reference);
+            $status = $this->gatewayFor($payment)->queryCollection($payment->provider_reference);
         } catch (Throwable $e) {
             Log::warning("[payments] status query failed for payment #{$payment->id}: ".$e->getMessage());
+            if ($this->timedOut($payment)) {
+                // No answer and no time left: the buyer may try again; a late success is still caught.
+                $this->fail($payment, self::TIMEOUT);
+            }
 
-            return $payment;
+            return $payment->fresh();
         }
+        $this->remember($payment, $status->meta);
 
-        $succeeded = false;
-        $failedReason = null;
-        DB::transaction(function () use ($payment, $status, &$succeeded, &$failedReason) {
-            /** @var Payment $locked */
-            $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
-            if ($locked->status !== 'pending') {
-                return;
-            }
-
-            if ($status->status === 'succeeded') {
-                $locked->forceFill(['status' => 'succeeded', 'paid_at' => $status->paidAt ?? now()])->save();
-                $succeeded = true;
-            } elseif ($status->status === 'failed') {
-                $failedReason = $status->failureReason ?? 'declined';
-            } elseif ($this->timedOut($locked)) {
-                $failedReason = self::TIMEOUT;
-            }
-        });
-
-        if ($succeeded && $payment->return_request_id !== null) {
-            // ReturnService depends on Bolt, not on payments; resolved here to keep the constructor graph acyclic.
-            app(ReturnService::class)->markFeePaid($payment->returnRequest()->firstOrFail(), $payment->provider_reference);
-        } elseif ($succeeded) {
-            $this->jobs->markFeePaid($payment->deliveryJob()->firstOrFail(), $payment->provider_reference);
-        } elseif ($failedReason !== null) {
-            $this->fail($payment, $failedReason);
+        if ($status->status === 'succeeded') {
+            $this->settle($payment, $status);
+        } elseif ($status->status === 'failed') {
+            $this->fail($payment, $status->failureReason ?? 'declined');
+        } elseif ($this->timedOut($payment)) {
+            $this->fail($payment, self::TIMEOUT);
         }
 
         return $payment->fresh();
+    }
+
+    /**
+     * The provider confirmed this payment. It pays the delivery fee or the
+     * return ride fee, unless that is already settled, in which case the
+     * money is owed back to the buyer (`refund_pending`). The payable is
+     * locked before the payment, the same order as start(), so two
+     * confirmations can't both pay one fee.
+     */
+    private function settle(Payment $payment, CollectionStatus $status): void
+    {
+        if ($status->amount !== null && $status->amount !== (int) $payment->amount) {
+            Log::critical("[payments] payment #{$payment->id}: the provider confirmed {$status->amount} {$payment->currency} for a {$payment->amount} attempt; not applied, an admin must check it");
+            $this->remember($payment, ['amount_mismatch' => $status->amount]);
+
+            return;
+        }
+
+        $outcome = DB::transaction(function () use ($payment, $status) {
+            $alreadySettled = false;
+            if ($payment->delivery_job_id !== null) {
+                $job = DeliveryJob::query()->lockForUpdate()->find($payment->delivery_job_id);
+                $alreadySettled = $job !== null && $job->payment_status !== 'unpaid';
+            } elseif ($payment->return_request_id !== null) {
+                $return = ReturnRequest::query()->lockForUpdate()->find($payment->return_request_id);
+                $alreadySettled = $return !== null && $return->fee_status !== 'unpaid';
+            }
+
+            /** @var Payment $locked */
+            $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            if (! in_array($locked->status, ['pending', 'failed'], true)) {
+                return null; // confirmed already
+            }
+
+            $locked->forceFill([
+                'status' => $alreadySettled ? 'refund_pending' : 'succeeded',
+                'paid_at' => $status->paidAt ?? now(),
+                'failure_reason' => null,
+                'meta' => array_filter([
+                    ...(array) $locked->meta,
+                    'late_after' => $locked->status === 'failed' ? $locked->failure_reason : null,
+                    'refund_reason' => $alreadySettled ? 'fee_already_settled' : null,
+                ], fn ($v) => $v !== null),
+            ])->save();
+
+            return $alreadySettled ? 'refund' : 'apply';
+        });
+
+        if ($outcome === 'refund') {
+            Log::warning("[payments] payment #{$payment->id} arrived when its fee was already settled; {$payment->amount} {$payment->currency} is owed back to the buyer");
+        } elseif ($outcome === 'apply' && $payment->return_request_id !== null) {
+            // ReturnService depends on Bolt, not on payments; resolved here to keep the constructor graph acyclic.
+            app(ReturnService::class)->markFeePaid($payment->returnRequest()->firstOrFail(), $payment->provider_reference);
+        } elseif ($outcome === 'apply') {
+            $this->jobs->markFeePaid($payment->deliveryJob()->firstOrFail(), $payment->provider_reference);
+        }
+    }
+
+    /** @param array<string, scalar|null> $meta provider details kept on the payment for admins */
+    private function remember(Payment $payment, array $meta): void
+    {
+        $meta = array_filter($meta, fn ($v) => $v !== null && $v !== '');
+        if ($meta === []) {
+            return;
+        }
+        DB::transaction(function () use ($payment, $meta) {
+            $locked = Payment::query()->lockForUpdate()->find($payment->id);
+            $locked?->forceFill(['meta' => [...(array) $locked->meta, ...$meta]])->save();
+        });
     }
 
     /** @param callable(Payment): bool $owns */
@@ -339,5 +480,15 @@ class DeliveryPaymentService
         if ($return !== null && $return->fee_status === 'unpaid') {
             app(ReturnMessages::class)->toBuyer($return, 'payment_failed');
         }
+    }
+
+    /** The gateway this payment was made with, which may not be today's PAYMENT_PROVIDER. */
+    private function gatewayFor(Payment $payment): PaymentGateway
+    {
+        if ($payment->provider === $this->gateway->name()) {
+            return $this->gateway;
+        }
+
+        return ($this->gateways ?? app(PaymentGatewayFactory::class))->forProvider((string) $payment->provider);
     }
 }

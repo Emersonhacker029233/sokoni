@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\BoltDeliveries\Pages;
 
 use App\Filament\Resources\BoltDeliveries\BoltDeliveryResource;
+use App\Filament\Support\PaymentAttempts;
+use App\Models\DeliveryJob;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewBoltDelivery extends ViewRecord
@@ -14,6 +16,7 @@ class ViewBoltDelivery extends ViewRecord
         return [
             BoltDeliveryResource::recordFeePaidAction(),
             BoltDeliveryResource::markRefundedAction(),
+            PaymentAttempts::markRefundedAction(fn (DeliveryJob $record) => $record->payments()->get()),
             BoltDeliveryResource::cancelAction(),
         ];
     }

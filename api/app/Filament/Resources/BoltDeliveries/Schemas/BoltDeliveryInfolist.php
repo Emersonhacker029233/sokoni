@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BoltDeliveries\Schemas;
 
 use App\Filament\Support\LivePosition;
+use App\Filament\Support\PaymentAttempts;
 use App\Models\DeliveryJob;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -73,6 +74,8 @@ class BoltDeliveryInfolist
                                 ? 'TSh '.number_format((int) $record->refund_amount).' ('.$record->refund_status.')'
                                 : '—'),
                     ]),
+
+                PaymentAttempts::section(fn (DeliveryJob $record) => $record->payments()->get()),
 
                 Section::make('Timeline (including every Bolt error)')
                     ->schema([

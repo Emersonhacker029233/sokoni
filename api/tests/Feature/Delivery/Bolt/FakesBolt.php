@@ -147,6 +147,11 @@ trait FakesBolt
             $url = $request->url();
             $path = parse_url($url, PHP_URL_PATH) ?? '';
 
+            // Other fakes (Dalipay) answer their own hosts.
+            if (! str_ends_with((string) parse_url($url, PHP_URL_HOST), 'bolt.eu')) {
+                return null;
+            }
+
             if ($url === self::TOKEN_URL) {
                 return $this->tokenResponse();
             }

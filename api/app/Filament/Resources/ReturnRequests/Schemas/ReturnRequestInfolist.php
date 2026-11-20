@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ReturnRequests\Schemas;
 
 use App\Filament\Support\LivePosition;
+use App\Filament\Support\PaymentAttempts;
 use App\Models\ActivityLog;
 use App\Models\ReturnRequest;
 use App\Support\PrivateFileUrl;
@@ -125,6 +126,8 @@ class ReturnRequestInfolist
                                 default => 'gray',
                             }),
                     ]),
+
+                PaymentAttempts::section(fn (ReturnRequest $record) => $record->payments()->get()),
 
                 Section::make('Timeline')
                     ->schema([

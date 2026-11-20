@@ -39,6 +39,14 @@ if (config('delivery.enabled') || filled(config('delivery.bolt.client_id'))) {
     Schedule::command('delivery:track')->everyTenSeconds()->withoutOverlapping(1);
 }
 
+// Dalipay payments (docs/delivery/BOLT.md): open and recently timed-out
+// attempts are checked with Dalipay every minute, so a lost webhook never
+// strands a paid fee. Registered whenever Dalipay is the provider or its
+// keys are in .env, independent of the Bolt flags; nothing otherwise.
+if (config('payments.provider') === 'dalipay' || filled(config('payments.dalipay.public_key')) || filled(config('payments.dalipay.secret_key'))) {
+    Schedule::command('payments:reconcile')->everyMinute()->withoutOverlapping(5);
+}
+
 // Apple Guideline 1.2: a daily email to MODERATION_ALERT_EMAIL listing every
 // report still pending after 20 hours, before it breaks the 24-hour promise.
 // 05:00 UTC is 08:00 in Dar es Salaam. Sends nothing on a clear queue.

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\Delivery\BoltWebhookController;
+use App\Http\Controllers\Api\Payments\DalipayWebhookController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\NotificationController;
@@ -225,3 +226,11 @@ Route::middleware(['delivery.enabled:returns', 'auth:sanctum', 'delivery.access:
 // bearer token and Bolt's source IPs, no user session.
 Route::post('/webhooks/bolt', BoltWebhookController::class)
     ->middleware(['delivery.enabled', 'throttle:120,1']);
+
+// Dalipay's payment webhook (docs/delivery/BOLT.md, "Payments with Dalipay").
+// Deliberately outside the delivery flags: a fee paid just before Bolt is
+// switched off must still be recorded. Signed (X-Signature), no session;
+// unknown collections are ignored.
+Route::post('/payments/webhook/dalipay', DalipayWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('payments.webhook.dalipay');
