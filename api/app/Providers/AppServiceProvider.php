@@ -11,9 +11,8 @@ use App\Services\Delivery\LogDeliveryNotifier;
 use App\Services\Moderation\BlockList;
 use App\Services\Nida\ManualReviewNidaVerifier;
 use App\Services\Nida\NidaVerifier;
-use App\Services\Payment\FakePaymentGateway;
 use App\Services\Payment\PaymentGateway;
-use App\Services\Payment\UnavailablePaymentGateway;
+use App\Services\Payment\PaymentGatewayFactory;
 use App\Services\Push\LogPushNotifier;
 use App\Services\Push\PushNotifier;
 use App\Services\Sms\AfricasTalkingSmsGateway;
@@ -75,10 +74,10 @@ class AppServiceProvider extends ServiceProvider
             };
         });
         $this->app->bind(NidaVerifier::class, ManualReviewNidaVerifier::class);
-        // The sandbox fake never runs in production, whatever .env says.
-        $this->app->bind(PaymentGateway::class, fn ($app) => config('payments.provider') === 'fake' && ! $app->environment('production')
-            ? new FakePaymentGateway((int) config('payments.fake.approve_after_seconds'))
-            : new UnavailablePaymentGateway);
+        // PAYMENT_PROVIDER: dalipay | fake | none. The sandbox fake and
+        // Dalipay's test mode never run in production, whatever .env says,
+        // and a Dalipay key that doesn't match DALIPAY_ENV is refused.
+        $this->app->bind(PaymentGateway::class, fn ($app) => $app->make(PaymentGatewayFactory::class)->current());
         $this->app->bind(SocialAuthVerifier::class, HttpSocialAuthVerifier::class);
         $this->app->bind(PushNotifier::class, LogPushNotifier::class);
 
