@@ -449,8 +449,23 @@ void main() {
       await disposeTree(tester);
     });
 
+    testWidgets('an attempt without a network (display only) still shows where it went', (tester) async {
+      await _pump(tester, view: buyerView(status: 'pending_payment', channels: fiveNetworks, attempt: {...attempt('pending'), 'channel': null}));
+
+      expect(find.text('Request sent to +25571••••111'), findsOneWidget);
+      expect(find.byKey(const Key('pay-pending-hint')), findsOneWidget);
+      await disposeTree(tester);
+
+      await _pump(tester, view: buyerView(status: 'pending_payment', channels: const [], attempt: {...attempt('failed', 'provider_failed'), 'channel': null}));
+      expect(find.text("The payment didn't go through."), findsOneWidget);
+      expect(find.byKey(const Key('pay-now')), findsOneWidget, reason: 'an empty network list still lets the buyer pay');
+      await disposeTree(tester);
+    });
+
     testWidgets('declined, timed out, wrong number and service trouble each say so and offer Try again', (tester) async {
       const cases = {
+        // Dalipay gives no reason for a failure.
+        'provider_failed': "The payment didn't go through.",
         'declined': 'The payment was declined.',
         'timeout': 'The payment request expired before it was approved.',
         'invalid_number': "That number can't receive this payment request. Check the number and the network, then try again.",

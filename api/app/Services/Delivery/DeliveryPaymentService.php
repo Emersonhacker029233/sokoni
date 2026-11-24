@@ -69,7 +69,7 @@ class DeliveryPaymentService
      * Sends a payment prompt to the buyer's phone. The same idempotency key
      * sent again returns the same attempt instead of a second prompt.
      */
-    public function start(DeliveryJob $job, User $buyer, string $channel, string $msisdn, string $idempotencyKey): Payment
+    public function start(DeliveryJob $job, User $buyer, ?string $channel, string $msisdn, string $idempotencyKey): Payment
     {
         $job->loadMissing('order');
 
@@ -100,7 +100,7 @@ class DeliveryPaymentService
      * way (docs/delivery/RETURNS.md). The amount is the one frozen on the
      * return when the shop accepted.
      */
-    public function startForReturn(ReturnRequest $return, User $buyer, string $channel, string $msisdn, string $idempotencyKey): Payment
+    public function startForReturn(ReturnRequest $return, User $buyer, ?string $channel, string $msisdn, string $idempotencyKey): Payment
     {
         $return->loadMissing('order');
 
@@ -142,7 +142,7 @@ class DeliveryPaymentService
      * @param  callable(Payment): bool  $owns  whether an attempt found by key belongs to this job/return
      * @param  callable(): Payment  $create  runs in a transaction; locks the payable and creates the row
      */
-    private function open(User $buyer, string $channel, string $msisdn, string $idempotencyKey, callable $owns, callable $create, string $description): Payment
+    private function open(User $buyer, ?string $channel, string $msisdn, string $idempotencyKey, callable $owns, callable $create, string $description): Payment
     {
         if (! $this->onlinePaymentAvailable()) {
             throw DeliveryActionException::make('payments_unavailable', 503);
@@ -215,7 +215,7 @@ class DeliveryPaymentService
         $this->fail($pending, self::TIMEOUT, notify: false);
     }
 
-    private function newAttempt(User $buyer, string $channel, string $msisdn, string $idempotencyKey, array $attributes): Payment
+    private function newAttempt(User $buyer, ?string $channel, string $msisdn, string $idempotencyKey, array $attributes): Payment
     {
         return Payment::query()->create([
             ...$attributes,

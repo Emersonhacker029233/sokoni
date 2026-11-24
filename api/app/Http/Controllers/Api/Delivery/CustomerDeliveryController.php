@@ -144,7 +144,7 @@ class CustomerDeliveryController extends Controller
     public function pay(PayDeliveryRequest $request, Order $order, DeliveryPaymentService $payments): JsonResponse
     {
         $job = $this->buyersJob($order);
-        $payments->start($job, $request->user(), $request->string('channel'), $request->string('msisdn'), $request->string('idempotency_key'));
+        $payments->start($job, $request->user(), $request->filled('channel') ? (string) $request->input('channel') : null, $request->string('msisdn'), $request->string('idempotency_key'));
 
         return $this->buyerResponse($request, $job)->setStatusCode(202);
     }

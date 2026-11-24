@@ -3,6 +3,7 @@
 namespace Tests\Feature\Payments;
 
 use App\Services\Payment\CollectionRequest;
+use App\Services\Payment\Dalipay\DalipayConfig;
 use App\Services\Payment\DalipayGateway;
 use App\Services\Payment\PaymentGateway;
 use App\Services\Payment\PaymentGatewayFactory;
@@ -30,7 +31,7 @@ class DalipayGatewayTest extends TestCase
         return $gateway;
     }
 
-    private function request(string $channel = 'mpesa', string $reference = 'k7Hq2LmN9pQ4rS6tU8vW0xY1'): CollectionRequest
+    private function request(?string $channel = 'mpesa', string $reference = 'k7Hq2LmN9pQ4rS6tU8vW0xY1'): CollectionRequest
     {
         return new CollectionRequest($reference, 6400, 'TZS', '+255754123456', $channel, 'Sokoni delivery SKAB12CD34');
     }
@@ -45,26 +46,58 @@ class DalipayGatewayTest extends TestCase
         $this->assertSame(['POST', '/api/v1/collections'], [$sent['method'], $sent['path']]);
         $this->assertSame([self::DALIPAY_PUBLIC], $sent['headers']['X-Public-Key']);
         $this->assertSame([self::DALIPAY_SECRET], $sent['headers']['X-Secret-Key']);
+        // Only the number and the documented fields: Dalipay takes the network from the number.
         $this->assertSame([
             'account_number' => '0754123456',
             'amount' => 6400,
             'currency' => 'TZS',
-            'provider' => 'Tigo', // Mixx by Yas is Dalipay's "Tigo"
             'external_id' => 'k7Hq2LmN9pQ4rS6tU8vW0xY1',
         ], $sent['body']);
+        $this->assertArrayNotHasKey('provider', $sent['body']);
         $this->assertArrayNotHasKey('customer_name', $sent['body'], 'no personal data Dalipay does not need');
         $this->assertStringStartsWith('col_', $result->meta['dalipay_reference']);
+        // What Dalipay recorded for the number, whatever the buyer picked (Mixx here).
+        $this->assertSame('Mpesa', $result->meta['dalipay_provider']);
+        $this->assertIsFloat($result->meta['dalipay_create_seconds']);
     }
 
-    public function test_every_sokoni_channel_maps_to_a_dalipay_provider_and_azampesa_is_offered(): void
+    public function test_the_channel_is_display_only_and_may_be_missing(): void
     {
         $this->assertSame(['mpesa', 'airtel', 'mixx', 'halopesa', 'azampesa'], $this->gateway()->capabilities()->channels);
         $this->assertTrue($this->gateway()->capabilities()->sandbox);
-        foreach (['mpesa' => 'Mpesa', 'airtel' => 'Airtel', 'halopesa' => 'Halopesa', 'azampesa' => 'Azampesa'] as $channel => $provider) {
-            $this->gateway()->initiateCollection($this->request($channel, 'key-'.$channel.'-123456'));
-            $this->assertSame($provider, end($this->dalipaySent)['body']['provider']);
+
+        foreach (['airtel', 'cash', null] as $i => $channel) {
+            $result = $this->gateway()->initiateCollection($this->request($channel, "key-{$i}-123456789"));
+            $this->assertTrue($result->accepted(), 'any or no channel: the number decides');
+            $this->assertArrayNotHasKey('provider', end($this->dalipaySent)['body']);
         }
-        $this->assertSame('unsupported_channel', $this->gateway()->initiateCollection($this->request('cash'))->failureReason);
+
+        $this->gateway()->initiateCollection(new CollectionRequest('key-airtel-number', 6400, 'TZS', '+255684123456', 'mpesa', 'x'));
+        $this->assertSame('Airtel', $this->dalipayCollections[$this->lastDalipayUuid()]['provider'], 'an Airtel number is Airtel to Dalipay');
+    }
+
+    public function test_creating_a_collection_waits_longer_than_a_status_check_and_logs_how_long_it_took(): void
+    {
+        $config = DalipayConfig::fromArray((array) config('payments.dalipay'), false);
+        $this->assertSame(40, $config->createTimeoutSeconds, 'default: under the app\'s 45 s wait');
+        $this->assertSame(15, $config->timeoutSeconds);
+        $this->assertSame(15, DalipayConfig::fromArray([...(array) config('payments.dalipay'), 'create_timeout_seconds' => 3], false)->createTimeoutSeconds);
+        $this->assertSame(60, DalipayConfig::fromArray([...(array) config('payments.dalipay'), 'create_timeout_seconds' => 600], false)->createTimeoutSeconds);
+        $this->assertSame(25, DalipayConfig::fromArray([...(array) config('payments.dalipay'), 'create_timeout_seconds' => 25], false)->createTimeoutSeconds);
+
+        $logged = [];
+        Log::listen(function ($message) use (&$logged) {
+            $logged[] = $message->message;
+        });
+        $this->gateway()->initiateCollection($this->request());
+        $this->dalipayNextCreate = 'no_answer';
+        $this->gateway()->initiateCollection($this->request(reference: 'second-attempt-12345'));
+
+        $text = implode("\n", $logged);
+        $this->assertMatchesRegularExpression('/collection [0-9a-f-]{36} \(k7Hq2LmN9pQ4rS6tU8vW0xY1\) created in \d+(\.\d)? s, status processing/', $text);
+        $this->assertMatchesRegularExpression('/no answer creating collection second-attempt-12345 after \d+\.\d s/', $text);
+        $this->assertStringNotContainsString(self::DALIPAY_SECRET, $text);
+        $this->assertStringNotContainsString(self::DALIPAY_PUBLIC, $text);
     }
 
     public function test_a_long_idempotency_key_is_hashed_into_a_30_character_external_id(): void
@@ -88,8 +121,11 @@ class DalipayGatewayTest extends TestCase
         $this->assertSame(6400, $status->amount);
         $this->assertNotNull($status->paidAt);
 
+        $this->assertSame('Mpesa', $status->meta['dalipay_provider']);
+
+        // Dalipay's API gives no reason for a failure, so the buyer reads "The payment didn't go through."
         $this->dalipaySettles($uuid, 'failed');
-        $this->assertSame(['failed', 'declined'], [$this->gateway()->queryCollection($uuid)->status, $this->gateway()->queryCollection($uuid)->failureReason]);
+        $this->assertSame(['failed', 'provider_failed'], [$this->gateway()->queryCollection($uuid)->status, $this->gateway()->queryCollection($uuid)->failureReason]);
         $this->assertSame("/api/v1/collections/{$uuid}/status", end($this->dalipaySent)['path']);
     }
 
@@ -160,6 +196,24 @@ class DalipayGatewayTest extends TestCase
         $gateway = app(PaymentGateway::class);
         $this->assertInstanceOf(DalipayGateway::class, $gateway);
         $this->assertFalse($gateway->capabilities()->sandbox);
+    }
+
+    /** Live keys on staging or a PC never power the app's Pay now; existing live payments are still confirmed. */
+    public function test_live_keys_off_production_leave_pay_now_off_but_confirm_existing_payments(): void
+    {
+        $this->setUpDalipay(['public_key' => 'gw_pk_production_abc', 'secret_key' => 'gw_sk_production_def', 'env' => 'live']);
+        $logged = [];
+        Log::listen(function ($message) use (&$logged) {
+            $logged[] = $message->message;
+        });
+
+        foreach (['staging', 'local'] as $env) {
+            $this->app['env'] = $env;
+            $this->assertInstanceOf(UnavailablePaymentGateway::class, app(PaymentGateway::class), "Pay now on {$env}");
+            $this->assertInstanceOf(DalipayGateway::class, app(PaymentGatewayFactory::class)->forProvider('dalipay'), "confirming on {$env}");
+        }
+        $this->assertStringContainsString('Dalipay live keys on a non-production server: Pay now stays off', implode("\n", $logged));
+        $this->assertStringNotContainsString('gw_sk_production_def', implode("\n", $logged));
     }
 
     public function test_the_secret_key_is_never_in_a_dump_of_the_gateway(): void

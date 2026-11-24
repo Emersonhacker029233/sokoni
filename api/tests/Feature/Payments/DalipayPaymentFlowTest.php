@@ -91,16 +91,17 @@ class DalipayPaymentFlowTest extends TestCase
         $this->poll($job)->assertJsonPath('data.payment.receipt.amount', $job->fee)->assertJsonPath('data.payment.receipt.channel', 'mpesa');
     }
 
-    public function test_a_declined_push_fails_and_the_buyer_can_pay_again(): void
+    public function test_a_failed_push_fails_and_the_buyer_can_pay_again(): void
     {
         $job = $this->unpaidJob();
         $this->pay($job)->assertStatus(202);
 
         $this->payerAnswers($this->lastDalipayUuid(), 'failed')->assertOk();
 
+        // Dalipay gives no reason: the app shows "The payment didn't go through."
         $this->poll($job)
             ->assertJsonPath('data.payment.attempt.status', 'failed')
-            ->assertJsonPath('data.payment.attempt.failure_reason', 'declined')
+            ->assertJsonPath('data.payment.attempt.failure_reason', 'provider_failed')
             ->assertJsonPath('data.actions.can_pay', true)
             ->assertJsonPath('data.payment_status', 'unpaid');
         $this->pay($job)->assertStatus(202)->assertJsonPath('data.payment.attempt.status', 'pending');
@@ -304,15 +305,35 @@ class DalipayPaymentFlowTest extends TestCase
         $this->assertSame([], $this->dalipaySent);
     }
 
-    public function test_azampesa_goes_to_dalipay_and_is_refused_where_the_gateway_does_not_offer_it(): void
+    public function test_azampesa_is_offered_with_dalipay_and_refused_where_the_gateway_does_not_list_it(): void
     {
         $job = $this->unpaidJob();
         $this->pay($job, 'azampesa')->assertStatus(202);
-        $this->assertSame('Azampesa', $this->dalipaySent[0]['body']['provider']);
+        $this->assertArrayNotHasKey('provider', $this->dalipaySent[0]['body']);
+        $this->assertSame('azampesa', Payment::query()->sole()->channel, 'kept for display');
 
         config(['payments.provider' => 'fake']);
         $other = $this->unpaidJob();
         $this->pay($other, 'azampesa')->assertStatus(422)->assertJsonValidationErrors('channel');
+    }
+
+    public function test_pay_now_works_without_a_network_choice_and_dalipay_records_the_network(): void
+    {
+        $job = $this->unpaidJob();
+        $this->actingAs($job->order->buyer)->postJson("/api/delivery/orders/{$job->order_id}/pay", [
+            'msisdn' => '+255684123456',
+            'idempotency_key' => 'k'.Str::random(23),
+        ])->assertStatus(202)
+            ->assertJsonPath('data.payment.attempt.status', 'pending')
+            ->assertJsonPath('data.payment.attempt.channel', null);
+
+        $this->assertSame(['account_number' => '0684123456', 'amount' => (int) $job->fee, 'currency' => 'TZS'], array_diff_key($this->dalipaySent[0]['body'], ['external_id' => 1]));
+        $payment = Payment::query()->sole();
+        $this->assertNull($payment->channel);
+        $this->assertSame('Airtel', $payment->meta['dalipay_provider']);
+
+        $this->payerAnswers($this->lastDalipayUuid(), 'success')->assertOk();
+        $this->assertSame('paid', $job->fresh()->payment_status);
     }
 
     public function test_the_return_ride_fee_is_collected_with_dalipay_too(): void
@@ -322,7 +343,8 @@ class DalipayPaymentFlowTest extends TestCase
         $this->asBuyer($return)->postJson("/api/returns/{$return->id}/pay", [
             'channel' => 'airtel', 'msisdn' => '+255684123456', 'idempotency_key' => 'r'.Str::random(23),
         ])->assertStatus(202)->assertJsonPath('data.payment.attempt.status', 'pending');
-        $this->assertSame(['Airtel', '0684123456'], [$this->dalipaySent[0]['body']['provider'], $this->dalipaySent[0]['body']['account_number']]);
+        $this->assertSame('0684123456', $this->dalipaySent[0]['body']['account_number']);
+        $this->assertArrayNotHasKey('provider', $this->dalipaySent[0]['body']);
 
         $this->payerAnswers($this->lastDalipayUuid(), 'success')->assertOk();
 
@@ -377,5 +399,30 @@ class DalipayPaymentFlowTest extends TestCase
             ->assertSee($this->lastDalipayUuid())
             ->assertSee('SUCCEEDED')
             ->assertSee('collection.success');
+    }
+
+    /** The buyer's network is display only: admins see when Dalipay recorded another one, and a slow push. */
+    public function test_admins_see_the_network_dalipay_recorded_and_a_slow_push(): void
+    {
+        $job = $this->unpaidJob();
+        $this->pay($job, 'airtel')->assertStatus(202); // a Vodacom number (0754...) with Airtel picked
+        $payment = Payment::query()->sole();
+        $this->assertSame('Mpesa', $payment->meta['dalipay_provider']);
+        $payment->forceFill(['meta' => [...$payment->meta, 'dalipay_create_seconds' => 23.4]])->save();
+        $other = $this->unpaidJob();
+        $this->pay($other, 'mpesa')->assertStatus(202);
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAsAdmin($admin)->get("/admin/bolt-deliveries/{$job->id}")
+            ->assertOk()
+            ->assertSee('network (Dalipay) Mpesa')
+            ->assertSee('buyer chose airtel, Dalipay recorded Mpesa (it goes by the number)')
+            ->assertSee('Dalipay took 23.4 s to answer the push');
+
+        // No note when the buyer's choice matches.
+        $this->actingAsAdmin($admin)->get("/admin/bolt-deliveries/{$other->id}")
+            ->assertOk()
+            ->assertSee('network (Dalipay) Mpesa')
+            ->assertDontSee('Dalipay recorded');
     }
 }

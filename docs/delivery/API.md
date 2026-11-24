@@ -163,12 +163,12 @@ Refunds are recorded (`refund: { amount, status: "pending" }`) and paid by an ad
 
 ### `POST /delivery/orders/{order}/pay`
 
-`{ channel: <one of payment.channels>, msisdn: "+2557XXXXXXXX", idempotency_key: "<8-100 chars [A-Za-z0-9_-]>" }`. A channel the active gateway doesn't offer is a `422`. The same call pays a return's ride fee at `POST /returns/{return}/pay`.
+`{ channel?: <one of payment.channels>, msisdn: "+2557XXXXXXXX", idempotency_key: "<8-100 chars [A-Za-z0-9_-]>" }`. `channel` is optional and for display only (Dalipay takes the network from the number); one the active gateway doesn't list is a `422`, and a missing one is fine (`payment.attempt.channel: null`). The same call pays a return's ride fee at `POST /returns/{return}/pay`.
 
 - Answers **202** with the buyer view; `payment.attempt.status` is `pending` while the prompt is on the phone. The amount is never in the request: the server charges the fee set on the job (`amount_due`).
 - Only the server marks a fee paid, after asking the gateway (on the buyer's polls, at most every 3 s, and every minute). The job then moves to `awaiting_ready`, or straight to booking if the shop already marked the order Ready.
 - The same `idempotency_key` returns the same attempt. A new key while one is open: `409 payment_in_progress`; an open attempt expires after 120 s.
-- `failure_reason`: `declined`, `timeout`, `invalid_number` (the provider refused the number), `gateway_error` / `rejected` (the provider refused the request; nothing was charged). `409 not_payable`, `409 idempotency_key_reused`, `503 payments_unavailable`.
+- `failure_reason`: `provider_failed` (Dalipay says `failed` and gives no reason; the app shows "The payment didn't go through."), `declined` (sandbox gateway), `timeout`, `invalid_number` (the provider refused the number), `gateway_error` / `rejected` (the provider refused the request; nothing was charged). `409 not_payable`, `409 idempotency_key_reused`, `503 payments_unavailable`.
 - `payment.attempt.status` can also be `succeeded`, or `refund_pending` / `refunded` for a payment that arrived after the fee was already settled (owed back to the buyer).
 - Unpaid 20 minutes after the price was set (`payment.deadline`): job and order cancelled (`cancel_reason: "payment_timeout"`). A payment confirmed after that is kept and marked for refund.
 

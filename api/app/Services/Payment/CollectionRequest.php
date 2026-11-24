@@ -11,7 +11,8 @@ final readonly class CollectionRequest
         public string $currency,
         /** E.164, e.g. +255754123456. */
         public string $msisdn,
-        public string $channel,
+        /** The network the buyer picked, for display; may be missing. No gateway needs it. */
+        public ?string $channel,
         public string $description,
     ) {}
 }

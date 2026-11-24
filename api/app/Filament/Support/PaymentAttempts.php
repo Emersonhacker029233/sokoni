@@ -62,8 +62,13 @@ class PaymentAttempts
                 isset($meta['dalipay_reference']) ? 'reference '.$meta['dalipay_reference'] : null,
                 $p->provider === 'dalipay' ? 'external_id '.($meta['external_id'] ?? '—') : null,
                 isset($meta['dalipay_status']) ? 'Dalipay status '.$meta['dalipay_status'] : null,
+                isset($meta['dalipay_provider']) ? 'network (Dalipay) '.$meta['dalipay_provider'] : null,
+                isset($meta['dalipay_create_seconds']) ? "push answered in {$meta['dalipay_create_seconds']} s" : null,
             ]);
             $notes = array_filter([
+                self::networkNote($p, $meta),
+                isset($meta['dalipay_create_seconds']) && (float) $meta['dalipay_create_seconds'] > 10
+                    ? "Dalipay took {$meta['dalipay_create_seconds']} s to answer the push" : null,
                 isset($meta['late_after']) ? "confirmed by the provider after it had failed here ({$meta['late_after']})" : null,
                 $p->status === 'refund_pending' ? 'REFUND OWED to the buyer: the fee was already settled when this payment arrived' : null,
                 $p->status === 'refunded' ? 'refunded'.($p->refunded_at ? ' '.$p->refunded_at->format('d M H:i') : '').(isset($meta['refund_reference']) ? ' · ref '.$meta['refund_reference'] : '') : null,
@@ -72,6 +77,25 @@ class PaymentAttempts
 
             return $line.($refs ? "\n    ".implode(' · ', $refs) : '').($notes ? "\n    ".implode("\n    ", $notes) : '');
         })->implode("\n");
+    }
+
+    /**
+     * The buyer's network choice is display only: Dalipay takes the network
+     * from the number. When the two differ, admins see both.
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    private static function networkNote(Payment $p, array $meta): ?string
+    {
+        $recorded = $meta['dalipay_provider'] ?? null;
+        if (! is_string($recorded) || $p->channel === null) {
+            return null;
+        }
+        $expected = config("payments.dalipay.providers.{$p->channel}");
+
+        return is_string($expected) && strcasecmp($expected, $recorded) !== 0
+            ? "buyer chose {$p->channel}, Dalipay recorded {$recorded} (it goes by the number)"
+            : null;
     }
 
     /** @param Collection<int, Payment> $payments */

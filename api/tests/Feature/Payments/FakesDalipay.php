@@ -110,11 +110,23 @@ trait FakesDalipay
             'status' => 'processing',
             'amount' => $body['amount'] ?? null,
             'currency' => $body['currency'] ?? 'TZS',
-            'provider' => $body['provider'] ?? null,
+            // Dalipay takes the network from the number ("we don't need provider, just the number").
+            'provider' => self::networkOf((string) ($body['account_number'] ?? '')),
             'external_id' => $body['external_id'] ?? null,
             'created_at' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
             'updated_at' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
         ];
+    }
+
+    /** The network Dalipay records for a local number (enough for the tests: 074-076 Vodacom, 068/069/078 Airtel, 065/067/071/077 Yas, 061/062 Halotel). */
+    protected static function networkOf(string $local): string
+    {
+        return match (substr($local, 0, 3)) {
+            '068', '069', '078' => 'Airtel',
+            '065', '067', '071', '077' => 'Tigo',
+            '061', '062' => 'Halopesa',
+            default => 'Mpesa',
+        };
     }
 
     /** The payer answers the prompt: Dalipay's status becomes success or failed. */

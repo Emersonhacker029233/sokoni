@@ -43,8 +43,10 @@ String paymentChannelLabel(AppLocalizations l10n, String channel) => switch (cha
   _ => l10n.deliveryChannelMpesa,
 };
 
-/// Why an attempt failed, from the server's `failure_reason`.
+/// Why an attempt failed, from the server's `failure_reason`. Dalipay gives
+/// no reason for a failure (`provider_failed`): "The payment didn't go through."
 String paymentFailureLabel(AppLocalizations l10n, String? reason) => switch (reason) {
+  'provider_failed' => l10n.deliveryPayFailed,
   'declined' => l10n.deliveryPayDeclined,
   'timeout' => l10n.deliveryPayExpired,
   'invalid_number' => l10n.deliveryPayInvalidNumber,

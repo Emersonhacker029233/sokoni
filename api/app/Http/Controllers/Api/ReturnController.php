@@ -109,7 +109,7 @@ class ReturnController extends Controller
     public function pay(PayDeliveryRequest $request, ReturnRequest $return, DeliveryPaymentService $payments): JsonResponse
     {
         $this->buyerOnly($request, $return);
-        $payments->startForReturn($return, $request->user(), $request->string('channel'), $request->string('msisdn'), $request->string('idempotency_key'));
+        $payments->startForReturn($return, $request->user(), $request->filled('channel') ? (string) $request->input('channel') : null, $request->string('msisdn'), $request->string('idempotency_key'));
 
         return $this->respond($request, $return->fresh(), ReturnRequestResource::BUYER)->setStatusCode(202);
     }

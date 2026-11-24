@@ -18,6 +18,7 @@ use App\Services\Payment\PaymentGatewayFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -30,51 +31,102 @@ use Illuminate\Validation\Rule;
  * test buyer (both marked "Staging payments test", never real accounts)
  * with a delivery job waiting for payment. Nothing is booked on Bolt: the
  * order never becomes ready. Refused unless PAYMENT_PROVIDER=dalipay with
- * DALIPAY_ENV=test and valid test keys, so it can't move real money.
+ * valid keys.
  *
- *  POST /api/staging/payments                      {msisdn, channel, amount, mode: normal|no_answer}
+ * Test keys (DALIPAY_ENV=test): any test number, TSh 100 to 10,000.
+ *
+ * Live keys (DALIPAY_ENV=live, real money) only with ALL of: APP_ENV=staging,
+ * the token, STAGING_PAYMENTS_ALLOW_LIVE=true, `live: true` in the request
+ * (staging-dalipay-test.ps1 -Live, after you type YES PAY), a normal payment,
+ * at most TSh 2,000, and the number exactly STAGING_PAYMENTS_LIVE_MSISDN.
+ * Anything else is refused, and every live collection is logged as a
+ * warning. Production answers 404 whatever the configuration
+ * (EnsureStagingPaymentsTest).
+ *
+ *  POST /api/staging/payments                      {msisdn, channel?, amount? (1000), mode: normal|no_answer, live?}
  *  GET  /api/staging/payments/{id}                 asks Dalipay, as the app's polling does
  *  POST /api/staging/payments/{id}/replay-webhook  the same signed webhook twice, signed here
  *
- * `no_answer` sends the push to an unreachable address (192.0.2.1), so the
- * attempt gets no answer and must expire after PAYMENT_ATTEMPT_TIMEOUT_SECONDS.
+ * `no_answer` (test keys only) sends the push to an unreachable address
+ * (192.0.2.1), so the attempt gets no answer and must expire after
+ * PAYMENT_ATTEMPT_TIMEOUT_SECONDS.
  */
 class StagingPaymentTestController
 {
     private const UNREACHABLE = 'https://192.0.2.1';
 
-    public function store(Request $request, DeliveryPaymentService $payments, PaymentGatewayFactory $gateways): JsonResponse
+    private const DEFAULT_AMOUNT = 1000;
+
+    public function store(Request $request, PaymentGatewayFactory $gateways): JsonResponse
     {
-        $gateway = $gateways->current();
-        if (! $gateway instanceof DalipayGateway || ! $gateway->capabilities()->sandbox) {
+        $gateway = config('payments.provider') === 'dalipay' ? $gateways->dalipay() : null;
+        if ($gateway === null) {
             return response()->json([
-                'code' => 'not_dalipay_test',
-                'message' => 'Runs only with PAYMENT_PROVIDER=dalipay, DALIPAY_ENV=test and valid test keys (see storage/logs for "[payments]").',
+                'code' => 'not_dalipay',
+                'message' => 'Runs only with PAYMENT_PROVIDER=dalipay and valid Dalipay keys (see storage/logs for "[payments]").',
             ], 409);
         }
+        $live = ! $gateway->capabilities()->sandbox;
 
         $data = $request->validate([
             'msisdn' => ['required', 'string', 'regex:/^\+255[67]\d{8}$/'],
-            'channel' => ['required', Rule::in($gateway->capabilities()->channels)],
-            'amount' => ['required', 'integer', 'min:100', 'max:10000'],
+            // Display only, like the app's choice: Dalipay takes the network from the number.
+            'channel' => ['nullable', 'string', Rule::in($gateway->capabilities()->channels)],
+            'amount' => ['nullable', 'integer', 'min:100', 'max:10000'],
             'mode' => ['nullable', Rule::in(['normal', 'no_answer'])],
+            'live' => ['nullable', 'boolean'],
         ]);
         $mode = $data['mode'] ?? 'normal';
+        $amount = (int) ($data['amount'] ?? self::DEFAULT_AMOUNT);
+        $wantsLive = (bool) ($data['live'] ?? false);
 
-        [$buyer, $job] = DB::transaction(fn () => $this->fixtures((int) $data['amount']));
+        if ($wantsLive && ! $live) {
+            return response()->json(['code' => 'not_live', 'message' => 'Dalipay is in test mode here (DALIPAY_ENV=test): a live test would pay nothing real. Run without -Live.'], 409);
+        }
+        if ($live && ($refusal = $this->liveRefusal($wantsLive, $mode, $amount, (string) $data['msisdn'])) !== null) {
+            return response()->json(['code' => 'live_not_allowed', 'message' => $refusal], 409);
+        }
 
-        $service = $mode === 'no_answer'
-            ? new DeliveryPaymentService(
-                new DalipayGateway(DalipayConfig::fromArray([...(array) config('payments.dalipay'), 'base_url' => self::UNREACHABLE, 'timeout_seconds' => 5], false)),
-                app(DeliveryJobService::class),
-                app(DeliveryMessages::class),
-            )
-            : $payments;
+        [$buyer, $job] = DB::transaction(fn () => $this->fixtures($amount));
 
-        $payment = $service->start($job, $buyer, $data['channel'], $data['msisdn'], 'stg'.Str::random(21));
-        $payment->forceFill(['meta' => [...(array) $payment->fresh()->meta, 'staging_test' => true, 'staging_mode' => $mode]])->save();
+        $service = new DeliveryPaymentService(
+            $mode === 'no_answer'
+                ? new DalipayGateway(DalipayConfig::fromArray([...(array) config('payments.dalipay'), 'base_url' => self::UNREACHABLE, 'timeout_seconds' => 5, 'create_timeout_seconds' => 15], false))
+                : $gateway,
+            app(DeliveryJobService::class),
+            app(DeliveryMessages::class),
+        );
 
-        return response()->json(['data' => $this->view($payment->fresh())], 201);
+        $payment = $service->start($job, $buyer, $data['channel'] ?? null, (string) $data['msisdn'], 'stg'.Str::random(21));
+        $payment->forceFill(['meta' => [...(array) $payment->fresh()->meta, 'staging_test' => true, 'staging_mode' => $mode, 'staging_live' => $live]])->save();
+        $payment = $payment->fresh();
+
+        if ($live) {
+            Log::warning(sprintf(
+                '[payments] STAGING LIVE COLLECTION (real money): TSh %d to the staging live number (ending %s), payment #%d, Dalipay %s, status %s. Back to test mode: docs/delivery/STAGING-dalipay.md',
+                $amount, substr((string) $data['msisdn'], -3), $payment->id, $payment->provider_reference ?? 'no uuid yet', $payment->status,
+            ));
+        }
+
+        return response()->json(['data' => $this->view($payment)], 201);
+    }
+
+    /** Why a live collection from staging is refused, or null when every condition holds. */
+    private function liveRefusal(bool $wantsLive, string $mode, int $amount, string $msisdn): ?string
+    {
+        $allowed = (string) config('payments.staging_live_msisdn');
+        $max = (int) config('payments.staging_live_max_amount', 2000);
+
+        return match (true) {
+            ! app()->environment('staging') => 'Live collections from the staging test need APP_ENV=staging.',
+            config('payments.staging_allow_live') !== true => 'Dalipay has live keys here. Set STAGING_PAYMENTS_ALLOW_LIVE=true to allow a live test collection.',
+            ! $wantsLive => 'Dalipay has live keys here: a real payment needs live: true (staging-dalipay-test.ps1 -Live).',
+            $mode !== 'normal' => 'Only a normal payment can be live; no_answer is for test mode.',
+            $amount > $max => 'A live test collection is at most TSh '.number_format($max).'.',
+            preg_match('/^\+255[67]\d{8}$/', $allowed) !== 1 => 'Set STAGING_PAYMENTS_LIVE_MSISDN (E.164, +255...) to the one number live tests may charge.',
+            ! hash_equals($allowed, $msisdn) => 'A live test collection can only go to STAGING_PAYMENTS_LIVE_MSISDN.',
+            default => null,
+        };
     }
 
     public function show(int $payment, DeliveryPaymentService $payments): JsonResponse
@@ -199,9 +251,12 @@ class StagingPaymentTestController
             'amount' => (int) $payment->amount,
             'channel' => $payment->channel,
             'mode' => $payment->meta['staging_mode'] ?? null,
+            'live' => (bool) ($payment->meta['staging_live'] ?? false),
             'dalipay_uuid' => $uuid,
             'dalipay_reference' => $payment->meta['dalipay_reference'] ?? null,
             'dalipay_status' => $payment->meta['dalipay_status'] ?? null,
+            'dalipay_provider' => $payment->meta['dalipay_provider'] ?? null,
+            'dalipay_create_seconds' => $payment->meta['dalipay_create_seconds'] ?? null,
             'external_id' => $payment->meta['external_id'] ?? null,
             'late_after' => $payment->meta['late_after'] ?? null,
             'fee_paid' => $payment->deliveryJob()->value('payment_status') === 'paid',

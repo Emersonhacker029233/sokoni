@@ -172,8 +172,9 @@ Sokoni collects only the **Bolt delivery fee** and the **return ride fee** (when
 
 ### How it works
 
-- **Pay now** sends a USSD push: `POST {DALIPAY_BASE_URL}/api/v1/collections` with `X-Public-Key` / `X-Secret-Key`, body `{ account_number: "0754123456", amount, currency: "TZS", provider, external_id }`. No customer name is sent. `external_id` is the attempt's idempotency key (or a 30-character hash of it when longer), so a lost answer can still be matched.
-- **Networks** (the app shows the server's list): `mpesa` → `Mpesa`, `airtel` → `Airtel`, `mixx` (Mixx by Yas) → `Tigo`, `halopesa` → `Halopesa`, `azampesa` → `Azampesa` (`payments.dalipay.providers`).
+- **Pay now** sends a USSD push: `POST {DALIPAY_BASE_URL}/api/v1/collections` with `X-Public-Key` / `X-Secret-Key`, body `{ account_number: "0754123456", amount, currency: "TZS", external_id }`. **No `provider` is sent**: Dalipay takes the network from the number ("we don't need provider, just the number"). No customer name is sent. `external_id` is the attempt's idempotency key (or a 30-character hash of it when longer), so a lost answer can still be matched.
+- **Timeouts:** creating a collection may take a while, because Dalipay can wait on its upstream (AzamPay) before answering, and hanging up early makes Dalipay fail it ("caller disconnected during a slow AzamPay round-trip"). So the create call gets `DALIPAY_CREATE_TIMEOUT_SECONDS` (40, between 15 and 60, under the app's 45-second wait); status checks keep `DALIPAY_TIMEOUT_SECONDS` (15). Connecting gets at most 10 s of either. Neither call is retried: a second create could send a second prompt. Every create is logged with how long Dalipay took, and kept on the payment (`dalipay_create_seconds`).
+- **Networks** (the app shows the server's list, for display only): `mpesa` (M-Pesa), `airtel` (Airtel Money), `mixx` (Mixx by Yas, Dalipay's `Tigo`), `halopesa`, `azampesa` (`payments.dalipay.providers`). The buyer may pick none. The network Dalipay records is kept on the payment (`dalipay_provider`); the admin page notes when it differs from the buyer's pick.
 - **Only the server marks a fee paid**, after `GET /api/v1/collections/{uuid}/status` answers `success`: when the buyer's order screen polls (at most every 3 s), every minute from `payments:reconcile`, and when Dalipay's webhook arrives.
 - **Webhook:** `POST https://api.sokoni.co.tz/api/payments/webhook/dalipay`, outside the delivery flags so Dalipay can always reach it, throttled to 120 a minute.
   - `X-Signature` must be the HMAC-SHA256 (hex) of the raw body with `DALIPAY_WEBHOOK_SECRET`, compared in constant time. A wrong or missing signature is answered 401, logged without the body, and never stored, so it can't take a genuine event's place.
@@ -181,7 +182,7 @@ Sokoni collects only the **Bolt delivery fee** and the **return ride fee** (when
   - The body is only a hint: the payment is confirmed by asking the status API, and a payment only ever moves towards "paid". A signed body that says `success` while Dalipay says `processing` changes nothing.
   - Unknown collections are recorded (`unknown_payment`) and ignored. An amount that differs from the attempt is never applied (`amount_mismatch`, logged as critical).
   - Dalipay doesn't retry webhooks, which is why the reconcile cron exists.
-- **States the buyer sees:** waiting for the PIN (with "don't pay twice"), declined, expired (no answer within `PAYMENT_ATTEMPT_TIMEOUT_SECONDS`, 120 s), wrong number, payment service trouble, and paid. English and Swahili.
+- **States the buyer sees:** waiting for the PIN (with "don't pay twice"), "The payment didn't go through." (Dalipay's `failed`: its API gives no reason, `provider_failed`), expired (no answer within `PAYMENT_ATTEMPT_TIMEOUT_SECONDS`, 120 s), wrong number, payment service trouble, and paid. English and Swahili.
 - **Late and lost answers:**
   - No answer when the push is sent: the attempt stays open until it expires (no second prompt meanwhile), and the webhook's `external_id` attaches it.
   - Approved after it expired here: Dalipay is asked again for `DALIPAY_LATE_CHECK_MINUTES` (60), so a late approval with a lost webhook is still applied.
@@ -203,7 +204,9 @@ All in `api/.env` only, typed on the server by you. Never committed, never paste
 | `DALIPAY_SECRET_KEY` | `gw_sk_test_…` or `gw_sk_production_…` |
 | `DALIPAY_WEBHOOK_SECRET` | The "callback secret" next to the webhook URL in Dalipay's Settings |
 
-Optional: `DALIPAY_TIMEOUT_SECONDS` (15), `DALIPAY_LATE_CHECK_MINUTES` (60).
+Optional: `DALIPAY_TIMEOUT_SECONDS` (15), `DALIPAY_CREATE_TIMEOUT_SECONDS` (40), `DALIPAY_LATE_CHECK_MINUTES` (60).
+
+**Live keys anywhere but production never power the app's Pay now** (the log says `Dalipay live keys on a non-production server: Pay now stays off`). On staging, live keys are used only by the guarded staging live test ([STAGING-dalipay.md](STAGING-dalipay.md), Update 2). Payments already made with them are still confirmed.
 
 **Refused, and Pay now disappears** (the log says `[payments] Dalipay is not used: <reason>`, never a key): a production key unless `DALIPAY_ENV=live`; a test key with `live`; one test and one production key; swapped keys; a missing key or URL; `live` over `http`; and test mode on a server with `APP_ENV=production`, because Dalipay's test mode approves payments that never happened and would book real Bolt rides. Without `DALIPAY_WEBHOOK_SECRET` every webhook is refused and the status checks alone confirm payments.
 

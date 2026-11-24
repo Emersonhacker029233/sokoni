@@ -27,8 +27,11 @@ final class DalipayConfig
         public readonly string $baseUrl,
         public readonly string $publicKey,
         #[SensitiveParameter] public readonly string $secretKey,
+        /** Status checks, total seconds per request. */
         public readonly int $timeoutSeconds,
-        /** @var array<string, string> Sokoni channel => Dalipay provider */
+        /** Creating a collection, total seconds (15 to 60). */
+        public readonly int $createTimeoutSeconds,
+        /** @var array<string, string> Sokoni channel => the network name Dalipay records (display only) */
         public readonly array $providers,
     ) {}
 
@@ -78,12 +81,15 @@ final class DalipayConfig
             throw new InvalidArgumentException('DALIPAY_BASE_URL must use https with DALIPAY_ENV=live.');
         }
 
+        // Display only (Dalipay takes the network from the number): an empty list is fine.
         $providers = array_filter((array) ($config['providers'] ?? []), fn ($code, $channel) => is_string($channel) && is_string($code) && $code !== '', ARRAY_FILTER_USE_BOTH);
-        if ($providers === []) {
-            throw new InvalidArgumentException('No Dalipay providers are configured.');
-        }
 
-        return new self($env, $base, $public, $secret, max(5, (int) ($config['timeout_seconds'] ?? 15)), $providers);
+        return new self(
+            $env, $base, $public, $secret,
+            max(5, (int) ($config['timeout_seconds'] ?? 15)),
+            min(60, max(15, (int) ($config['create_timeout_seconds'] ?? 40))),
+            $providers,
+        );
     }
 
     public function isTest(): bool
