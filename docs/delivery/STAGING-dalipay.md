@@ -1,5 +1,7 @@
 # Staging: Dalipay test mode on staging-api.sokoni.co.tz (checklist)
 
+> **Update 2 (2026-11-24):** no provider sent, a 40 s create timeout and a guarded live test. See [Update 2](#update-2-no-provider-40-s-create-timeout-live-test-2026-11-24), after step 11.
+
 This brings **staging** up to `feature/dalipay` so Dalipay can be tested with **test keys**. It is for `staging-api.sokoni.co.tz` (`/home/sokoftsn/staging-api`, `APP_ENV=staging`) only. **Never run any of it on production** (`api.sokoni.co.tz`, `/home/sokoftsn/sokoni-api`). Bolt stays switched off. Follow the steps in order and stop wherever a step says **STOP**.
 
 - **Branch:** `feature/dalipay`: production's code (the 1.0 (9) moderation release and the Bolt dark release) plus live tracking, the flat delivery fee, the Android 1.1 server parts and Dalipay.
@@ -247,6 +249,119 @@ phpMyAdmin → **Import** the `.sql.gz` from step 1.1. This throws away everythi
 
 ---
 
+## Update 2: no provider, 40 s create timeout, live test (2026-11-24)
+
+A small update on top of the package above, after Dalipay's answers: its test mode is unreliable ("use production"), and "we don't need provider, just the number".
+
+- **Code commit in the zip:** `bf80c38e47ba6597f167ddfdd0d8d7bf699a5f96`
+- **Staging base:** `0d737707d48b81085be0ee3874a574bd2fcb0aa3` (the package above)
+- **Zips:** `D:\Projects\sokoni-release-staging-dalipay\update-2\`:
+  - `code.zip`: the 11 changed files plus `BUILD.txt`
+  - `rollback-code.zip`: the same 11 files as in `0d73770`, plus `BUILD.txt`
+  - `staging-dalipay-test.ps1`: the new script, with `-Live` (identical to `tools/staging-dalipay-test.ps1` in the commit)
+- **No migration, no new or deleted file, no cron job.** Upload, clear the caches, done.
+
+**What changes:**
+
+- **No `provider` is sent to Dalipay.** The create request is `account_number` (`0754123456`), `amount`, `currency`, `external_id`. Dalipay takes the network from the number. The network the buyer picks is display only and may be missing; the network Dalipay records is kept on the payment, and the admin page says when the two differ.
+- **The create call waits up to 40 s** (`DALIPAY_CREATE_TIMEOUT_SECONDS`), status checks 15 s. This is the fix for "Request never completed … caller disconnected during a slow AzamPay round-trip": the create call used to give up after 15 s. Each create logs and stores how long Dalipay took (admin page: "push answered in … s").
+- **Dalipay's `failed` shows as "The payment didn't go through."** (`provider_failed`): its API gives no reason.
+- **A live test from staging,** guarded (U2.6). Live keys never turn on the app's Pay now outside production.
+
+### U2.1 Back up
+
+- [ ] Download `/home/sokoftsn/staging-api/.env`.
+- [ ] File Manager → `/home/sokoftsn/staging-api` → select `app`, `config` and `BUILD.txt` → **Compress** → `backup-before-staging-update-2.zip` → **Download** → delete it from the server.
+
+### U2.2 Pre-flight
+
+- [ ] `/home/sokoftsn/staging-api/BUILD.txt` says `commit: 0d737707d48b81085be0ee3874a574bd2fcb0aa3`. Anything else: **STOP** (do the package above first, or send it to your developer).
+
+### U2.3 Upload
+
+- [ ] File Manager → `/home/sokoftsn/staging-api` → **Upload** `update-2\code.zip` → **Extract** into `/home/sokoftsn/staging-api` → delete the zip.
+- [ ] `BUILD.txt` now says `commit: bf80c38e47ba6597f167ddfdd0d8d7bf699a5f96`. If not, extract again.
+
+### U2.4 Clear the caches
+
+- [ ] `/home/sokoftsn/staging-api/bootstrap/cache/`: delete `config.php`, `routes-v7.php` and `events.php` if they are there, and the folder `filament`. Keep `packages.php`, `services.php` and `.gitignore`. (No page template changed, so compiled views can stay.)
+
+### U2.5 Check in test mode first
+
+With `.env` still on test keys (`DALIPAY_ENV=test`), run the script without `-Live`, from `D:\Projects\sokoni-release-staging-dalipay\update-2\`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\Projects\sokoni-release-staging-dalipay\update-2\staging-dalipay-test.ps1 -Msisdn +2557XXXXXXXX
+```
+
+Each payment line now shows `network (Dalipay)` and `push answered in … s`. The decline check is skipped unless you pass `-DeclineMsisdn` (a number Dalipay declines). If Dalipay's test mode fails payments as before, that is the unreliability Dalipay mentioned: go on to the live test.
+
+### U2.6 Live test: one real payment from staging
+
+**Real money.** At most TSh 2,000 (default TSh 1,000), to one number you choose, from staging only. Every condition below must hold, or the staging test refuses (409, and the message says which one is missing): `APP_ENV=staging`, `STAGING_PAYMENTS_TEST_TOKEN`, `STAGING_PAYMENTS_ALLOW_LIVE=true`, `DALIPAY_ENV=live` with production keys, the script's `-Live` (it sends `live: true` only after you type `YES PAY`), at most TSh 2,000, and the number exactly `STAGING_PAYMENTS_LIVE_MSISDN`. The app's Pay now stays off while staging has live keys. Production answers 404 to all of this whatever its `.env` says.
+
+1. [ ] **Dalipay dashboard, production environment:** open the production keys. Set the production **Webhook URL** to `https://staging-api.sokoni.co.tz/api/payments/webhook/dalipay` for the test (production doesn't use Dalipay yet; see U2.7) and copy the production **callback secret**. Production IP whitelist: leave it empty, or add the staging server's outgoing IP.
+2. [ ] **Staging `.env`** (right-click → **Edit**), change or add, one of each:
+   ```
+   DALIPAY_ENV=live
+   DALIPAY_BASE_URL=https://<the production API host Dalipay gave you>
+   DALIPAY_PUBLIC_KEY=gw_pk_production_...
+   DALIPAY_SECRET_KEY=gw_sk_production_...
+   DALIPAY_WEBHOOK_SECRET=<the production callback secret>
+   STAGING_PAYMENTS_ALLOW_LIVE=true
+   STAGING_PAYMENTS_LIVE_MSISDN=+2557XXXXXXXX
+   ```
+   `STAGING_PAYMENTS_LIVE_MSISDN` is your own phone in E.164 (`+255…`). Leave `APP_ENV=staging`, `PAYMENT_PROVIDER=dalipay`, `BOLT_ENABLED=false` and the token as they are. **Save Changes**, then delete `bootstrap/cache/config.php` if it is there.
+3. [ ] **Run the live test** on your PC, with that same number and the phone in your hand:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File D:\Projects\sokoni-release-staging-dalipay\update-2\staging-dalipay-test.ps1 -Live -Msisdn +2557XXXXXXXX -Amount 1000
+   ```
+   It shows the amount, the number and the server, and sends nothing until you type `YES PAY`. Then it asks for the token, sends one real push, and waits up to 3 minutes. **Approve the prompt on the phone with your PIN.** It skips the decline and timeout checks.
+4. [ ] **Expected:** `REAL payment PASS: paid`, `Dalipay webhook PASS` (if the production webhook URL points at staging), and `duplicate webhook PASS`. The payment line shows `live: True`, the network Dalipay recorded and how long the push took.
+5. [ ] **The log:** `storage/logs/` has one warning per live payment, `[payments] STAGING LIVE COLLECTION (real money): TSh 1000 to the staging live number (ending …)`, never the full number or a key.
+6. [ ] **Admin:** Commerce → Bolt deliveries → the newest test delivery (`STAGING PAYMENT TEST`) shows the attempt with its Dalipay uuid, reference, network, "push answered in … s" and the webhooks.
+7. The money goes to Sokoni's Dalipay production balance (minus Dalipay's fee). It is a test order: nothing is delivered. Withdraw it, or keep it as part of Sokoni's balance.
+
+If Dalipay fails the live payment too, the admin page and the log show how long the push took. Send Dalipay the uuid and time.
+
+### U2.7 Back to test mode (do this right after the live test)
+
+- [ ] **Wait until the live payment has finished** (the script shows `succeeded` or `failed`). A live payment still pending when the live keys go can't be confirmed any more.
+- [ ] **Remove the live keys:** `DALIPAY_PUBLIC_KEY` and `DALIPAY_SECRET_KEY` back to the test keys (`gw_pk_test_…`, `gw_sk_test_…`), or empty.
+- [ ] `DALIPAY_ENV=test`.
+- [ ] `DALIPAY_WEBHOOK_SECRET` back to the test callback secret, and `DALIPAY_BASE_URL` back to the test host if Dalipay gave you a different one.
+- [ ] **Delete the lines** `STAGING_PAYMENTS_ALLOW_LIVE=true` and `STAGING_PAYMENTS_LIVE_MSISDN=…`.
+- [ ] **Save Changes**, then delete `bootstrap/cache/config.php` if it is there.
+- [ ] **Dalipay dashboard:** take the production webhook URL off staging (clear it, or set it to `https://api.sokoni.co.tz/api/payments/webhook/dalipay` when production starts using Dalipay).
+- [ ] **Check:** the script without `-Live` shows `live: False` on its payments, and with `-Live` it stops with `Refused (not_live)`.
+
+### U2.8 Rollback
+
+Do U2.7 first if live keys are in `.env`. Then upload `update-2\rollback-code.zip` → **Extract** into `/home/sokoftsn/staging-api` → delete the zip → U2.4 (clear the caches). `BUILD.txt` says `ROLLBACK`, commit `0d73770`. Nothing in the database changes in either direction.
+
+### U2.9 What is in the zips, and the byte-for-byte check
+
+All paths relative to `/home/sokoftsn/staging-api`; all 11 are changed files:
+
+- `app/Filament/Support/`: `PaymentAttempts.php`
+- `app/Http/Controllers/Api/Delivery/`: `CustomerDeliveryController.php`
+- `app/Http/Controllers/Api/Payments/`: `StagingPaymentTestController.php`
+- `app/Http/Controllers/Api/`: `ReturnController.php`
+- `app/Http/Requests/Delivery/`: `PayDeliveryRequest.php`
+- `app/Services/Delivery/`: `DeliveryPaymentService.php`
+- `app/Services/Payment/`: `CollectionRequest.php`, `DalipayGateway.php`, `PaymentGatewayFactory.php`, `Dalipay/DalipayConfig.php`
+- `config/`: `payments.php`
+
+Built with `git archive` from the commits, as in Appendix B, with `P=0d737707d48b81085be0ee3874a574bd2fcb0aa3` and `C=bf80c38e47ba6597f167ddfdd0d8d7bf699a5f96`. Tests and `.env.example` changed too and are left out. Each zip was extracted and every file compared with the blob in its commit:
+
+```
+code.zip: 11 identical to bf80c38, 0 different; extra: BUILD.txt; file list exactly as expected: yes
+rollback-code.zip: 11 identical to 0d73770, 0 different; extra: BUILD.txt; file list exactly as expected: yes
+staging-dalipay-test.ps1: identical to bf80c38:tools/staging-dalipay-test.ps1
+```
+
+---
+
 ## Appendix A: what is in each zip
 
 All paths are relative to `/home/sokoftsn/staging-api`.
@@ -362,12 +477,12 @@ The script was also run end to end against a local copy of the API with a stand-
 
 ## Appendix C: the staging test endpoint
 
-`StagingPaymentTestController`, behind `EnsureStagingPaymentsTest`. Every request needs `X-Staging-Token: <STAGING_PAYMENTS_TEST_TOKEN>`; the token must be at least 24 characters and `APP_ENV` local or staging, otherwise every route answers 404. It refuses (409 `not_dalipay_test`) unless `PAYMENT_PROVIDER=dalipay` with `DALIPAY_ENV=test` and valid test keys.
+`StagingPaymentTestController`, behind `EnsureStagingPaymentsTest`. Every request needs `X-Staging-Token: <STAGING_PAYMENTS_TEST_TOKEN>`; the token must be at least 24 characters and `APP_ENV` local or staging, otherwise every route answers 404. It refuses (409 `not_dalipay`) unless `PAYMENT_PROVIDER=dalipay` with valid keys. With live keys (Update 2) it refuses (409 `live_not_allowed`, saying which condition is missing) unless `APP_ENV=staging`, `STAGING_PAYMENTS_ALLOW_LIVE=true`, `live: true`, a normal payment, at most TSh 2,000 and exactly `STAGING_PAYMENTS_LIVE_MSISDN`; `live: true` against test keys is 409 `not_live`.
 
 | Route | |
 |---|---|
-| `POST /api/staging/payments` | `{ msisdn: "+2557…", channel, amount: 100–10000, mode: "normal" \| "no_answer" }`. Makes a test order and delivery job waiting for payment, and starts Pay now. `no_answer` sends the push to `192.0.2.1` (unreachable) to test the timeout. 201 with the payment |
+| `POST /api/staging/payments` | `{ msisdn: "+2557…", channel?, amount? (1000; 100–10000, live at most 2000), mode: "normal" \| "no_answer", live? }`. Makes a test order and delivery job waiting for payment, and starts Pay now. `channel` is display only. `no_answer` (test keys only) sends the push to `192.0.2.1` (unreachable) to test the timeout. 201 with the payment |
 | `GET /api/staging/payments/{id}` | Asks Dalipay about the payment, as the app's polling does, and returns it with its webhooks |
 | `POST /api/staging/payments/{id}/replay-webhook` | Signs Dalipay's webhook for a finished payment with `DALIPAY_WEBHOOK_SECRET` on the server and delivers it twice to the real handler; the second must be a duplicate |
 
-The payment answer: `payment_id, status, failure_reason, amount, channel, mode, dalipay_uuid, dalipay_reference, dalipay_status, external_id, late_after, fee_paid, order_code, created_at, webhooks[]`. Throttled to 30 requests a minute. Nothing is booked on Bolt: the test order never becomes ready.
+The payment answer: `payment_id, status, failure_reason, amount, channel, mode, live, dalipay_uuid, dalipay_reference, dalipay_status, dalipay_provider, dalipay_create_seconds, external_id, late_after, fee_paid, order_code, created_at, webhooks[]`. Throttled to 30 requests a minute. Nothing is booked on Bolt: the test order never becomes ready.
